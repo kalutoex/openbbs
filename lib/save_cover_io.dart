@@ -6,6 +6,7 @@ import 'package:gal/gal.dart';
 import 'site_config.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../l10n/l10n.dart';
 /// 把一张图存到相册（手机）或图片目录（桌面）。
 /// 返回给人看的位置说明；存不下就抛异常。
 Future<String> saveImageBytes(Uint8List bytes, String name) async {
@@ -16,7 +17,7 @@ Future<String> saveImageBytes(Uint8List bytes, String name) async {
     return f.path;
   }
   await Gal.putImageBytes(bytes, album: SiteConfig.brand);
-  return '相册';
+  return Lc.current.album;
 }
 
 Future<Directory> _pictureDir() async {
@@ -27,7 +28,7 @@ Future<Directory> _pictureDir() async {
     if (await d.exists()) return d;
   }
   final support = await getApplicationSupportDirectory();
-  final pic = Directory('${support.path}/图片');
+  final pic = Directory('${support.path}/Pictures');
   await pic.create(recursive: true);
   return pic;
 }

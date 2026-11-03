@@ -23,6 +23,7 @@ import 'server_page.dart';
 import 'theme_color_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 设置：外观、浏览、内容、账号、关于。
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -33,7 +34,7 @@ class SettingsPage extends StatelessWidget {
     final st = AppState.instance;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: Text(Lc.current.settings)),
       body: ListenableBuilder(
         listenable: st,
         builder: (context, _) {
@@ -41,13 +42,13 @@ class SettingsPage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.only(bottom: 40),
             children: [
-              _label(context, '外观'),
+              _label(context, Lc.current.appearance),
               ValueListenableBuilder<ThemeMode>(
                 valueListenable: st.themeMode,
                 builder: (_, m, _) => _row(
                   context,
                   icon: Icons.dark_mode_outlined,
-                  title: '主题',
+                  title: Lc.current.theme,
                   value: _themeName(m),
                   onTap: () => _pickTheme(context),
                 ),
@@ -57,7 +58,7 @@ class SettingsPage extends StatelessWidget {
                 builder: (_, h, _) => _row(
                   context,
                   icon: Icons.palette_outlined,
-                  title: '主题色',
+                  title: Lc.current.accentColor,
                   value: AppState.hueName(h),
                   dot: st.colorOfHue(h),
                   onTap: () => Navigator.of(context).push(
@@ -70,7 +71,7 @@ class SettingsPage extends StatelessWidget {
                 builder: (_, v, _) => _row(
                   context,
                   icon: Icons.format_size,
-                  title: '字号',
+                  title: Lc.current.fontSize,
                   value: _fontName(v),
                   onTap: () => _pickFont(context),
                 ),
@@ -80,8 +81,8 @@ class SettingsPage extends StatelessWidget {
                 builder: (_, v, _) => _row(
                   context,
                   icon: Icons.view_agenda_outlined,
-                  title: '列表密度',
-                  subtitle: '帖子之间的间距',
+                  title: Lc.current.listDensity,
+                  subtitle: Lc.current.threadSpacing,
                   value: _densityName(v),
                   onTap: () => _pickDensity(context),
                 ),
@@ -97,14 +98,14 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               const Divider(height: 24),
-              _label(context, '浏览'),
+              _label(context, Lc.current.browseSection),
               ValueListenableBuilder<String>(
                 valueListenable: st.feedSort,
                 builder: (_, v, _) => _row(
                   context,
                   icon: Icons.sort,
-                  title: '时间线排序',
-                  value: v == 'created' ? '最新发布' : '最新回复',
+                  title: Lc.current.feedSort,
+                  value: v == 'created' ? Lc.current.sortCreated : Lc.current.sortUpdated,
                   onTap: () => _pickSort(context),
                 ),
               ),
@@ -113,8 +114,8 @@ class SettingsPage extends StatelessWidget {
                 builder: (_, v, _) => _row(
                   context,
                   icon: Icons.home_outlined,
-                  title: '启动页',
-                  subtitle: '打开 app 先看哪个',
+                  title: Lc.current.startTab,
+                  subtitle: Lc.current.startTabHint,
                   value: _tabName(v),
                   onTap: () => _pickStartTab(context),
                 ),
@@ -123,8 +124,8 @@ class SettingsPage extends StatelessWidget {
                 valueListenable: st.thumbs,
                 builder: (_, v, _) => SwitchListTile(
                   secondary: const Icon(Icons.image_outlined),
-                  title: const Text('显示缩略图'),
-                  subtitle: const Text('关掉后时间线只留文字，省流量'),
+                  title: Text(Lc.current.showThumbnails),
+                  subtitle: Text(Lc.current.showThumbnailsHint),
                   value: v,
                   onChanged: (x) => st.setThumbs(x),
                 ),
@@ -133,60 +134,64 @@ class SettingsPage extends StatelessWidget {
                 valueListenable: st.autoUnread,
                 builder: (_, v, _) => SwitchListTile(
                   secondary: const Icon(Icons.notifications_active_outlined),
-                  title: const Text('自动检查通知'),
-                  subtitle: const Text('每分钟问一次未读数'),
+                  title: Text(Lc.current.autoCheckNotice),
+                  subtitle: Text(Lc.current.autoCheckNoticeHint),
                   value: v,
                   onChanged: (x) => st.setAutoUnread(x),
                 ),
               ),
               const Divider(height: 24),
-              _label(context, '网络'),
+              _label(context, Lc.current.networkSection),
               _row(
                 context,
                 icon: Icons.dns_outlined,
-                title: '服务器',
+                title: Lc.current.server,
                 subtitle: Api.base,
                 value: switch (st.serverMode) {
-                  ServerMode.auto => '自动',
+                  ServerMode.auto => Lc.current.auto,
                   ServerMode.ipv6 => 'IPv6',
                   ServerMode.ipv4 => 'IPv4',
-                  ServerMode.manual => '手动',
+                  ServerMode.manual => Lc.current.manual,
                 },
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ServerPage()),
                 ),
               ),
               const Divider(height: 24),
-              _label(context, '内容'),
+              _label(context, Lc.current.contentSection),
               const _ClearCacheTile(),
               ListTile(
                 leading: const Icon(Icons.manage_search),
-                title: const Text('清除搜索记录'),
+                title: Text(Lc.current.clearSearchHistory),
                 onTap: () async {
                   final p = await SharedPreferences.getInstance();
                   await p.remove('search_hist');
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context)
-                      .showSnackBar(const SnackBar(content: Text('搜索记录已清除')));
+                      .showSnackBar(SnackBar(content: Text(Lc.current.searchHistoryCleared)));
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.verified_user_outlined),
-                title: const Text('权限'),
-                subtitle: const Text('通知、相册'),
+                title: Text(Lc.current.permissions),
+                subtitle: Text(Lc.current.permSubtitle),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const PermissionsPage()),
                 ),
               ),
               const Divider(height: 24),
-              _label(context, '账号'),
+              _label(context, Lc.current.accounts),
               ListTile(
                 leading: const Icon(Icons.person_outline),
-                title: const Text('当前账号'),
+                title: Text(Lc.current.currentAccount),
                 subtitle: Text(
                   st.accounts.length > 1
-                      ? '${u == null ? '未登录' : u['nickname'] ?? u['name']} · 本机 ${st.accounts.length} 个账号'
-                      : (u == null ? '未登录' : '${u['nickname'] ?? u['name']}'),
+                      ? Lc.current.accountLine(
+                          u == null
+                              ? Lc.current.notLoggedIn
+                              : (u['nickname'] ?? u['name'] ?? ''),
+                          '${st.accounts.length}')
+                      : (u == null ? Lc.current.notLoggedIn : '${u['nickname'] ?? u['name']}'),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(
@@ -196,10 +201,10 @@ class SettingsPage extends StatelessWidget {
               if (u != null)
                 ListTile(
                   leading: const Icon(Icons.lock_outline),
-                  title: const Text('账号安全'),
+                  title: Text(Lc.current.accountSecurity),
                   subtitle: Text(
                     ((u['email'] as String?) ?? '').isEmpty
-                        ? '还没绑邮箱，忘了密码只能找管理员'
+                        ? Lc.current.noEmailBoundHint
                         : (u['email'] as String),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -214,34 +219,34 @@ class SettingsPage extends StatelessWidget {
               if (u != null)
                 ListTile(
                   leading: const Icon(Icons.key_outlined),
-                  title: const Text('复制登录凭证'),
-                  subtitle: const Text('重装或换机后，登录页可粘贴恢复'),
+                  title: Text(Lc.current.copyCredential),
+                  subtitle: Text(Lc.current.copyCredentialHint),
                   onTap: () async {
                     final t = Api.token;
                     if (t == null || t.isEmpty) return;
                     await Clipboard.setData(ClipboardData(text: t));
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context)
-                        .showSnackBar(const SnackBar(content: Text('凭证已复制')));
+                        .showSnackBar(SnackBar(content: Text(Lc.current.credentialCopied)));
                   },
                 ),
               if (u != null)
                 ListTile(
                   leading: Icon(Icons.logout, color: cs.error),
-                  title: Text('退出登录', style: TextStyle(color: cs.error)),
+                  title: Text(Lc.current.logout, style: TextStyle(color: cs.error)),
                   onTap: () => _logout(context),
                 ),
               const Divider(height: 24),
               if (kIsWeb) ...[
-                _label(context, '网页访问'),
+                _label(context, Lc.current.webAccessSection),
                 const _WebEntryRow(),
               ],
-              _label(context, '关于'),
+              _label(context, Lc.current.about),
               const _VersionRow(),
               ListTile(
                 leading: const Icon(Icons.info_outline),
-                title: Text('关于${SiteConfig.brand}'),
-                subtitle: const Text('开源信息、更新日志、许可证'),
+                title: Text(Lc.current.aboutBrand('${SiteConfig.brand}')),
+                subtitle: Text(Lc.current.aboutSubtitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const AboutPage()),
@@ -304,29 +309,29 @@ class SettingsPage extends StatelessWidget {
   }
 
   static String _themeName(ThemeMode m) => switch (m) {
-    ThemeMode.system => '跟随系统',
-    ThemeMode.light => '浅色',
-    ThemeMode.dark => '深色',
+    ThemeMode.system => Lc.current.themeSystem,
+    ThemeMode.light => Lc.current.themeLight,
+    ThemeMode.dark => Lc.current.themeDark,
   };
 
   static String _fontName(double v) =>
-      v < 0.95 ? '小' : (v > 1.25 ? '特大' : (v > 1.05 ? '大' : '标准'));
+      v < 0.95 ? Lc.current.sizeSmall : (v > 1.25 ? Lc.current.sizeHuge : (v > 1.05 ? Lc.current.sizeLarge : Lc.current.densityNormal));
 
   static String _densityName(int v) => switch (v) {
-    0 => '紧凑',
-    2 => '宽松',
-    _ => '标准',
+    0 => Lc.current.densityCompact,
+    2 => Lc.current.densityLoose,
+    _ => Lc.current.densityNormal,
   };
 
   static String _tabName(int v) => switch (v) {
-    1 => '板块',
-    2 => '通知',
-    3 => '我的',
-    _ => '时间线',
+    1 => Lc.current.forums,
+    2 => Lc.current.notice,
+    3 => Lc.current.me,
+    _ => Lc.current.timeline,
   };
 
   String _localeName(BuildContext c, String code) => switch (code) {
-    'zh' => '中文',
+    'zh' => Lc.current.chinese,
     'en' => 'English',
     _ => L.of(c).languageSystem,
   };
@@ -341,7 +346,7 @@ class SettingsPage extends StatelessWidget {
         current: cur,
         options: [
           ('', L.of(c).languageSystem),
-          ('zh', '中文'),
+          ('zh', Lc.current.chinese),
           ('en', 'English'),
         ],
       ),
@@ -355,7 +360,7 @@ class SettingsPage extends StatelessWidget {
     final v = await showDialog<ThemeMode>(
       context: ctx,
       builder: (c) => _pickDialog<ThemeMode>(
-        title: '主题',
+        title: Lc.current.theme,
         current: cur,
         options: [for (final m in ThemeMode.values) (m, _themeName(m))],
       ),
@@ -369,9 +374,9 @@ class SettingsPage extends StatelessWidget {
     final v = await showDialog<double>(
       context: ctx,
       builder: (c) => _pickDialog<double>(
-        title: '字号',
+        title: Lc.current.fontSize,
         current: cur,
-        options: const [(0.9, '小'), (1.0, '标准'), (1.15, '大'), (1.3, '特大')],
+        options: [(0.9, Lc.current.sizeSmall), (1.0, Lc.current.densityNormal), (1.15, Lc.current.sizeLarge), (1.3, Lc.current.sizeHuge)],
       ),
     );
     if (v != null) await st.setFontScale(v);
@@ -383,9 +388,9 @@ class SettingsPage extends StatelessWidget {
     final v = await showDialog<int>(
       context: ctx,
       builder: (c) => _pickDialog<int>(
-        title: '列表密度',
+        title: Lc.current.listDensity,
         current: cur,
-        options: const [(0, '紧凑'), (1, '标准'), (2, '宽松')],
+        options: [(0, Lc.current.densityCompact), (1, Lc.current.densityNormal), (2, Lc.current.densityLoose)],
       ),
     );
     if (v != null) await st.setDensity(v);
@@ -397,9 +402,9 @@ class SettingsPage extends StatelessWidget {
     final v = await showDialog<String>(
       context: ctx,
       builder: (c) => _pickDialog<String>(
-        title: '时间线排序',
+        title: Lc.current.feedSort,
         current: cur,
-        options: const [('updated', '最新回复'), ('created', '最新发布')],
+        options: [('updated', Lc.current.sortUpdated), ('created', Lc.current.sortCreated)],
       ),
     );
     if (v != null) await st.setFeedSort(v);
@@ -411,9 +416,9 @@ class SettingsPage extends StatelessWidget {
     final v = await showDialog<int>(
       context: ctx,
       builder: (c) => _pickDialog<int>(
-        title: '启动页',
+        title: Lc.current.startTab,
         current: cur,
-        options: const [(0, '时间线'), (1, '板块'), (2, '通知'), (3, '我的')],
+        options: [(0, Lc.current.timeline), (1, Lc.current.forums), (2, Lc.current.notice), (3, Lc.current.me)],
       ),
     );
     if (v != null) await st.setStartTab(v);
@@ -423,15 +428,15 @@ class SettingsPage extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: ctx,
       builder: (c) => AlertDialog(
-        title: const Text('退出登录？'),
+        title: Text(Lc.current.confirmLogout),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('算了'),
+            child: Text(Lc.current.forgetIt),
           ),
           TextButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('退出'),
+            child: Text(Lc.current.logoutShort),
           ),
         ],
       ),
@@ -513,8 +518,8 @@ class _VersionRowState extends State<_VersionRow> {
     final text = p == null ? '…' : '${p.version} (${p.buildNumber})';
     final row = ListTile(
       leading: const Icon(Icons.system_update_alt),
-      title: const Text('版本'),
-      subtitle: const Text('点一下检查更新'),
+      title: Text(Lc.current.version),
+      subtitle: Text(Lc.current.tapToCheckUpdate),
       trailing: Text(text, style: const TextStyle(fontSize: 13)),
       // 取不到自身版本号也让点：真检查不出来，至少还能问服务器一趟。
       onTap: _check,
@@ -525,8 +530,8 @@ class _VersionRowState extends State<_VersionRow> {
         row,
         ListTile(
           leading: const Icon(Icons.science_outlined),
-          title: const Text('更新通道'),
-          subtitle: Text(_useBeta ? '内测版，只推给你' : '稳定版，所有人都在用'),
+          title: Text(Lc.current.updateChannel),
+          subtitle: Text(_useBeta ? Lc.current.betaChannelHint : Lc.current.stableChannelHint),
           trailing: const Icon(Icons.chevron_right, size: 20),
           onTap: _pickChannel,
         ),
@@ -538,15 +543,15 @@ class _VersionRowState extends State<_VersionRow> {
     final v = await showDialog<bool>(
       context: context,
       builder: (c) => SimpleDialog(
-        title: const Text('更新通道'),
+        title: Text(Lc.current.updateChannel),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('稳定版　验证过的'),
+            child: Text(Lc.current.stableOption),
           ),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('内测版　改一点就推给你'),
+            child: Text(Lc.current.betaOption),
           ),
         ],
       ),
@@ -566,27 +571,30 @@ class _VersionRowState extends State<_VersionRow> {
     } on ApiException catch (e) {
       err = e;
     } catch (_) {
-      err = '连不上服务器';
+      err = Lc.current.connectFailedPlain;
     }
     if (!mounted) return;
 
     if (err != null) {
       await _tell(
-        '检查更新',
+        Lc.current.checkUpdate,
         err is String ? err : errorText(context, err),
       );
       return;
     }
     final r = rel!;
     if (r.build == _localBuild) {
-      await _tell('检查更新', '已是最新版（${_pkg?.version ?? ''}）');
+      await _tell(Lc.current.checkUpdate, Lc.current.upToDate('${_pkg?.version ?? ''}'));
       return;
     }
     if (r.build < _localBuild) {
       await _tell(
-        '检查更新',
-        '你手上是 build $_localBuild，比${r.channel == 'beta' ? '内测' : '稳定'}版的 '
-        '${r.build} 还新。同签名的包不能往低号装，要回退得先卸载。',
+        Lc.current.checkUpdate,
+        Lc.current.newerThanServer(
+          '$_localBuild',
+          r.channel == 'beta' ? Lc.current.betaShort : Lc.current.stableShort,
+          '${r.build}',
+        ),
       );
       return;
     }
@@ -594,7 +602,7 @@ class _VersionRowState extends State<_VersionRow> {
     final go = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: Text(r.channel == 'beta' ? '内测版 ${r.version}' : '有新版本 ${r.version}'),
+        title: Text(r.channel == 'beta' ? Lc.current.betaVersion('${r.version}') : Lc.current.newVersion('${r.version}')),
         content: ConstrainedBox(
           // 小屏（手表）上不加这层，正文会把按钮顶出可视区。
           constraints: BoxConstraints(
@@ -604,19 +612,19 @@ class _VersionRowState extends State<_VersionRow> {
           child: SingleChildScrollView(
             child: Text(
               r.notes.isEmpty
-                  ? '大小 ${r.sizeText}，装完会覆盖当前版本，登录和设置都还在。'
-                  : '${r.notes}\n\n大小 ${r.sizeText}，装完会覆盖当前版本，登录和设置都还在。',
+                  ? Lc.current.installOverwrite('${r.sizeText}')
+                  : Lc.current.releaseNotes('${r.notes}', '${r.sizeText}'),
             ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('以后再说'),
+            child: Text(Lc.current.later),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('下载并安装'),
+            child: Text(Lc.current.downloadAndInstall),
           ),
         ],
       ),
@@ -631,7 +639,7 @@ class _VersionRowState extends State<_VersionRow> {
         title: Text(title),
         content: Text(body),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('好')),
+          TextButton(onPressed: () => Navigator.pop(c), child: Text(Lc.current.ok)),
         ],
       ),
     );
@@ -646,7 +654,7 @@ class _VersionRowState extends State<_VersionRow> {
         context: context,
         barrierDismissible: false,
         builder: (c) => AlertDialog(
-          title: const Text('正在下载'),
+          title: Text(Lc.current.downloading),
           content: ValueListenableBuilder<double>(
             valueListenable: prog,
             builder: (_, v, _) => Column(
@@ -670,14 +678,14 @@ class _VersionRowState extends State<_VersionRow> {
         context,
       ).showSnackBar(SnackBar(
         content: Text(
-          isDesktop ? '已交给系统打开' : '已交给系统安装，没反应就去设置里允许安装未知应用',
+          isDesktop ? Lc.current.handedToSystem : Lc.current.handedToInstaller,
         ),
       ));
     } catch (e) {
       if (mounted) nav.pop();
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('下载失败：$e')));
+          .showSnackBar(SnackBar(content: Text(Lc.current.downloadFailedWith('${e}'))));
     }
   }
 }
@@ -712,7 +720,7 @@ class _WebEntryRow extends StatelessWidget {
       children: [
         ListTile(
           leading: const Icon(Icons.link),
-          title: const Text('当前入口'),
+          title: Text(Lc.current.primaryEndpoint),
           subtitle: Text(_current, style: const TextStyle(fontSize: 12)),
           trailing: const Icon(Icons.copy, size: 18),
           onTap: () => _copy(context, _current),
@@ -720,7 +728,7 @@ class _WebEntryRow extends StatelessWidget {
         if (_alt.isNotEmpty) ...[
           ListTile(
             leading: const Icon(Icons.swap_horiz),
-            title: const Text('备用入口'),
+            title: Text(Lc.current.backupEndpoint),
             subtitle: Text(_alt, style: const TextStyle(fontSize: 12)),
             trailing: const Icon(Icons.copy, size: 18),
             onTap: () => _copy(context, _alt),
@@ -728,7 +736,7 @@ class _WebEntryRow extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: Text(
-              '两个地址是同一个站。主入口连不上时会自己走备用那条。',
+              Lc.current.endpointHint,
               style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
             ),
           ),
@@ -740,7 +748,7 @@ class _WebEntryRow extends StatelessWidget {
   void _copy(BuildContext context, String s) {
     Clipboard.setData(ClipboardData(text: s));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('地址已复制')),
+      SnackBar(content: Text(Lc.current.addressCopied)),
     );
   }
 }
@@ -774,16 +782,16 @@ class _ClearCacheTileState extends State<_ClearCacheTile> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('清除缓存'),
-        content: const Text('图片和接口缓存都会删掉，下次打开重新下载。\n登录状态和设置不受影响。'),
+        title: Text(Lc.current.clearCache),
+        content: Text(Lc.current.clearCacheConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('算了'),
+            child: Text(Lc.current.forgetIt),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('清除'),
+            child: Text(Lc.current.clear),
           ),
         ],
       ),
@@ -798,22 +806,22 @@ class _ClearCacheTileState extends State<_ClearCacheTile> {
       _size = 0;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(before > 0 ? '已清除 ${AppCache.human(before)}' : '已清除')),
+      SnackBar(content: Text(before > 0 ? Lc.current.clearedAmount('${AppCache.human(before)}') : Lc.current.cleared)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final sub = _busy
-        ? '正在清…'
+        ? Lc.current.clearing
         : _size == null
-            ? '正在算…'
+            ? Lc.current.calculating
             : _size == 0
-                ? '暂时是空的'
-                : '占 ${AppCache.human(_size!)}';
+                ? Lc.current.cacheEmpty
+                : Lc.current.cacheSize('${AppCache.human(_size!)}');
     return ListTile(
       leading: const Icon(Icons.cleaning_services_outlined),
-      title: const Text('清除缓存'),
+      title: Text(Lc.current.clearCache),
       subtitle: Text(sub),
       onTap: _confirm,
     );

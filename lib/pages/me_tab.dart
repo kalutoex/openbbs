@@ -11,6 +11,7 @@ import 'settings_page.dart';
 import 'thread_list_page.dart';
 import 'user_page.dart';
 
+import '../l10n/l10n.dart';
 class MeTab extends StatelessWidget {
   final VoidCallback onMenu;
 
@@ -26,10 +27,10 @@ class MeTab extends StatelessWidget {
         leading: IconButton(
           onPressed: onMenu,
           icon: const Icon(Icons.menu),
-          tooltip: '菜单',
+          tooltip: Lc.current.menu,
         ),
         titleSpacing: 0,
-        title: const Text('我的', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(Lc.current.me, style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: ListenableBuilder(
         listenable: AppState.instance,
@@ -54,8 +55,8 @@ class MeTab extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  '还没登录',
+                                Text(
+                                  Lc.current.notLoggedIn,
                                   style: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.w600,
@@ -63,7 +64,7 @@ class MeTab extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '登录后可以发帖、回复、关注團',
+                                  Lc.current.loginBenefits,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: cs.outline,
@@ -80,7 +81,7 @@ class MeTab extends StatelessWidget {
                                 ),
                               );
                             },
-                            child: const Text('登录'),
+                            child: Text(Lc.current.login),
                           ),
                         ],
                       )
@@ -171,7 +172,7 @@ class MeTab extends StatelessWidget {
               if (u != null) ...[
                 ListTile(
                   leading: const Icon(Icons.people_outline),
-                  title: const Text('关注'),
+                  title: Text(Lc.current.follow),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(
                     context,
@@ -180,14 +181,14 @@ class MeTab extends StatelessWidget {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.star_border),
-                  title: const Text('我的收藏'),
+                  title: Text(Lc.current.myFavorites),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ThreadListPage(
-                        title: '我的收藏',
+                      builder: (_) => ThreadListPage(
+                        title: Lc.current.myFavorites,
                         path: '/favorites',
-                        emptyText: '还没收藏过線',
+                        emptyText: Lc.current.noFavoritesYet,
                       ),
                     ),
                   ),
@@ -195,14 +196,14 @@ class MeTab extends StatelessWidget {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.history),
-                  title: const Text('浏览历史'),
+                  title: Text(Lc.current.browseHistory),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ThreadListPage(
-                        title: '浏览历史',
+                      builder: (_) => ThreadListPage(
+                        title: Lc.current.browseHistory,
                         path: '/history',
-                        emptyText: '还没有浏览记录',
+                        emptyText: Lc.current.noHistoryYet,
                       ),
                     ),
                   ),
@@ -211,7 +212,7 @@ class MeTab extends StatelessWidget {
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.settings_outlined),
-                title: const Text('设置'),
+                title: Text(Lc.current.settings),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(
                   context,

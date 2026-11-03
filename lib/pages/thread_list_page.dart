@@ -5,6 +5,7 @@ import '../widgets/thread_tile.dart';
 import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 一条只有帖子列表的页：收藏、浏览历史共用。
 class ThreadListPage extends StatefulWidget {
   final String title;
@@ -138,7 +139,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
           IconButton(
             onPressed: _reload,
             icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
+            tooltip: Lc.current.refresh,
           ),
         ],
       ),
@@ -169,7 +170,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
           Center(
             child: FilledButton.tonal(
               onPressed: _reload,
-              child: const Text('重试'),
+              child: Text(Lc.current.retry),
             ),
           ),
         ],
@@ -200,7 +201,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
             padding: const EdgeInsets.symmetric(vertical: 18),
             child: Center(
               child: Text(
-                _busy ? '加载中…' : (_hasMore ? '还有更多' : '到底了'),
+                _busy ? Lc.current.loading : (_hasMore ? Lc.current.moreToLoad : Lc.current.endOfList),
                 style: TextStyle(color: cs.outline, fontSize: 12),
               ),
             ),

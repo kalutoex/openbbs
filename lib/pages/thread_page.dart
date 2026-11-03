@@ -18,6 +18,7 @@ import '../widgets/skeleton.dart';
 import '../widgets/user_link.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 帖子详情：楼层 + 楼中楼。
 class ThreadPage extends StatefulWidget {
   final int threadId;
@@ -137,23 +138,23 @@ class _ThreadPageState extends State<ThreadPage> {
     final n = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('跳转楼层'),
+        title: Text(Lc.current.jumpToFloor),
         content: TextField(
           controller: ctl,
           autofocus: true,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(hintText: '输入楼层号，比如 128'),
+          decoration: InputDecoration(hintText: Lc.current.floorJumpHint),
           onSubmitted: (v) => Navigator.of(ctx).pop(int.tryParse(v)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
+            child: Text(Lc.current.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(int.tryParse(ctl.text)),
-            child: const Text('跳'),
+            child: Text(Lc.current.jump),
           ),
         ],
       ),
@@ -199,7 +200,7 @@ class _ThreadPageState extends State<ThreadPage> {
     final list = _shownList();
     final idx = list.indexWhere((p) => (p['floor'] ?? 0) == n);
     if (idx < 0) {
-      _toast(_page <= _pages ? '还没翻到第 $n 楼' : '没有第 $n 楼');
+      _toast(_page <= _pages ? Lc.current.notReachedFloor('${n}') : Lc.current.noSuchFloor('${n}'));
       return;
     }
     if (!_itemScroll.isAttached) return;
@@ -245,7 +246,7 @@ class _ThreadPageState extends State<ThreadPage> {
         _pages = (d['pages'] ?? 1) as int;
         _page++;
         _first = false;
-        _err = cached ? '网络不通，下面是上次缓存的内容' : null;
+        _err = cached ? Lc.current.offlineCached : null;
       });
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -317,7 +318,7 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _send() async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     final body = _input.text.trim();
@@ -359,7 +360,7 @@ class _ThreadPageState extends State<ThreadPage> {
 
   void _beginReply(Map<String, dynamic> post) {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     setState(() => _replyTo = post);
@@ -376,7 +377,7 @@ class _ThreadPageState extends State<ThreadPage> {
       setState(() {
         _thread = {...t, if (kind == 'top') 'is_top': on else 'is_good': on};
       });
-      _toast(kind == 'top' ? (on ? '已置顶' : '已取消置顶') : (on ? '已加精' : '已取消加精'));
+      _toast(kind == 'top' ? (on ? Lc.current.pinnedToast : Lc.current.unpinnedToast) : (on ? Lc.current.featuredToast : Lc.current.unfeaturedToast));
     } on ApiException catch (e) {
       _toast(e);
     }
@@ -390,17 +391,17 @@ class _ThreadPageState extends State<ThreadPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '举报理由',
+                  Lc.current.reportReason,
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ),
-            for (final r in const ['垃圾广告', '人身攻击', '违法违规', '内容不实', '其他'])
+            for (final r in [Lc.current.reportSpam, Lc.current.reportAbuse, Lc.current.reportIllegal, Lc.current.reportFalse, Lc.current.reportOther])
               ListTile(title: Text(r), onTap: () => Navigator.of(ctx).pop(r)),
           ],
         ),
@@ -411,7 +412,7 @@ class _ThreadPageState extends State<ThreadPage> {
   Future<void> _sendReport(Map<String, dynamic> body) async {
     try {
       final r = await Api.post('/report', body);
-      _toast(r['duplicate'] == true ? '已经报过一次了' : '收到了，会看');
+      _toast(r['duplicate'] == true ? Lc.current.reportDuplicate : Lc.current.reportThanks);
     } on ApiException catch (e) {
       _toast(e);
     }
@@ -422,7 +423,7 @@ class _ThreadPageState extends State<ThreadPage> {
     final t = _thread;
     if (t == null) return;
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     final reason = await _pickReason();
@@ -433,7 +434,7 @@ class _ThreadPageState extends State<ThreadPage> {
   /// 举报某一层。
   Future<void> _reportReply(Map<String, dynamic> post) async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     final reason = await _pickReason();
@@ -450,7 +451,7 @@ class _ThreadPageState extends State<ThreadPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(Lc.current.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -458,7 +459,7 @@ class _ThreadPageState extends State<ThreadPage> {
               foregroundColor: Theme.of(ctx).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('删除'),
+            child: Text(Lc.current.delete),
           ),
         ],
       ),
@@ -469,7 +470,7 @@ class _ThreadPageState extends State<ThreadPage> {
   /// 改自己的帖子。图片在编辑页里增删，这里只负责把结果拿回来。
   Future<void> _editThread() async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     final t = _thread;
@@ -493,7 +494,7 @@ class _ThreadPageState extends State<ThreadPage> {
       ),
     );
     if (changed == true && mounted) {
-      _toast('改好了');
+      _toast(Lc.current.changed);
       await _reload();
     }
   }
@@ -501,7 +502,7 @@ class _ThreadPageState extends State<ThreadPage> {
   /// 改回复：只动正文，配图原样留着。
   Future<void> _editReply(Map<String, dynamic> post) async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     final id = (post['id'] ?? 0) as int;
@@ -509,26 +510,26 @@ class _ThreadPageState extends State<ThreadPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('改这一楼'),
+        title: Text(Lc.current.editFloor),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           minLines: 3,
           maxLines: 8,
           maxLength: 20000,
-          decoration: const InputDecoration(
-            hintText: '说点什么…',
+          decoration: InputDecoration(
+            hintText: Lc.current.saySomething,
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(Lc.current.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('保存'),
+            child: Text(Lc.current.save),
           ),
         ],
       ),
@@ -542,7 +543,7 @@ class _ThreadPageState extends State<ThreadPage> {
     try {
       await Api.patch('/c/$id', {'body': body});
       if (!mounted) return;
-      _toast('改好了');
+      _toast(Lc.current.changed);
       await _reload();
     } on ApiException catch (e) {
       _toast(e);
@@ -552,14 +553,14 @@ class _ThreadPageState extends State<ThreadPage> {
   /// 管理员：把这一帖（含回复）里的图全换成占位图。
   Future<void> _wipeImages() async {
     final ok = await _confirmDelete(
-      '换成占位图？',
-      '这一帖和下面所有回复里的图都会换成同一张占位图，原图找不回来。',
+      Lc.current.replaceWithPlaceholder,
+      Lc.current.replacePlaceholderConfirm,
     );
     if (!ok) return;
     try {
       final d = await Api.post('/t/${widget.threadId}/replace-images', {});
       if (!mounted) return;
-      _toast('已换掉 ${d['changed'] ?? 0} 张图');
+      _toast(Lc.current.replacedImages('${d['changed'] ?? 0}'));
       _reload();
     } on ApiException catch (e) {
       _toast(e);
@@ -568,15 +569,15 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _deleteThread() async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
-    final ok = await _confirmDelete('删除这帖？', '帖子和下面所有回复一起消失，删了找不回来。');
+    final ok = await _confirmDelete(Lc.current.deletePostConfirm, Lc.current.deleteThreadConfirm);
     if (!ok) return;
     try {
       await Api.delete('/t/${widget.threadId}');
       if (!mounted) return;
-      _toast('帖子已删');
+      _toast(Lc.current.postDeleted);
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       _toast(e);
@@ -585,21 +586,21 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _deletePost(Map<String, dynamic> post) async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     final id = (post['id'] ?? 0) as int;
     final isThread = (post['floor'] ?? 0) == 1;
     final ok = await _confirmDelete(
-      isThread ? '删除这帖？' : '删除这楼？',
-      isThread ? '帖子连同所有回复一起删掉，删了不能恢复。' : '这楼和它下面的楼中楼一起删掉。',
+      isThread ? Lc.current.deletePostConfirm : Lc.current.deleteFloorConfirm,
+      isThread ? Lc.current.deleteThreadBody : Lc.current.deleteFloorBody,
     );
     if (!ok) return;
     try {
       if (isThread) {
         await Api.delete('/t/${widget.threadId}');
         if (!mounted) return;
-        _toast('帖子已删');
+        _toast(Lc.current.postDeleted);
         Navigator.of(context).pop(true);
       } else {
         await Api.delete('/c/$id');
@@ -612,10 +613,10 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _deleteSub(Map<String, dynamic> sub) async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
-    final ok = await _confirmDelete('删除这条回复？', '删了不能恢复。');
+    final ok = await _confirmDelete(Lc.current.deleteReplyConfirm, Lc.current.cannotUndo);
     if (!ok) return;
     try {
       await Api.delete('/c/${sub['id']}');
@@ -627,7 +628,7 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _agree(Map<String, dynamic> post) async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     final id = post['id'] as int;
@@ -679,7 +680,7 @@ class _ThreadPageState extends State<ThreadPage> {
         actions: [
           if (_thread != null)
             PopupMenuButton<String>(
-              tooltip: '更多',
+              tooltip: Lc.current.more,
               onSelected: (v) {
                 if (v == 'only') {
                   setState(() => _onlyAuthor = !_onlyAuthor);
@@ -702,7 +703,7 @@ class _ThreadPageState extends State<ThreadPage> {
                         size: 18,
                       ),
                       const SizedBox(width: 10),
-                      Text(_onlyAuthor ? '已只看楼主' : '只看楼主'),
+                      Text(_onlyAuthor ? Lc.current.onlyAuthorOn : Lc.current.onlyAuthorOff),
                     ],
                   ),
                 ),
@@ -712,7 +713,7 @@ class _ThreadPageState extends State<ThreadPage> {
                     children: [
                       const Icon(Icons.tag, size: 18),
                       const SizedBox(width: 10),
-                      Text(_pages > 1 ? '跳转楼层（共 $_pages 页）' : '跳转楼层'),
+                      Text(_pages > 1 ? Lc.current.jumpToFloorPages('${_pages}') : Lc.current.jumpToFloor),
                     ],
                   ),
                 ),
@@ -728,7 +729,7 @@ class _ThreadPageState extends State<ThreadPage> {
                           size: 18,
                         ),
                         const SizedBox(width: 10),
-                        Text(_thread!['is_top'] == true ? '取消置顶' : '置顶'),
+                        Text(_thread!['is_top'] == true ? Lc.current.unpin : Lc.current.pinned),
                       ],
                     ),
                   ),
@@ -744,52 +745,52 @@ class _ThreadPageState extends State<ThreadPage> {
                           size: 18,
                         ),
                         const SizedBox(width: 10),
-                        Text(_thread!['is_good'] == true ? '取消加精' : '加精'),
+                        Text(_thread!['is_good'] == true ? Lc.current.unfeature : Lc.current.feature),
                       ],
                     ),
                   ),
                 if (_thread!['can_edit'] == true)
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'edit',
                     child: Row(
                       children: [
                         Icon(Icons.edit_outlined, size: 18),
                         SizedBox(width: 10),
-                        Text('编辑帖子'),
+                        Text(Lc.current.editPost),
                       ],
                     ),
                   ),
                 if (AppState.instance.user?['is_admin'] == true)
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'wipe',
                     child: Row(
                       children: [
                         Icon(Icons.hide_image_outlined, size: 18),
                         SizedBox(width: 10),
-                        Text('一键替换图片'),
+                        Text(Lc.current.replaceAllImages),
                       ],
                     ),
                   ),
                 if (_thread!['can_delete'] == true)
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'del',
                     child: Row(
                       children: [
                         Icon(Icons.delete_outline, size: 18),
                         SizedBox(width: 10),
-                        Text('删除帖子'),
+                        Text(Lc.current.deletePost),
                       ],
                     ),
                   ),
                 if (AppState.instance.loggedIn &&
                     AppState.instance.user?['id'] != _thread!['owner_id'])
-                  const PopupMenuItem<String>(
+                  PopupMenuItem<String>(
                     value: 'report',
                     child: Row(
                       children: [
                         Icon(Icons.flag_outlined, size: 18),
                         SizedBox(width: 10),
-                        Text('举报'),
+                        Text(Lc.current.report),
                       ],
                     ),
                   ),
@@ -798,7 +799,7 @@ class _ThreadPageState extends State<ThreadPage> {
           IconButton(
             onPressed: _reload,
             icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
+            tooltip: Lc.current.refresh,
           ),
         ],
       ),
@@ -957,8 +958,8 @@ class _ThreadPageState extends State<ThreadPage> {
               Text(
                 [
                   postTime(created),
-                  '${bigNum(views)} 浏览',
-                  if (((op['edited_at'] ?? 0) as int) > 0) '已编辑',
+                  Lc.current.viewsCount('${bigNum(views)}'),
+                  if (((op['edited_at'] ?? 0) as int) > 0) Lc.current.edited,
                 ].join(' · '),
                 style: TextStyle(fontSize: 12, color: cs.outline),
               ),
@@ -1012,15 +1013,15 @@ class _ThreadPageState extends State<ThreadPage> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Row(
             children: [
-              const Text(
-                '相关',
+              Text(
+                Lc.current.related,
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               const SizedBox(width: 4),
               Icon(Icons.keyboard_arrow_down, size: 18, color: cs.outline),
               const Spacer(),
               Text(
-                replies > 0 ? '${bigNum(replies)} 条回复' : '还没有回复',
+                replies > 0 ? Lc.current.repliesCount('${bigNum(replies)}') : Lc.current.noReplies,
                 style: TextStyle(fontSize: 12, color: cs.outline),
               ),
             ],
@@ -1058,7 +1059,7 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _toggleFav() async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     final t = _thread;
@@ -1067,7 +1068,7 @@ class _ThreadPageState extends State<ThreadPage> {
       final d = await Api.post('/fav/${t['id']}', {});
       if (!mounted) return;
       setState(() => t['faved'] = d['faved'] == true);
-      _toast(d['faved'] == true ? '已收藏' : '取消收藏');
+      _toast(d['faved'] == true ? Lc.current.favorited : Lc.current.unfavorite);
     } on ApiException catch (e) {
       _toast(e);
     }
@@ -1075,7 +1076,7 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _agreeThread() async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     final t = _thread;
@@ -1095,7 +1096,7 @@ class _ThreadPageState extends State<ThreadPage> {
   Widget _replyBar(ColorScheme cs) {
     final me = AppState.instance.user;
     final meAvatar = (me?['avatar'] ?? '') as String;
-    final meName = ((me?['nickname'] ?? me?['name'] ?? '我') as Object)
+    final meName = ((me?['nickname'] ?? me?['name'] ?? Lc.current.meShort) as Object)
         .toString();
     return SafeArea(
       top: false,
@@ -1122,7 +1123,7 @@ class _ThreadPageState extends State<ThreadPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '回复 ${(_replyTo!['author'] ?? '') as String}',
+                      Lc.current.replyTo('${(_replyTo!['author'] ?? '') as String}'),
                       style: TextStyle(fontSize: 12, color: cs.primary),
                     ),
                     GestureDetector(
@@ -1152,7 +1153,7 @@ class _ThreadPageState extends State<ThreadPage> {
                       isDense: true,
                       filled: true,
                       fillColor: cs.surfaceContainerHighest,
-                      hintText: '发布你的回复',
+                      hintText: Lc.current.replyHint,
                       hintStyle: TextStyle(fontSize: 14, color: cs.outline),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -1175,7 +1176,7 @@ class _ThreadPageState extends State<ThreadPage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.image_outlined, size: 22),
-                  tooltip: '加图',
+                  tooltip: Lc.current.addImageShort,
                 ),
                 IconButton(
                   visualDensity: VisualDensity.compact,
@@ -1238,7 +1239,7 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _pickImages() async {
     if (_imgs.length >= 9) {
-      _toast('最多 9 张');
+      _toast(Lc.current.maxNineImages);
       return;
     }
     if (_compressing) return;
@@ -1252,14 +1253,14 @@ class _ThreadPageState extends State<ThreadPage> {
         final raw = await x.readAsBytes();
         final b = await ImgCompress.run(raw);
         if (ImgCompress.tooBig(b)) {
-          _toast('有张图压完还是太大，跳过了');
+          _toast(Lc.current.imageStillTooBig);
           continue;
         }
         _imgs.add(b);
       }
       if (mounted) setState(() {});
     } catch (e) {
-      _toast('打不开相册：$e');
+      _toast(Lc.current.albumFailed('$e'));
     } finally {
       if (mounted) setState(() => _compressing = false);
     }
@@ -1308,19 +1309,19 @@ class _PostCardState extends State<_PostCard> {
             if (widget.onEdit != null)
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('编辑'),
+                title: Text(Lc.current.edit),
                 onTap: () => Navigator.of(c).pop('edit'),
               ),
             if (widget.onDelete != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline),
-                title: const Text('删除'),
+                title: Text(Lc.current.delete),
                 onTap: () => Navigator.of(c).pop('del'),
               ),
             if (widget.onReport != null)
               ListTile(
                 leading: const Icon(Icons.flag_outlined),
-                title: const Text('举报'),
+                title: Text(Lc.current.report),
                 onTap: () => Navigator.of(c).pop('report'),
               ),
             const SizedBox(height: 8),
@@ -1402,7 +1403,7 @@ class _PostCardState extends State<_PostCard> {
                                 borderRadius: BorderRadius.circular(3),
                               ),
                               child: Text(
-                                '楼主',
+                                Lc.current.opAuthor,
                                 style: TextStyle(
                                   fontSize: 9,
                                   color: cs.primary,
@@ -1416,7 +1417,7 @@ class _PostCardState extends State<_PostCard> {
                                 if (handle.isNotEmpty) '@$handle',
                                 timeAgo(created),
                                 if (((post['edited_at'] ?? 0) as int) > 0)
-                                  '已编辑',
+                                  Lc.current.edited,
                               ].join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1434,13 +1435,13 @@ class _PostCardState extends State<_PostCard> {
                               anchors: editable.contextMenuAnchors,
                               buttonItems: [
                                 ContextMenuButtonItem(
-                                  label: '复制全文',
+                                  label: Lc.current.copyFullText,
                                   onPressed: () {
                                     Clipboard.setData(
                                       ClipboardData(text: bodyText),
                                     );
                                     editable.hideToolbar();
-                                    _toastOf(ctx, '已复制');
+                                    _toastOf(ctx, Lc.current.copied);
                                   },
                                 ),
                                 ...editable.contextMenuButtonItems,
@@ -1457,7 +1458,7 @@ class _PostCardState extends State<_PostCard> {
                           child: Padding(
                             padding: const EdgeInsets.only(top: 6, bottom: 2),
                             child: Text(
-                              _all ? '收起' : '展开全部 ${subs.length} 条回复',
+                              _all ? Lc.current.collapse : Lc.current.expandAllReplies('${subs.length}'),
                               style: TextStyle(fontSize: 12, color: cs.primary),
                             ),
                           ),

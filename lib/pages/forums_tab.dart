@@ -8,10 +8,11 @@ import 'forum_page.dart';
 import 'login_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 板块页：一页滚到底。
 ///
 /// 原来的两栏卡片网格太挤，改成单列行式列表——搜索常驻顶部，
-/// 登录了就先把「我关注的」摆出来，下面接着全部的團。
+/// 登录了就先把「我关注的」摆出来，下面接着全部的吧。
 class ForumsTab extends StatefulWidget {
   final VoidCallback onMenu;
 
@@ -70,7 +71,7 @@ class _ForumsTabState extends State<ForumsTab> {
       if (!mounted) return;
       setState(() => _mine = (d['items'] as List).cast<Map<String, dynamic>>());
     } on ApiException catch (_) {
-      // 关注的團拉不动不算错，页面还有「全部」可用
+      // 关注的吧拉不动不算错，页面还有「全部」可用
       if (mounted) setState(() => _mine = const []);
     }
   }
@@ -115,18 +116,18 @@ class _ForumsTabState extends State<ForumsTab> {
         leading: IconButton(
           onPressed: widget.onMenu,
           icon: const Icon(Icons.menu),
-          tooltip: '菜单',
+          tooltip: Lc.current.menu,
         ),
         titleSpacing: 4,
-        title: const Text(
-          '板块',
+        title: Text(
+          Lc.current.forums,
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 19),
         ),
         actions: [
           IconButton(
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
+            tooltip: Lc.current.refresh,
           ),
         ],
       ),
@@ -167,13 +168,13 @@ class _ForumsTabState extends State<ForumsTab> {
         },
         decoration: InputDecoration(
           isDense: true,
-          hintText: '搜團',
+          hintText: Lc.current.searchForumsHint,
           prefixIcon: const Icon(Icons.search, size: 20),
           suffixIcon: _q.text.isEmpty
               ? null
               : IconButton(
                   icon: const Icon(Icons.close, size: 18),
-                  tooltip: '清空',
+                  tooltip: Lc.current.clearAll,
                   onPressed: () {
                     _q.clear();
                     _debounce?.cancel();
@@ -214,7 +215,7 @@ class _ForumsTabState extends State<ForumsTab> {
             style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
-          OutlinedButton(onPressed: _refresh, child: const Text('再试一次')),
+          OutlinedButton(onPressed: _refresh, child: Text(Lc.current.tryAgain)),
         ],
       ),
     );
@@ -277,7 +278,7 @@ class _ForumsTabState extends State<ForumsTab> {
               Icon(Icons.search_off, size: 34, color: cs.outline),
               const SizedBox(height: 10),
               Text(
-                '没搜到「$_query」',
+                Lc.current.noSearchResult('${_query}'),
                 style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
               ),
             ],
@@ -286,7 +287,7 @@ class _ForumsTabState extends State<ForumsTab> {
       ];
     }
     return [
-      _header('搜到 ${items.length} 个', cs),
+      _header(Lc.current.searchResultCount('${items.length}'), cs),
       for (final f in items) _row(f, cs),
     ];
   }
@@ -300,17 +301,17 @@ class _ForumsTabState extends State<ForumsTab> {
       else if (mine.isEmpty)
         _emptyMine(cs)
       else ...[
-        _header('我关注的 ${mine.length}', cs),
+        _header(Lc.current.myFollowedForums('${mine.length}'), cs),
         for (final f in mine) _row(f, cs),
         const SizedBox(height: 8),
       ],
-      _header('全部 ${all.length}', cs),
+      _header(Lc.current.allForums('${all.length}'), cs),
       if (all.isEmpty)
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 30, 24, 0),
           child: Center(
             child: Text(
-              '还没有建板块',
+              Lc.current.noForums,
               style: TextStyle(fontSize: 13, color: cs.outline),
             ),
           ),
@@ -352,12 +353,12 @@ class _ForumsTabState extends State<ForumsTab> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '登录后能看到关注过的團',
+                  Lc.current.loginToSeeFollowed,
                   style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
                 ),
               ),
               Text(
-                '去登录',
+                Lc.current.goLogin,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -387,7 +388,7 @@ class _ForumsTabState extends State<ForumsTab> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                '还没关注團，进一个點关注',
+                Lc.current.noFollowedForums,
                 style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
               ),
             ),
@@ -454,14 +455,14 @@ class _ForumsTabState extends State<ForumsTab> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    intro.isEmpty ? '还没有简介' : intro,
+                    intro.isEmpty ? Lc.current.noIntro : intro,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$threads 線 · $followers 关注',
+                    Lc.current.forumStats('${threads}', '${followers}'),
                     style: TextStyle(fontSize: 11, color: cs.outline),
                   ),
                 ],

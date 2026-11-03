@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../store.dart';
 
+import '../l10n/l10n.dart';
 /// 36 档，0° 到 350°，和 AppState 的色相范围、Slider 的 max 对齐。
 /// （37 档会走到 360°，等于 0°，色环首尾重复。）
 final _rainbow = List.generate(
@@ -23,7 +24,7 @@ class ThemeColorPage extends StatelessWidget {
     final tFill = scheme.onSurface;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('主题色')),
+      appBar: AppBar(title: Text(Lc.current.accentColor)),
       body: ValueListenableBuilder<double>(
         valueListenable: st.accentHue,
         builder: (context, hue, _) => SingleChildScrollView(
@@ -31,7 +32,7 @@ class ThemeColorPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('主题颜色', style: t.textTheme.titleMedium),
+              Text(Lc.current.themeColorTitle, style: t.textTheme.titleMedium),
               const SizedBox(height: 12),
               RepaintBoundary(
                 child: SizedBox(
@@ -103,7 +104,7 @@ class ThemeColorPage extends StatelessWidget {
               ),
               const SizedBox(height: 28),
               Text(
-                '上面的按钮、选中状态、输入框焦点圈都会跟着这条色带走。',
+                Lc.current.accentColorHint,
                 style: t.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),

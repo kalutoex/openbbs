@@ -9,6 +9,7 @@ import 'search_page.dart';
 import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 时间线：全站最新的帖子。
 class FeedTab extends StatefulWidget {
   final VoidCallback onMenu;
@@ -182,7 +183,7 @@ class _FeedTabState extends State<FeedTab> {
         leading: IconButton(
           onPressed: widget.onMenu,
           icon: const Icon(Icons.menu),
-          tooltip: '菜单',
+          tooltip: Lc.current.menu,
         ),
         titleSpacing: 0,
         title: Text(
@@ -194,15 +195,15 @@ class _FeedTabState extends State<FeedTab> {
             onPressed: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const SearchPage())),
             icon: const Icon(Icons.search),
-            tooltip: '搜索',
+            tooltip: Lc.current.search,
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (v) {
               if (v == 'refresh') _reload();
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'refresh', child: Text('刷新')),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'refresh', child: Text(Lc.current.refresh)),
             ],
           ),
         ],
@@ -214,7 +215,7 @@ class _FeedTabState extends State<FeedTab> {
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOut,
               ),
-              tooltip: '回到顶部',
+              tooltip: Lc.current.backToTop,
               child: const Icon(Icons.arrow_upward, size: 20),
             )
           : null,
@@ -240,7 +241,7 @@ class _FeedTabState extends State<FeedTab> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '连不上服务器，这是上次的缓存',
+                          Lc.current.offlineCacheFeed,
                           style: TextStyle(
                             fontSize: 12,
                             color: cs.onTertiaryContainer,
@@ -248,7 +249,7 @@ class _FeedTabState extends State<FeedTab> {
                         ),
                       ),
                       Text(
-                        '重试',
+                        Lc.current.retry,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -282,9 +283,9 @@ class _FeedTabState extends State<FeedTab> {
                       );
                     }
                     if (_items.isEmpty) {
-                      return const Padding(
+                      return Padding(
                         padding: EdgeInsets.only(top: 120),
-                        child: Center(child: Text('还没有人发帖')),
+                        child: Center(child: Text(Lc.current.noPostsYet)),
                       );
                     }
                     return Padding(
@@ -298,7 +299,7 @@ class _FeedTabState extends State<FeedTab> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : Text('到底了', style: TextStyle(color: cs.outline)),
+                            : Text(Lc.current.endOfList, style: TextStyle(color: cs.outline)),
                       ),
                     );
                   }

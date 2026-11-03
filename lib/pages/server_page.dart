@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../store.dart';
 
+import '../l10n/l10n.dart';
 /// 服务器选路：自动 / 仅 IPv6 / 仅 IPv4 / 手动。
 class ServerPage extends StatefulWidget {
   const ServerPage({super.key});
@@ -26,7 +27,7 @@ class _ServerPageState extends State<ServerPage> {
       if (v.isEmpty) {
         setState(() {
           _ok = false;
-          _msg = '手动要填地址';
+          _msg = Lc.current.manualNeedsAddress;
         });
         return;
       }
@@ -41,12 +42,12 @@ class _ServerPageState extends State<ServerPage> {
       await Api.get('/feed');
       setState(() {
         _ok = true;
-        _msg = '通了，当前用 ${Api.base}';
+        _msg = Lc.current.serverOkUsing('${Api.base}');
       });
     } catch (e) {
       setState(() {
         _ok = false;
-        _msg = '连不上：$e';
+        _msg = Lc.current.connectFailedBody('${e}');
       });
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -63,7 +64,7 @@ class _ServerPageState extends State<ServerPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('服务器')),
+      appBar: AppBar(title: Text(Lc.current.server)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -74,23 +75,23 @@ class _ServerPageState extends State<ServerPage> {
               children: [
                 RadioListTile<ServerMode>(
                   value: ServerMode.auto,
-                  title: const Text('自动'),
-                  subtitle: const Text('先试 IPv6，连不上再用 IPv4'),
+                  title: Text(Lc.current.auto),
+                  subtitle: Text(Lc.current.ipv6FirstHint),
                 ),
                 RadioListTile<ServerMode>(
                   value: ServerMode.ipv6,
-                  title: const Text('IPv6 通道'),
+                  title: Text(Lc.current.channelIpv6),
                   subtitle: Text(Api.chIpv6),
                 ),
                 RadioListTile<ServerMode>(
                   value: ServerMode.ipv4,
-                  title: const Text('IPv4 通道'),
+                  title: Text(Lc.current.channelIpv4),
                   subtitle: Text(Api.chIpv4),
                 ),
                 RadioListTile<ServerMode>(
                   value: ServerMode.manual,
-                  title: const Text('手动'),
-                  subtitle: const Text('自己填地址'),
+                  title: Text(Lc.current.manual),
+                  subtitle: Text(Lc.current.enterManually),
                 ),
               ],
             ),
@@ -101,8 +102,8 @@ class _ServerPageState extends State<ServerPage> {
             enabled: _mode == ServerMode.manual,
             keyboardType: TextInputType.url,
             autocorrect: false,
-            decoration: const InputDecoration(
-              labelText: '服务器地址',
+            decoration: InputDecoration(
+              labelText: Lc.current.serverAddress,
               hintText: 'http://192.168.1.10:8080',
               border: OutlineInputBorder(),
             ),
@@ -116,7 +117,7 @@ class _ServerPageState extends State<ServerPage> {
                     width: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('保存并测试'),
+                : Text(Lc.current.saveAndTest),
           ),
           if (_msg != null) ...[
             const SizedBox(height: 14),
@@ -127,7 +128,7 @@ class _ServerPageState extends State<ServerPage> {
           ],
           const SizedBox(height: 24),
           Text(
-            '当前出口：${Api.base}',
+            Lc.current.currentExit('${Api.base}'),
             style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
           ),
         ],

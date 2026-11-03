@@ -5,6 +5,7 @@ import '../store.dart';
 import '../widgets/avatar.dart';
 import 'login_page.dart';
 
+import '../l10n/l10n.dart';
 /// 本机登录过的账号列表。点一下就换，不用重新输密码。
 class AccountsPage extends StatelessWidget {
   const AccountsPage({super.key});
@@ -21,7 +22,7 @@ class AccountsPage extends StatelessWidget {
     if (!context.mounted) return;
     messenger.showSnackBar(
       SnackBar(
-        content: Text(ok ? '已切换到 ${a.nickname}' : '${a.nickname} 的登录已失效，已移除'),
+        content: Text(ok ? Lc.current.switchedTo('${a.nickname}') : Lc.current.accountExpiredRemoved('${a.nickname}')),
       ),
     );
     if (ok) nav.pop();
@@ -31,16 +32,16 @@ class AccountsPage extends StatelessWidget {
     final yes = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('移除账号'),
-        content: Text('从本机移除 ${a.nickname}？只是退出这台设备，账号和帖子都还在服务器上。'),
+        title: Text(Lc.current.removeAccount),
+        content: Text(Lc.current.removeAccountConfirm('${a.nickname}')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('算了'),
+            child: Text(Lc.current.forgetIt),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('移除'),
+            child: Text(Lc.current.remove),
           ),
         ],
       ),
@@ -57,7 +58,7 @@ class AccountsPage extends StatelessWidget {
     if (!context.mounted) return;
     if (ok == true && st.accounts.length > before) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已添加 ${st.activeAccount?.nickname ?? '账号'}')),
+        SnackBar(content: Text(Lc.current.accountAdded('${st.activeAccount?.nickname ?? Lc.current.accounts}'))),
       );
     }
   }
@@ -68,7 +69,7 @@ class AccountsPage extends StatelessWidget {
     final st = AppState.instance;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('账号')),
+      appBar: AppBar(title: Text(Lc.current.accounts)),
       body: ListenableBuilder(
         listenable: st,
         builder: (context, _) {
@@ -78,9 +79,9 @@ class AccountsPage extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 32),
             children: [
               if (list.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(16, 32, 16, 16),
-                  child: Text('还没有账号'),
+                  child: Text(Lc.current.noAccounts),
                 ),
               for (final a in list)
                 ListTile(
@@ -99,7 +100,7 @@ class AccountsPage extends StatelessWidget {
                   trailing: a.token == active?.token
                       ? Icon(Icons.check_circle, color: cs.primary)
                       : IconButton(
-                          tooltip: '移除',
+                          tooltip: Lc.current.remove,
                           icon: const Icon(Icons.close),
                           onPressed: () => _remove(context, a),
                         ),
@@ -109,14 +110,14 @@ class AccountsPage extends StatelessWidget {
               const Divider(height: 24),
               ListTile(
                 leading: const Icon(Icons.person_add_alt_1_outlined),
-                title: const Text('添加账号'),
-                subtitle: const Text('登录另一个账号，之后可以随时切回来'),
+                title: Text(Lc.current.addAccount),
+                subtitle: Text(Lc.current.addAccountHint),
                 onTap: () => _add(context),
               ),
               ListTile(
                 leading: const Icon(Icons.vpn_key_outlined),
-                title: const Text('粘贴登录凭证'),
-                subtitle: const Text('把别的设备上的账号加进这台机器'),
+                title: Text(Lc.current.pasteCredential),
+                subtitle: Text(Lc.current.addFromDevice),
                 onTap: () => _add(context),
               ),
             ],

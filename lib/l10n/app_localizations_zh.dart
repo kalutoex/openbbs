@@ -37,7 +37,7 @@ class LZh extends L {
   String get done => '完成';
 
   @override
-  String get confirm => '确认';
+  String get confirm => '确定';
 
   @override
   String get send => '发送';
@@ -148,7 +148,7 @@ class LZh extends L {
   String get notice => '通知';
 
   @override
-  String get me => '我';
+  String get me => '我的';
 
   @override
   String get newThread => '发帖';
@@ -172,7 +172,7 @@ class LZh extends L {
   String get confirmDelete => '删了就找不回来，确定？';
 
   @override
-  String get confirmLogout => '确定要退出登录？';
+  String get confirmLogout => '退出登录？';
 
   @override
   String get unsavedChanges => '有没保存的内容，确定离开？';
@@ -201,5 +201,1554 @@ class LZh extends L {
   @override
   String errDownloadFailed(int status) {
     return '下载失败（$status）';
+  }
+
+  @override
+  String get needLogin => '先登录';
+
+  @override
+  String get forgetIt => '算了';
+
+  @override
+  String get follow => '关注';
+
+  @override
+  String connectFailed(String v1) {
+    return '连不上服务器：$v1';
+  }
+
+  @override
+  String get myFavorites => '我的收藏';
+
+  @override
+  String get browseHistory => '浏览历史';
+
+  @override
+  String get notLoggedIn => '还没登录';
+
+  @override
+  String get menu => '菜单';
+
+  @override
+  String get densityNormal => '标准';
+
+  @override
+  String get timeline => '时间线';
+
+  @override
+  String get deleteIt => '删掉';
+
+  @override
+  String get postDeleted => '帖子已删';
+
+  @override
+  String get emailAndCodeRequired => '邮箱和验证码都要填';
+
+  @override
+  String maxImages(String v1) {
+    return '最多 $v1 张';
+  }
+
+  @override
+  String get imageStillTooBig => '有张图压完还是太大，跳过了';
+
+  @override
+  String get addImageShort => '加图';
+
+  @override
+  String get accept => '采纳';
+
+  @override
+  String get wontDo => '不做';
+
+  @override
+  String get endOfList => '到底了';
+
+  @override
+  String get following => '已关注';
+
+  @override
+  String get sortUpdated => '最新回复';
+
+  @override
+  String get sortCreated => '最新发布';
+
+  @override
+  String get connectFailedPlain => '连不上服务器';
+
+  @override
+  String get server => '服务器';
+
+  @override
+  String get checkUpdate => '检查更新';
+
+  @override
+  String uploadFailedWith(String v1) {
+    return '上传失败：$v1';
+  }
+
+  @override
+  String get album => '相册';
+
+  @override
+  String get allowed => '已允许';
+
+  @override
+  String get accountManagement => '账号管理';
+
+  @override
+  String get featureRequests => '想要的新功能';
+
+  @override
+  String get tapToRetry => '点一下重试';
+
+  @override
+  String saveFailed(String v1) {
+    return '保存失败：$v1';
+  }
+
+  @override
+  String get deleteThreadConfirm => '帖子和下面所有回复一起消失，删了找不回来。';
+
+  @override
+  String get pinned => '置顶';
+
+  @override
+  String get fillEmailFirst => '先填邮箱';
+
+  @override
+  String get accountSecurity => '账号安全';
+
+  @override
+  String get code => '验证码';
+
+  @override
+  String get remove => '移除';
+
+  @override
+  String get pasteCredential => '粘贴登录凭证';
+
+  @override
+  String get ignore => '忽略';
+
+  @override
+  String get loadMore => '加载更多';
+
+  @override
+  String get post => '帖子';
+
+  @override
+  String get resetPassword => '重置密码';
+
+  @override
+  String get newPassword => '新密码';
+
+  @override
+  String albumFailed(String v1) {
+    return '打不开相册：$v1';
+  }
+
+  @override
+  String readImageFailed(String v1) {
+    return '读图失败：$v1';
+  }
+
+  @override
+  String get publishing => '发布中…';
+
+  @override
+  String get clear => '清除';
+
+  @override
+  String get saving => '保存中…';
+
+  @override
+  String get editPost => '编辑帖子';
+
+  @override
+  String get clearAll => '清空';
+
+  @override
+  String get tryAgain => '再试一次';
+
+  @override
+  String get addPeople => '加人';
+
+  @override
+  String get takeDown => '拿下来';
+
+  @override
+  String get permissions => '权限';
+
+  @override
+  String get auto => '自动';
+
+  @override
+  String get manual => '手动';
+
+  @override
+  String get fontSize => '字号';
+
+  @override
+  String get listDensity => '列表密度';
+
+  @override
+  String get feedSort => '时间线排序';
+
+  @override
+  String get startTab => '启动页';
+
+  @override
+  String get sizeSmall => '小';
+
+  @override
+  String get sizeHuge => '特大';
+
+  @override
+  String get sizeLarge => '大';
+
+  @override
+  String get densityCompact => '紧凑';
+
+  @override
+  String get densityLoose => '宽松';
+
+  @override
+  String get chinese => '中文';
+
+  @override
+  String get updateChannel => '更新通道';
+
+  @override
+  String get clearCache => '清除缓存';
+
+  @override
+  String get jumpToFloor => '跳转楼层';
+
+  @override
+  String get changed => '改好了';
+
+  @override
+  String get deletePostConfirm => '删掉这帖？';
+
+  @override
+  String get edited => '已编辑';
+
+  @override
+  String get hueRed => '红';
+
+  @override
+  String get hueOrangeRed => '橙红';
+
+  @override
+  String get hueOrange => '橙';
+
+  @override
+  String get hueAmber => '橙黄';
+
+  @override
+  String get hueYellow => '黄';
+
+  @override
+  String get hueLime => '黄绿';
+
+  @override
+  String get hueGrass => '草绿';
+
+  @override
+  String get hueGreen => '绿';
+
+  @override
+  String get hueTeal => '青绿';
+
+  @override
+  String get hueCyan => '青';
+
+  @override
+  String get hueAzure => '青蓝';
+
+  @override
+  String get hueBlue => '蓝';
+
+  @override
+  String get hueIndigo => '靛蓝';
+
+  @override
+  String get hueViolet => '紫蓝';
+
+  @override
+  String get huePurple => '紫';
+
+  @override
+  String get hueMagenta => '紫红';
+
+  @override
+  String get huePink => '粉';
+
+  @override
+  String get huePinkLight => '浅粉';
+
+  @override
+  String get permNotificationWhy => '有人回复、赞你时提醒你';
+
+  @override
+  String get permPhotosWhy => '发帖、回复时从相册选图';
+
+  @override
+  String get permDeniedForever => '已拒绝 · 去系统设置开';
+
+  @override
+  String get permRestricted => '被系统限制';
+
+  @override
+  String get permAsk => '未允许 · 点一下申请';
+
+  @override
+  String get justNow => '刚刚';
+
+  @override
+  String minutesAgo(String v1) {
+    return '$v1 分钟前';
+  }
+
+  @override
+  String get yesterday => '昨天';
+
+  @override
+  String bigNumSuffix(String v1) {
+    return '$v1万';
+  }
+
+  @override
+  String get am => '上午';
+
+  @override
+  String get pm => '下午';
+
+  @override
+  String postTimeFmt(
+    String v1,
+    String v2,
+    String v3,
+    String v4,
+    String v5,
+    String v6,
+  ) {
+    return '$v1年$v2月$v3日, $v4:$v5 $v6';
+  }
+
+  @override
+  String get threadSpacing => '帖子之间的间距';
+
+  @override
+  String get browseSection => '浏览';
+
+  @override
+  String get startTabHint => '打开 app 先看哪个';
+
+  @override
+  String get showThumbnails => '显示缩略图';
+
+  @override
+  String get showThumbnailsHint => '关掉后时间线只留文字，省流量';
+
+  @override
+  String get autoCheckNotice => '自动检查通知';
+
+  @override
+  String get autoCheckNoticeHint => '每分钟问一次未读数';
+
+  @override
+  String get networkSection => '网络';
+
+  @override
+  String get contentSection => '内容';
+
+  @override
+  String get clearSearchHistory => '清除搜索记录';
+
+  @override
+  String get searchHistoryCleared => '搜索记录已清除';
+
+  @override
+  String get permSubtitle => '通知、相册';
+
+  @override
+  String get currentAccount => '当前账号';
+
+  @override
+  String get noEmailBoundHint => '还没绑邮箱，忘了密码只能找管理员';
+
+  @override
+  String get copyCredential => '复制登录凭证';
+
+  @override
+  String get copyCredentialHint => '重装或换机后，登录页可粘贴恢复';
+
+  @override
+  String get credentialCopied => '凭证已复制';
+
+  @override
+  String get webAccessSection => '网页访问';
+
+  @override
+  String aboutBrand(String v1) {
+    return '关于$v1';
+  }
+
+  @override
+  String get aboutSubtitle => '开源信息、更新日志、许可证';
+
+  @override
+  String get logoutShort => '退出';
+
+  @override
+  String get version => '版本';
+
+  @override
+  String get tapToCheckUpdate => '点一下检查更新';
+
+  @override
+  String get betaChannelHint => '内测版，只推给你';
+
+  @override
+  String get stableChannelHint => '稳定版，所有人都在用';
+
+  @override
+  String get stableOption => '稳定版　验证过的';
+
+  @override
+  String get betaOption => '内测版　改一点就推给你';
+
+  @override
+  String betaVersion(String v1) {
+    return '内测版 $v1';
+  }
+
+  @override
+  String newVersion(String v1) {
+    return '有新版本 $v1';
+  }
+
+  @override
+  String installOverwrite(String v1) {
+    return '大小 $v1，装完会覆盖当前版本，登录和设置都还在。';
+  }
+
+  @override
+  String get later => '以后再说';
+
+  @override
+  String get downloadAndInstall => '下载并安装';
+
+  @override
+  String get downloading => '正在下载';
+
+  @override
+  String get handedToSystem => '已交给系统打开';
+
+  @override
+  String get handedToInstaller => '已交给系统安装，没反应就去设置里允许安装未知应用';
+
+  @override
+  String downloadFailedWith(String v1) {
+    return '下载失败：$v1';
+  }
+
+  @override
+  String get primaryEndpoint => '当前入口';
+
+  @override
+  String get backupEndpoint => '备用入口';
+
+  @override
+  String get endpointHint => '两个地址是同一个站。主入口连不上时会自己走备用那条。';
+
+  @override
+  String get addressCopied => '地址已复制';
+
+  @override
+  String get clearing => '正在清…';
+
+  @override
+  String get calculating => '正在算…';
+
+  @override
+  String get cacheEmpty => '暂时是空的';
+
+  @override
+  String cacheSize(String v1) {
+    return '占 $v1';
+  }
+
+  @override
+  String get cleared => '已清除';
+
+  @override
+  String clearedAmount(String v1) {
+    return '已清除 $v1';
+  }
+
+  @override
+  String newerThanServer(String v1, String v2, String v3) {
+    return '你手上是 build $v1，比$v2版的 $v3 还新。同签名的包不能往低号装，要回退得先卸载。';
+  }
+
+  @override
+  String upToDate(String v1) {
+    return '已是最新版（$v1）';
+  }
+
+  @override
+  String accountLine(String v1, String v2) {
+    return '$v1 · 本机 $v2 个账号';
+  }
+
+  @override
+  String get betaShort => '内测';
+
+  @override
+  String get stableShort => '稳定';
+
+  @override
+  String releaseNotes(String v1, String v2) {
+    return '$v1\n\n大小 $v2，装完会覆盖当前版本，登录和设置都还在。';
+  }
+
+  @override
+  String get clearCacheConfirm => '图片和接口缓存都会删掉，下次打开重新下载。\n登录状态和设置不受影响。';
+
+  @override
+  String get floorJumpHint => '输入楼层号，比如 128';
+
+  @override
+  String get jump => '跳';
+
+  @override
+  String notReachedFloor(String v1) {
+    return '还没翻到第 $v1 楼';
+  }
+
+  @override
+  String noSuchFloor(String v1) {
+    return '没有第 $v1 楼';
+  }
+
+  @override
+  String get offlineCached => '网络不通，下面是上次缓存的内容';
+
+  @override
+  String get pinnedToast => '已置顶';
+
+  @override
+  String get unpinnedToast => '已取消置顶';
+
+  @override
+  String get featuredToast => '已加精';
+
+  @override
+  String get unfeaturedToast => '已取消加精';
+
+  @override
+  String get reportReason => '举报理由';
+
+  @override
+  String get reportSpam => '垃圾广告';
+
+  @override
+  String get reportAbuse => '人身攻击';
+
+  @override
+  String get reportIllegal => '违法违规';
+
+  @override
+  String get reportFalse => '内容不实';
+
+  @override
+  String get reportOther => '其他';
+
+  @override
+  String get reportDuplicate => '已经报过一次了';
+
+  @override
+  String get reportThanks => '收到了，会看';
+
+  @override
+  String get editFloor => '改这一楼';
+
+  @override
+  String get saySomething => '说点什么…';
+
+  @override
+  String get replaceWithPlaceholder => '换成占位图？';
+
+  @override
+  String get replacePlaceholderConfirm => '这一帖和下面所有回复里的图都会换成同一张占位图，原图找不回来。';
+
+  @override
+  String replacedImages(String v1) {
+    return '已换掉 $v1 张图';
+  }
+
+  @override
+  String get deleteFloorConfirm => '删除这楼？';
+
+  @override
+  String get deleteThreadBody => '帖子连同所有回复一起删掉，删了不能恢复。';
+
+  @override
+  String get deleteFloorBody => '这楼和它下面的楼中楼一起删掉。';
+
+  @override
+  String get deleteReplyConfirm => '删除这条回复？';
+
+  @override
+  String get cannotUndo => '删了不能恢复。';
+
+  @override
+  String get onlyAuthorOn => '已只看楼主';
+
+  @override
+  String get onlyAuthorOff => '只看楼主';
+
+  @override
+  String jumpToFloorPages(String v1) {
+    return '跳转楼层（共 $v1 页）';
+  }
+
+  @override
+  String get unpin => '取消置顶';
+
+  @override
+  String get unfeature => '取消加精';
+
+  @override
+  String get feature => '加精';
+
+  @override
+  String get replaceAllImages => '一键替换图片';
+
+  @override
+  String get deletePost => '删除帖子';
+
+  @override
+  String viewsCount(String v1) {
+    return '$v1 浏览';
+  }
+
+  @override
+  String get related => '相关';
+
+  @override
+  String repliesCount(String v1) {
+    return '$v1 条回复';
+  }
+
+  @override
+  String get noReplies => '还没有回复';
+
+  @override
+  String get favorited => '已收藏';
+
+  @override
+  String get unfavorite => '取消收藏';
+
+  @override
+  String get meShort => '我';
+
+  @override
+  String replyTo(String v1) {
+    return '回复 $v1';
+  }
+
+  @override
+  String get replyHint => '发布你的回复';
+
+  @override
+  String get maxNineImages => '最多 9 张';
+
+  @override
+  String get opAuthor => '楼主';
+
+  @override
+  String get copyFullText => '复制全文';
+
+  @override
+  String get copied => '已复制';
+
+  @override
+  String get collapse => '收起';
+
+  @override
+  String expandAllReplies(String v1) {
+    return '展开全部 $v1 条回复';
+  }
+
+  @override
+  String get resumeDraft => '接着上次的写';
+
+  @override
+  String resumeDraftImages(String v1) {
+    return '接着上次的写，带 $v1 张图';
+  }
+
+  @override
+  String get discardDraft => '清掉';
+
+  @override
+  String get pickFromAlbum => '从相册选';
+
+  @override
+  String canAddMore(String v1) {
+    return '还能加 $v1 张';
+  }
+
+  @override
+  String get takePhoto => '拍一张';
+
+  @override
+  String cameraFailed(String v1) {
+    return '打不开相机：$v1';
+  }
+
+  @override
+  String tooManyImages(String v1) {
+    return '最多 $v1 张，多的没收';
+  }
+
+  @override
+  String get deleteThisImage => '删掉这张';
+
+  @override
+  String uploadingStart(String v1) {
+    return '上传图片 0/$v1';
+  }
+
+  @override
+  String uploadingImages(String v1, String v2) {
+    return '上传图片 $v1/$v2';
+  }
+
+  @override
+  String postFailed(String v1) {
+    return '发不出去：$v1';
+  }
+
+  @override
+  String get draftUnsaved => '这篇还没发出去';
+
+  @override
+  String get draftImagesNote => '图片不进草稿，只有标题和正文会留着';
+
+  @override
+  String get saveDraftAndLeave => '存草稿，先走';
+
+  @override
+  String get discardPost => '扔掉这篇';
+
+  @override
+  String get keepEditing => '再改改';
+
+  @override
+  String get composeTitle => '发新帖';
+
+  @override
+  String get forumSuffix => '吧';
+
+  @override
+  String get composeHint => '说点什么…（@ 找人）';
+
+  @override
+  String imageCount(String v1, String v2) {
+    return '图片 $v1/$v2';
+  }
+
+  @override
+  String get dragToReorder => '长按拖动换顺序';
+
+  @override
+  String titleRequiredMaxImages(String v1) {
+    return '标题必填 · 最多 $v1 张图';
+  }
+
+  @override
+  String imageCountPrefix(String v1, String v2, String v3) {
+    return '$v1/$v2 张 · $v3';
+  }
+
+  @override
+  String bodyLength(String v1) {
+    return '$v1 字';
+  }
+
+  @override
+  String get credentialHint => '在旧设备「设置 → 复制登录凭证」里复制';
+
+  @override
+  String get restore => '恢复';
+
+  @override
+  String get credentialInvalid => '凭证无效或已失效';
+
+  @override
+  String restoreFailed(String v1) {
+    return '恢复失败：$v1';
+  }
+
+  @override
+  String codeSendFailed(String v1) {
+    return '验证码没发出去：$v1';
+  }
+
+  @override
+  String get passwordTooShort => '密码至少 8 位';
+
+  @override
+  String passwordChangeFailed(String v1) {
+    return '没改成：$v1';
+  }
+
+  @override
+  String get fillUserAndPassword => '用户名和密码都要填';
+
+  @override
+  String loginFailed(String v1) {
+    return '登录没成功：$v1';
+  }
+
+  @override
+  String get resetTitle => '找回密码';
+
+  @override
+  String get atLeast8 => '至少 8 位';
+
+  @override
+  String get emailUsedToRegister => '注册时用的邮箱';
+
+  @override
+  String get emailForCode => '用来收注册验证码';
+
+  @override
+  String get sending => '发送中';
+
+  @override
+  String get getCode => '获取验证码';
+
+  @override
+  String get changePasswordAndLogin => '改密码并登录';
+
+  @override
+  String get registerAndLogin => '注册并登录';
+
+  @override
+  String get backToLogin => '返回登录';
+
+  @override
+  String get haveAccountLogin => '已有账号，去登录';
+
+  @override
+  String get noAccountRegister => '没有账号，去注册';
+
+  @override
+  String get forgotPasswordQuestion => '忘记密码？';
+
+  @override
+  String get restoreWithCredential => '用登录凭证恢复';
+
+  @override
+  String get accountCopied => '账号已复制';
+
+  @override
+  String get coverUpdated => '封面已换';
+
+  @override
+  String coverFailed(String v1) {
+    return '换封面失败：$v1';
+  }
+
+  @override
+  String get saveCover => '保存背景图';
+
+  @override
+  String get saveCoverConfirm => '把这张背景图存到相册？';
+
+  @override
+  String savedTo(String v1) {
+    return '已保存到 $v1';
+  }
+
+  @override
+  String get changeCover => '换封面';
+
+  @override
+  String get addCover => '加封面';
+
+  @override
+  String joinedAt(String v1) {
+    return '加入于 $v1';
+  }
+
+  @override
+  String get followingCount => '正在关注';
+
+  @override
+  String get followers => '关注者';
+
+  @override
+  String get editProfile => '编辑个人资料';
+
+  @override
+  String get noPostsYet => '还没有人发帖';
+
+  @override
+  String get longAgo => '很久以前';
+
+  @override
+  String yearMonth(String v1, String v2) {
+    return '$v1 年 $v2 月';
+  }
+
+  @override
+  String get acceptConfirm => '采纳这条？';
+
+  @override
+  String get rejectConfirm => '不做这条？';
+
+  @override
+  String get reopenConfirm => '退回待看？';
+
+  @override
+  String get replyOptional => '回一句（可选）';
+
+  @override
+  String get adminReplyHint => '排期中 / 做不了，原因是……';
+
+  @override
+  String get accepted => '已采纳';
+
+  @override
+  String get markedWontDo => '已标记不做';
+
+  @override
+  String get movedBack => '已退回待看';
+
+  @override
+  String get requestsDone => '需求 · 已处理';
+
+  @override
+  String requestsCount(String v1) {
+    return '需求（$v1）';
+  }
+
+  @override
+  String get requests => '需求';
+
+  @override
+  String get viewPending => '看待看';
+
+  @override
+  String get viewDone => '看已处理';
+
+  @override
+  String get nothingHandled => '还没处理过';
+
+  @override
+  String get noPendingRequests => '没有待看的需求';
+
+  @override
+  String replyLine(String v1) {
+    return '回复：$v1';
+  }
+
+  @override
+  String submittedBy(String v1) {
+    return '提交人：$v1';
+  }
+
+  @override
+  String get moveBack => '退回待看';
+
+  @override
+  String avatarUpdated(String v1) {
+    return '头像已换上 · $v1';
+  }
+
+  @override
+  String get chooseFromAlbum => '从相册选择';
+
+  @override
+  String get compressNote => '自动压到 100KB 上下再上传';
+
+  @override
+  String get nicknameRequired => '昵称不能为空';
+
+  @override
+  String get handleInvalid => '标识只能用小写字母、数字、下划线，3–16 位';
+
+  @override
+  String get editProfileTitle => '编辑资料';
+
+  @override
+  String get nickname => '昵称';
+
+  @override
+  String get nicknameMax => '最多 20 个字';
+
+  @override
+  String get handle => '标识';
+
+  @override
+  String get handleHint => '别人用 @ 找到你；小写字母、数字、下划线，3–16 位';
+
+  @override
+  String get bio => '签名';
+
+  @override
+  String get bioHint => '最多 80 个字，可以留空';
+
+  @override
+  String get profileSavedHint => '改完立刻生效，回主页刷新就能看到。';
+
+  @override
+  String get openSource => '开源';
+
+  @override
+  String get thanksFriends => '致谢我的朋友们';
+
+  @override
+  String get thanksFriendsSub => '这里是他们的账号';
+
+  @override
+  String get thirdPartyLicenses => '第三方许可证';
+
+  @override
+  String get thirdPartyLicensesSub => '各依赖自带的许可文本';
+
+  @override
+  String get gplLicense => 'GPL-3.0 许可证';
+
+  @override
+  String get gplLicenseSub => '本项目以 GPL-3.0 发布';
+
+  @override
+  String get links => '链接';
+
+  @override
+  String get sourceCode => '源代码';
+
+  @override
+  String get issues => '问题反馈';
+
+  @override
+  String get issuesSub => '发现什么不对，记在这里';
+
+  @override
+  String get cantOpenLink => '打不开这个链接';
+
+  @override
+  String get reportKeepNote => '这条没问题，关掉举报。';
+
+  @override
+  String get reportDeleteFloorNote => '楼层内容会被删掉，删了找不回来。';
+
+  @override
+  String get reportDeletePostNote => '整个帖子连同回复一起删掉，删了找不回来。';
+
+  @override
+  String get ignoreReportConfirm => '忽略这条举报？';
+
+  @override
+  String get deleteContentConfirm => '删掉这条内容？';
+
+  @override
+  String get ignored => '已忽略';
+
+  @override
+  String get deleted => '已删掉';
+
+  @override
+  String reportsCount(String v1) {
+    return '举报（$v1）';
+  }
+
+  @override
+  String get noReports => '没有待处理的举报';
+
+  @override
+  String get floor => '楼层';
+
+  @override
+  String reportLine(String v1, String v2) {
+    return '理由：$v1　举报人：$v2';
+  }
+
+  @override
+  String galleryReadFailed(String v1) {
+    return '相册读不出来：$v1';
+  }
+
+  @override
+  String albumOpenFailed(String v1) {
+    return '这个相册打不开：$v1';
+  }
+
+  @override
+  String maxSelectImages(String v1) {
+    return '最多选 $v1 张';
+  }
+
+  @override
+  String get pickPhotos => '选择照片';
+
+  @override
+  String doneWithCount(String v1) {
+    return '完成 ($v1)';
+  }
+
+  @override
+  String get albumEmpty => '这个相册里没有图片';
+
+  @override
+  String get needsAlbumPermission => '需要相册权限才能列出照片';
+
+  @override
+  String get noAlbumUsePicker => '这台机器没有相册，用系统的文件选择';
+
+  @override
+  String get localThumbsOnly => '只在本机缩略图里挑，不上传整本相册。';
+
+  @override
+  String get grantPermission => '去开权限';
+
+  @override
+  String get pickAnotherWay => '换个方式选图';
+
+  @override
+  String get titleClearer => '标题再写清楚一点';
+
+  @override
+  String get requestDuplicate => '这条已经提过了';
+
+  @override
+  String get requestSubmitted => '提交好了';
+
+  @override
+  String get requestIntro => '想到什么功能，写在这里。管理员会看，采纳了会回一句。';
+
+  @override
+  String get requestTitleLabel => '一句话说清要什么';
+
+  @override
+  String get requestTitleHint => '比如：帖子支持收藏到不同文件夹';
+
+  @override
+  String get requestDetailLabel => '细节（可选）';
+
+  @override
+  String get requestDetailHint => '为什么需要、大概怎么用';
+
+  @override
+  String get myRequests => '我提过的';
+
+  @override
+  String requestCount(String v1) {
+    return '$v1 条';
+  }
+
+  @override
+  String get noRequestsYet => '还没提过';
+
+  @override
+  String get statusPending => '待看';
+
+  @override
+  String get codeSentCheckEmail => '验证码发出去了，去邮箱里看看';
+
+  @override
+  String get emailBound => '绑好了';
+
+  @override
+  String get noEmailWarning => '这个账号还没绑邮箱。忘了密码的话，现在只能找管理员重置。';
+
+  @override
+  String get emailBoundHint => '已绑定，忘了密码可以自己重置';
+
+  @override
+  String get bindEmail => '绑定邮箱';
+
+  @override
+  String get changeEmail => '换一个邮箱';
+
+  @override
+  String get sendCode => '发送验证码';
+
+  @override
+  String get processing => '处理中…';
+
+  @override
+  String get bind => '绑定';
+
+  @override
+  String get rebind => '换绑';
+
+  @override
+  String get bindEmailWhy => '绑了之后，忘记密码不用找人：登录页点「忘记密码」，收个验证码就能改。';
+
+  @override
+  String get titleEmpty => '标题不能空';
+
+  @override
+  String get bodyOrImageRequired => '正文或图片至少留一样';
+
+  @override
+  String uploadingNewStart(String v1) {
+    return '上传新图 0/$v1';
+  }
+
+  @override
+  String uploadingNewImages(String v1, String v2) {
+    return '上传新图 $v1/$v2';
+  }
+
+  @override
+  String get changesUnsaved => '改动还没保存';
+
+  @override
+  String get continueEditing => '继续改';
+
+  @override
+  String get leaveWithoutSaving => '不保存，退出';
+
+  @override
+  String imageCountShort(String v1, String v2) {
+    return '图片 $v1/$v2';
+  }
+
+  @override
+  String get noImagesYet => '还没有图';
+
+  @override
+  String get searchForumsHint => '搜吧';
+
+  @override
+  String noSearchResult(String v1) {
+    return '没搜到「$v1」';
+  }
+
+  @override
+  String searchResultCount(String v1) {
+    return '搜到 $v1 个';
+  }
+
+  @override
+  String myFollowedForums(String v1) {
+    return '我关注的 $v1';
+  }
+
+  @override
+  String allForums(String v1) {
+    return '全部 $v1';
+  }
+
+  @override
+  String get noForums => '还没建板块';
+
+  @override
+  String get loginToSeeFollowed => '登录后能看到关注过的吧';
+
+  @override
+  String get goLogin => '去登录';
+
+  @override
+  String get noFollowedForums => '还没关注吧，进一个点关注';
+
+  @override
+  String get noIntro => '还没有简介';
+
+  @override
+  String forumStats(String v1, String v2) {
+    return '$v1 帖 · $v2 关注';
+  }
+
+  @override
+  String get nRepliedPost => '回复了你的帖';
+
+  @override
+  String get nRepliedYou => '回复了你';
+
+  @override
+  String get nLiked => '赞了你';
+
+  @override
+  String get nMentioned => '在帖子里 @ 了你';
+
+  @override
+  String get nFeatured => '把你的帖加精了';
+
+  @override
+  String get nDeleted => '删了你的内容';
+
+  @override
+  String get nNew => '有新消息';
+
+  @override
+  String get noticeLoginNeeded => '登录后才能收到通知';
+
+  @override
+  String get noticeLoginHint => '去「我的」登录';
+
+  @override
+  String get noNotifications => '还没有通知';
+
+  @override
+  String get noNotificationsHint => '别人回复你、赞你，会出现在这里';
+
+  @override
+  String get reset => '重置';
+
+  @override
+  String newPasswordFor(String v1) {
+    return '给「$v1」的新密码：';
+  }
+
+  @override
+  String get newPasswordOnce => '关掉就看不到了。让本人登录后马上改成自己记得的。';
+
+  @override
+  String get copyAndClose => '复制并关闭';
+
+  @override
+  String get searchUsername => '搜用户名';
+
+  @override
+  String get noEmail => '没绑邮箱';
+
+  @override
+  String get manualNeedsAddress => '手动要填地址';
+
+  @override
+  String serverOkUsing(String v1) {
+    return '通了，当前用 $v1';
+  }
+
+  @override
+  String connectFailedBody(String v1) {
+    return '连不上：$v1';
+  }
+
+  @override
+  String get ipv6FirstHint => '先试 IPv6，连不上再用 IPv4';
+
+  @override
+  String get channelIpv6 => 'IPv6 通道';
+
+  @override
+  String get channelIpv4 => 'IPv4 通道';
+
+  @override
+  String get enterManually => '自己填地址';
+
+  @override
+  String get serverAddress => '服务器地址';
+
+  @override
+  String get saveAndTest => '保存并测试';
+
+  @override
+  String currentExit(String v1) {
+    return '当前出口：$v1';
+  }
+
+  @override
+  String switchedTo(String v1) {
+    return '已切换到 $v1';
+  }
+
+  @override
+  String accountExpiredRemoved(String v1) {
+    return '$v1 的登录已失效，已移除';
+  }
+
+  @override
+  String get removeAccount => '移除账号';
+
+  @override
+  String removeAccountConfirm(String v1) {
+    return '从本机移除 $v1？只是退出这台设备，账号和帖子都还在服务器上。';
+  }
+
+  @override
+  String accountAdded(String v1) {
+    return '已添加 $v1';
+  }
+
+  @override
+  String get noAccounts => '还没有账号';
+
+  @override
+  String get addAccount => '添加账号';
+
+  @override
+  String get addAccountHint => '登录另一个账号，之后可以随时切回来';
+
+  @override
+  String get addFromDevice => '把别的设备上的账号加进这台机器';
+
+  @override
+  String get friendSearchHint => '用户名 / @标识 / 昵称';
+
+  @override
+  String get enterName => '写个名字';
+
+  @override
+  String get add => '添加';
+
+  @override
+  String removeFriendConfirm(String v1) {
+    return '把 $v1 拿下来？';
+  }
+
+  @override
+  String get removeFriendBody => '只是从这页去掉，账号还在。';
+
+  @override
+  String get credits => '致谢';
+
+  @override
+  String get nobodyYet => '还没有人';
+
+  @override
+  String creditsAdminOnly(String v1) {
+    return '这份名单只有管理员能改（当前登录：$v1）。';
+  }
+
+  @override
+  String unfollowed(String v1) {
+    return '已取消关注 $v1';
+  }
+
+  @override
+  String followedBack(String v1) {
+    return '已回关 $v1';
+  }
+
+  @override
+  String get fans => '粉丝';
+
+  @override
+  String get notFollowingAnyone => '还没关注谁';
+
+  @override
+  String get noFans => '还没有粉丝';
+
+  @override
+  String get mutual => '互相关注';
+
+  @override
+  String get followBack => '回关';
+
+  @override
+  String get searchTitleOrBody => '搜标题或内容';
+
+  @override
+  String get searchPrompt => '输入关键词，按回车';
+
+  @override
+  String get recentSearches => '最近搜索';
+
+  @override
+  String totalCount(String v1) {
+    return '共 $v1 条';
+  }
+
+  @override
+  String endTotalCount(String v1) {
+    return '到底了，共 $v1 条';
+  }
+
+  @override
+  String get noFavoritesYet => '还没收藏过帖';
+
+  @override
+  String get reportHandling => '举报处理';
+
+  @override
+  String get requestHandling => '需求处理';
+
+  @override
+  String get noHistoryYet => '还没有浏览记录';
+
+  @override
+  String get enterBio => '请输入你的个人签名';
+
+  @override
+  String get tapToLogin => '点这里登录';
+
+  @override
+  String get general => '综合';
+
+  @override
+  String get featured => '精华';
+
+  @override
+  String get multiImage => '多图片';
+
+  @override
+  String get comments => '评论';
+
+  @override
+  String get loginBenefits => '登录后可以发帖、回复、关注吧';
+
+  @override
+  String get hot => '热门';
+
+  @override
+  String get forumEmpty => '这个吧还没有帖';
+
+  @override
+  String get permIntro => '联网权限安装时已经给了，这里只剩通知和相册需要你点头。';
+
+  @override
+  String get network => '联网';
+
+  @override
+  String get networkGranted => '安装时自动授予，不用管';
+
+  @override
+  String get permOptionalNote => '不想开的可以一直关着，只是发图时得手动去系统里选。';
+
+  @override
+  String get downloadImage => '下载这张图';
+
+  @override
+  String get backToTop => '回到顶部';
+
+  @override
+  String get offlineCacheFeed => '连不上服务器，这是上次的缓存';
+
+  @override
+  String get chooseForum => '发到哪个板块';
+
+  @override
+  String get fillAddress => '填一下地址';
+
+  @override
+  String get fillServerAddress => '填一下服务器地址';
+
+  @override
+  String get connect => '连上去';
+
+  @override
+  String get themeColorTitle => '主题颜色';
+
+  @override
+  String get accentColorHint => '上面的按钮、选中状态、输入框焦点圈都会跟着这条色带走。';
+
+  @override
+  String get moreToLoad => '还有更多';
+
+  @override
+  String resetPasswordConfirm(String v1) {
+    return '把「$v1」的密码换成随机的一串？\n\n原密码会立刻失效。新密码只显示一次，记得发给本人。';
   }
 }

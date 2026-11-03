@@ -6,6 +6,7 @@ import '../utils.dart';
 import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 管理员看举报。删掉或者认定没问题，二选一。
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({super.key});
@@ -63,21 +64,21 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     String note;
     bool? ok = true;
     if (keep) {
-      note = '这条没问题，关掉举报。';
+      note = Lc.current.reportKeepNote;
     } else if (it['reply_id'] != null) {
-      note = '楼层内容会被删掉，删了找不回来。';
+      note = Lc.current.reportDeleteFloorNote;
     } else {
-      note = '整个帖子连同回复一起删掉，删了找不回来。';
+      note = Lc.current.reportDeletePostNote;
     }
     ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(keep ? '忽略这条举报？' : '删掉这条内容？'),
+        title: Text(keep ? Lc.current.ignoreReportConfirm : Lc.current.deleteContentConfirm),
         content: Text(note),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(Lc.current.cancel),
           ),
           FilledButton(
             style: keep
@@ -87,7 +88,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                     foregroundColor: Theme.of(ctx).colorScheme.onError,
                   ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(keep ? '忽略' : '删掉'),
+            child: Text(keep ? Lc.current.ignore : Lc.current.deleteIt),
           ),
         ],
       ),
@@ -102,7 +103,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       });
       AppState.instance.setReportOpen(_total);
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(keep ? '已忽略' : '已删掉')));
+          .showSnackBar(SnackBar(content: Text(keep ? Lc.current.ignored : Lc.current.deleted)));
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -115,12 +116,12 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_total > 0 ? '举报（$_total）' : '举报'),
+        title: Text(_total > 0 ? Lc.current.reportsCount('${_total}') : Lc.current.report),
         actions: [
           IconButton(
             onPressed: () => _load(reset: true),
             icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
+            tooltip: Lc.current.refresh,
           ),
         ],
       ),
@@ -142,7 +143,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
               const SizedBox(height: 12),
               FilledButton.tonal(
                 onPressed: () => _load(reset: true),
-                child: const Text('重试'),
+                child: Text(Lc.current.retry),
               ),
             ],
           ),
@@ -150,7 +151,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       );
     }
     if (_items.isEmpty) {
-      return const Center(child: Text('没有待处理的举报'));
+      return Center(child: Text(Lc.current.noReports));
     }
     return ListView.separated(
       itemCount: _items.length + 1,
@@ -168,13 +169,13 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                   _page++;
                   _load();
                 },
-                child: const Text('加载更多'),
+                child: Text(Lc.current.loadMore),
               ),
             ),
           );
         }
         final it = _items[i];
-        final kind = it['reply_id'] != null ? '楼层' : '帖子';
+        final kind = it['reply_id'] != null ? Lc.current.floor : Lc.current.post;
         return InkWell(
           onTap: () {
             final tid = it['thread_id'];
@@ -236,7 +237,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '理由：${(it['reason'] ?? '')}　举报人：${(it['reporter'] ?? '')}',
+                  Lc.current.reportLine('${(it['reason'] ?? '')}', '${(it['reporter'] ?? '')}'),
                   style: TextStyle(fontSize: 11, color: cs.outline),
                 ),
                 Row(
@@ -244,13 +245,13 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                   children: [
                     TextButton(
                       onPressed: () => _handle(it, keep: true),
-                      child: const Text('忽略'),
+                      child: Text(Lc.current.ignore),
                     ),
                     const SizedBox(width: 4),
                     TextButton(
                       style: TextButton.styleFrom(foregroundColor: cs.error),
                       onPressed: () => _handle(it, keep: false),
-                      child: const Text('删掉'),
+                      child: Text(Lc.current.deleteIt),
                     ),
                     const SizedBox(width: 8),
                   ],

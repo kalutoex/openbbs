@@ -6,6 +6,7 @@ import '../utils.dart';
 import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 通知：回复、楼中楼、赞。
 class NoticeTab extends StatefulWidget {
   final VoidCallback onMenu;
@@ -68,19 +69,19 @@ class _NoticeTabState extends State<NoticeTab> {
   String _action(String kind) {
     switch (kind) {
       case 'reply':
-        return '回复了你的線';
+        return Lc.current.nRepliedPost;
       case 'sub':
-        return '回复了你';
+        return Lc.current.nRepliedYou;
       case 'agree':
-        return '赞了你';
+        return Lc.current.nLiked;
       case 'mention':
-        return '在帖子里 @ 了你';
+        return Lc.current.nMentioned;
       case 'good':
-        return '把你的線加精了';
+        return Lc.current.nFeatured;
       case 'del':
-        return '删了你的内容';
+        return Lc.current.nDeleted;
       default:
-        return '有新消息';
+        return Lc.current.nNew;
     }
   }
 
@@ -108,11 +109,11 @@ class _NoticeTabState extends State<NoticeTab> {
         leading: IconButton(
           onPressed: widget.onMenu,
           icon: const Icon(Icons.menu_rounded),
-          tooltip: '菜单',
+          tooltip: Lc.current.menu,
         ),
         titleSpacing: 0,
         title: Text(
-          '通知',
+          Lc.current.notice,
           style: Theme.of(context).textTheme.titleLarge
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
@@ -128,8 +129,8 @@ class _NoticeTabState extends State<NoticeTab> {
     if (!AppState.instance.loggedIn) {
       return _Empty(
         icon: Icons.lock_outline_rounded,
-        text: '登录后才能收到通知',
-        hint: '去「我的」登录',
+        text: Lc.current.noticeLoginNeeded,
+        hint: Lc.current.noticeLoginHint,
       );
     }
     if (_loading) {
@@ -139,7 +140,7 @@ class _NoticeTabState extends State<NoticeTab> {
       return _Empty(
         icon: Icons.cloud_off_rounded,
         text: _err!,
-        hint: '点一下重试',
+        hint: Lc.current.tapToRetry,
         onTap: () {
           setState(() {
             _loading = true;
@@ -154,12 +155,12 @@ class _NoticeTabState extends State<NoticeTab> {
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          children: const [
+          children: [
             SizedBox(height: 120),
             _Empty(
               icon: Icons.notifications_none_rounded,
-              text: '还没有通知',
-              hint: '别人回复你、赞你，会出现在这里',
+              text: Lc.current.noNotifications,
+              hint: Lc.current.noNotificationsHint,
             ),
           ],
         ),

@@ -11,6 +11,7 @@ import '../img_compress.dart';
 import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 改自己的帖子：标题、正文、配图。
 ///
 /// 图片分两种：已经传上去的（服务端给的 /img/ 路径，可以摘掉）和这次新选的
@@ -70,7 +71,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
   Future<void> _addImages() async {
     final left = _maxImgs - _count;
     if (left <= 0) {
-      _snack('最多 $_maxImgs 张');
+      _snack(Lc.current.maxImages('$_maxImgs'));
       return;
     }
     List<XFile> picked = const [];
@@ -85,14 +86,14 @@ class _EditThreadPageState extends State<EditThreadPage> {
       for (final x in picked.take(left)) {
         final b = await ImgCompress.run(await x.readAsBytes());
         if (ImgCompress.tooBig(b)) {
-          _snack('有张图压完还是太大，跳过了');
+          _snack(Lc.current.imageStillTooBig);
           continue;
         }
         _added.add(b);
       }
       if (mounted) setState(() {});
     } catch (e) {
-      _snack('读图失败：$e');
+      _snack(Lc.current.readImageFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -103,26 +104,26 @@ class _EditThreadPageState extends State<EditThreadPage> {
     final t = _title.text.trim();
     final b = _body.text.trim();
     if (t.isEmpty) {
-      _snack('标题不能空');
+      _snack(Lc.current.titleEmpty);
       return;
     }
     if (b.isEmpty && _count == 0) {
-      _snack('正文或图片至少留一样');
+      _snack(Lc.current.bodyOrImageRequired);
       return;
     }
     setState(() {
       _busy = true;
-      _status = _added.isEmpty ? '保存中…' : '上传新图 0/${_added.length}';
+      _status = _added.isEmpty ? Lc.current.saving : Lc.current.uploadingNewStart('${_added.length}');
     });
     try {
       final urls = [..._remote];
       for (var i = 0; i < _added.length; i++) {
         if (mounted) {
-          setState(() => _status = '上传新图 ${i + 1}/${_added.length}');
+          setState(() => _status = Lc.current.uploadingNewImages('${i + 1}', '${_added.length}'));
         }
         urls.add(await Api.uploadImage(_added[i]));
       }
-      if (mounted) setState(() => _status = '保存中…');
+      if (mounted) setState(() => _status = Lc.current.saving);
       await Api.patch('/t/${widget.tid}', {
         'title': t,
         'body': b,
@@ -133,7 +134,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
     } on ApiException catch (e) {
       _fail(errorText(context, e));
     } catch (e) {
-      _fail('保存失败：$e');
+      _fail(Lc.current.saveFailed('${e}'));
     }
   }
 
@@ -159,15 +160,15 @@ class _EditThreadPageState extends State<EditThreadPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ListTile(dense: true, title: Text('改动还没保存')),
+            ListTile(dense: true, title: Text(Lc.current.changesUnsaved)),
             ListTile(
               leading: const Icon(Icons.edit_outlined),
-              title: const Text('继续改'),
+              title: Text(Lc.current.continueEditing),
               onTap: () => Navigator.of(c).pop(),
             ),
             ListTile(
               leading: const Icon(Icons.close),
-              title: const Text('不保存，退出'),
+              title: Text(Lc.current.leaveWithoutSaving),
               onTap: () => Navigator.of(c).pop('leave'),
             ),
             const SizedBox(height: 8),
@@ -188,12 +189,12 @@ class _EditThreadPageState extends State<EditThreadPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('编辑帖子'),
+          title: Text(Lc.current.editPost),
           actions: [
             TextButton(
               onPressed: _busy ? null : _save,
               child: Text(
-                '保存',
+                Lc.current.save,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: _busy ? null : cs.primary,
@@ -210,7 +211,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
               controller: _title,
               maxLength: 120,
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-              decoration: _deco(cs, '标题'),
+              decoration: _deco(cs, Lc.current.title),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -220,13 +221,13 @@ class _EditThreadPageState extends State<EditThreadPage> {
               maxLength: 20000,
               keyboardType: TextInputType.multiline,
               style: const TextStyle(fontSize: 15, height: 1.55),
-              decoration: _deco(cs, '正文'),
+              decoration: _deco(cs, Lc.current.body),
             ),
             const SizedBox(height: 18),
             Row(
               children: [
                 Text(
-                  '图片 $_count/$_maxImgs',
+                  Lc.current.imageCountShort('${_count}', '${_maxImgs}'),
                   style: TextStyle(
                     fontSize: 12,
                     color: cs.onSurfaceVariant,
@@ -240,7 +241,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
                     Icons.add_photo_alternate_outlined,
                     size: 18,
                   ),
-                  label: const Text('加图'),
+                  label: Text(Lc.current.addImageShort),
                 ),
               ],
             ),
@@ -288,7 +289,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
   Widget _imgsGrid(ColorScheme cs) {
     final n = _count;
     if (n == 0) {
-      return Text('还没有图', style: TextStyle(fontSize: 12, color: cs.outline));
+      return Text(Lc.current.noImagesYet, style: TextStyle(fontSize: 12, color: cs.outline));
     }
     return GridView.builder(
       shrinkWrap: true,

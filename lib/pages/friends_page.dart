@@ -6,6 +6,7 @@ import '../widgets/avatar.dart';
 import 'user_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 致谢：把成员挂出来。管理员可以直接增删。
 class FriendsPage extends StatefulWidget {
   const FriendsPage({super.key});
@@ -40,7 +41,7 @@ class _FriendsPageState extends State<FriendsPage> {
     } on ApiException catch (e) {
       if (mounted) setState(() => _err = errorText(context, e));
     } catch (_) {
-      if (mounted) setState(() => _err = '连不上服务器');
+      if (mounted) setState(() => _err = Lc.current.connectFailedPlain);
     }
   }
 
@@ -52,15 +53,15 @@ class _FriendsPageState extends State<FriendsPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: const Text('加人'),
+          title: Text(Lc.current.addPeople),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: ctl,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: '用户名 / @标识 / 昵称',
+                decoration: InputDecoration(
+                  hintText: Lc.current.friendSearchHint,
                   errorText: null,
                 ),
                 onSubmitted: (_) {},
@@ -81,7 +82,7 @@ class _FriendsPageState extends State<FriendsPage> {
           actions: [
             TextButton(
               onPressed: busy ? null : () => Navigator.of(ctx).pop(false),
-              child: const Text('取消'),
+              child: Text(Lc.current.cancel),
             ),
             TextButton(
               onPressed: busy
@@ -89,7 +90,7 @@ class _FriendsPageState extends State<FriendsPage> {
                   : () async {
                       final q = ctl.text.trim();
                       if (q.isEmpty) {
-                        setD(() => err = '写个名字');
+                        setD(() => err = Lc.current.enterName);
                         return;
                       }
                       setD(() {
@@ -107,7 +108,7 @@ class _FriendsPageState extends State<FriendsPage> {
                       } catch (_) {
                         setD(() {
                           busy = false;
-                          err = '连不上服务器';
+                          err = Lc.current.connectFailedPlain;
                         });
                       }
                     },
@@ -117,7 +118,7 @@ class _FriendsPageState extends State<FriendsPage> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('添加'),
+                  : Text(Lc.current.add),
             ),
           ],
         ),
@@ -132,16 +133,16 @@ class _FriendsPageState extends State<FriendsPage> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('把 $nick 拿下来？'),
-        content: const Text('只是从这页去掉，账号还在。'),
+        title: Text(Lc.current.removeFriendConfirm('${nick}')),
+        content: Text(Lc.current.removeFriendBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('算了'),
+            child: Text(Lc.current.forgetIt),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('拿下来'),
+            child: Text(Lc.current.takeDown),
           ),
         ],
       ),
@@ -164,11 +165,11 @@ class _FriendsPageState extends State<FriendsPage> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('致谢'),
+        title: Text(Lc.current.credits),
         actions: [
           if (_isAdmin)
             IconButton(
-              tooltip: '加人',
+              tooltip: Lc.current.addPeople,
               icon: const Icon(Icons.person_add_alt_1),
               onPressed: _add,
             ),
@@ -188,7 +189,7 @@ class _FriendsPageState extends State<FriendsPage> {
                       setState(() => _err = null);
                       _load();
                     },
-                    child: const Text('再试一次'),
+                    child: Text(Lc.current.tryAgain),
                   ),
                 ],
               ),
@@ -200,7 +201,7 @@ class _FriendsPageState extends State<FriendsPage> {
           }
           if (items.isEmpty) {
             return Center(
-              child: Text('还没有人', style: TextStyle(color: cs.onSurfaceVariant)),
+              child: Text(Lc.current.nobodyYet, style: TextStyle(color: cs.onSurfaceVariant)),
             );
           }
           return ListView.builder(
@@ -210,12 +211,12 @@ class _FriendsPageState extends State<FriendsPage> {
               if (i >= items.length) {
                 final me = AppState.instance.user;
                 final who = me == null
-                    ? '未登录'
+                    ? Lc.current.notLoggedIn
                     : ((me['nickname'] ?? me['name'] ?? '') as String);
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                   child: Text(
-                    '这份名单只有管理员能改（当前登录：$who）。',
+                    Lc.current.creditsAdminOnly('${who}'),
                     style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
                 );
@@ -252,7 +253,7 @@ class _FriendsPageState extends State<FriendsPage> {
                       ),
                 trailing: _isAdmin
                     ? IconButton(
-                        tooltip: '拿下来',
+                        tooltip: Lc.current.takeDown,
                         icon: Icon(
                           Icons.remove_circle_outline,
                           size: 20,

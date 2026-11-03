@@ -15,6 +15,7 @@ import '../store.dart';
 import 'avatar.dart';
 import 'name_tag.dart';
 
+import '../l10n/l10n.dart';
 /// 左侧抽屉：身份、导航、板块、我的入口。
 class AppDrawer extends StatefulWidget {
   /// 当前底部 tab，用来标出选中项。
@@ -137,7 +138,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         context,
                         icon: Icons.dynamic_feed_outlined,
                         activeIcon: Icons.dynamic_feed,
-                        label: '时间线',
+                        label: Lc.current.timeline,
                         active: widget.currentTab == 0,
                         onTap: () {
                           _close();
@@ -148,7 +149,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         context,
                         icon: Icons.grid_view_outlined,
                         activeIcon: Icons.grid_view_rounded,
-                        label: '板块',
+                        label: Lc.current.forums,
                         active: widget.currentTab == 1,
                         onTap: () {
                           _close();
@@ -156,7 +157,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         },
                       ),
                       const SizedBox(height: 10),
-                      _label(context, '板块'),
+                      _label(context, Lc.current.forums),
                       if (!_loaded)
                         const Padding(
                           padding: EdgeInsets.fromLTRB(14, 8, 14, 8),
@@ -166,7 +167,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
                           child: Text(
-                            '还没建板块',
+                            Lc.current.noForums,
                             style: TextStyle(fontSize: 12, color: cs.outline),
                           ),
                         )
@@ -187,30 +188,30 @@ class _AppDrawerState extends State<AppDrawer> {
                           ),
                       if (st.loggedIn) ...[
                         const SizedBox(height: 10),
-                        _label(context, '我的'),
+                        _label(context, Lc.current.me),
                         _item(
                           context,
                           icon: Icons.bookmark_border,
-                          label: '我的收藏',
+                          label: Lc.current.myFavorites,
                           onTap: () => _push(
-                            const ThreadListPage(
-                              title: '我的收藏',
+                            ThreadListPage(
+                              title: Lc.current.myFavorites,
                               path: '/favorites',
-                              emptyText: '还没收藏过帖子',
+                              emptyText: Lc.current.noFavoritesYet,
                             ),
                           ),
                         ),
                         _item(
                           context,
                           icon: Icons.people_outline,
-                          label: '关注',
+                          label: Lc.current.follow,
                           onTap: () => _push(const FollowPage()),
                         ),
                         if (st.user?['is_admin'] == true)
                           _item(
                             context,
                             icon: Icons.flag_outlined,
-                            label: '举报处理',
+                            label: Lc.current.reportHandling,
                             badge: st.reportOpen,
                             onTap: () => _push(const AdminReportsPage()),
                           ),
@@ -218,7 +219,7 @@ class _AppDrawerState extends State<AppDrawer> {
                           _item(
                             context,
                             icon: Icons.tips_and_updates_outlined,
-                            label: '需求处理',
+                            label: Lc.current.requestHandling,
                             badge: st.featureOpen,
                             onTap: () =>
                                 _push(const FeatureRequestsAdminPage()),
@@ -227,25 +228,25 @@ class _AppDrawerState extends State<AppDrawer> {
                           _item(
                             context,
                             icon: Icons.manage_accounts_outlined,
-                            label: '账号管理',
+                            label: Lc.current.accountManagement,
                             onTap: () => _push(const AdminUsersPage()),
                           ),
                         _item(
                           context,
                           icon: Icons.history,
-                          label: '浏览历史',
+                          label: Lc.current.browseHistory,
                           onTap: () => _push(
-                            const ThreadListPage(
-                              title: '浏览历史',
+                            ThreadListPage(
+                              title: Lc.current.browseHistory,
                               path: '/history',
-                              emptyText: '还没看过帖子',
+                              emptyText: Lc.current.noHistoryYet,
                             ),
                           ),
                         ),
                         _item(
                           context,
                           icon: Icons.lightbulb_outline,
-                          label: '想要的新功能',
+                          label: Lc.current.featureRequests,
                           onTap: () => _push(const FeatureRequestPage()),
                         ),
                       ],
@@ -256,7 +257,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 _item(
                   context,
                   icon: Icons.settings_outlined,
-                  label: '设置',
+                  label: Lc.current.settings,
                   onTap: () => _push(const SettingsPage()),
                 ),
                 const SizedBox(height: 8),
@@ -368,7 +369,7 @@ class _Top extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final u = st.user;
-    final nick = st.loggedIn ? '${u?['nickname'] ?? u?['name'] ?? ''}' : '未登录';
+    final nick = st.loggedIn ? '${u?['nickname'] ?? u?['name'] ?? ''}' : Lc.current.notLoggedIn;
     final handle = st.loggedIn ? '${u?['handle'] ?? ''}' : '';
 
     return Padding(
@@ -438,8 +439,8 @@ class _Top extends StatelessWidget {
                                             .isNotEmpty ??
                                         false
                                     ? (u!['signature'] as String).trim()
-                                    : '请输入你的个人签名')
-                              : '点这里登录',
+                                    : Lc.current.enterBio)
+                              : Lc.current.tapToLogin,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: tt.labelSmall?.copyWith(color: cs.outline),

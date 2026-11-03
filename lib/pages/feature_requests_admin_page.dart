@@ -5,6 +5,7 @@ import '../store.dart';
 import '../utils.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 管理员看需求单。采纳或者不做，顺手回一句话给提交人。
 class FeatureRequestsAdminPage extends StatefulWidget {
   const FeatureRequestsAdminPage({super.key});
@@ -71,9 +72,9 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(switch (status) {
-          1 => '采纳这条？',
-          2 => '不做这条？',
-          _ => '退回待看？',
+          1 => Lc.current.acceptConfirm,
+          2 => Lc.current.rejectConfirm,
+          _ => Lc.current.reopenConfirm,
         }),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -89,9 +90,9 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
               maxLength: 200,
               maxLines: 3,
               minLines: 1,
-              decoration: const InputDecoration(
-                labelText: '回一句（可选）',
-                hintText: '排期中 / 做不了，原因是……',
+              decoration: InputDecoration(
+                labelText: Lc.current.replyOptional,
+                hintText: Lc.current.adminReplyHint,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -100,11 +101,11 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(Lc.current.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('确定'),
+            child: Text(Lc.current.confirm),
           ),
         ],
       ),
@@ -130,9 +131,9 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(switch (status) {
-            1 => '已采纳',
-            2 => '已标记不做',
-            _ => '已退回待看',
+            1 => Lc.current.accepted,
+            2 => Lc.current.markedWontDo,
+            _ => Lc.current.movedBack,
           }),
         ),
       );
@@ -149,8 +150,8 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_done
-            ? '需求 · 已处理'
-            : (_total > 0 ? '需求（$_total）' : '需求')),
+            ? Lc.current.requestsDone
+            : (_total > 0 ? Lc.current.requestsCount('${_total}') : Lc.current.requests)),
         actions: [
           TextButton(
             onPressed: () {
@@ -160,12 +161,12 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
               });
               _load(reset: true);
             },
-            child: Text(_done ? '看待看' : '看已处理'),
+            child: Text(_done ? Lc.current.viewPending : Lc.current.viewDone),
           ),
           IconButton(
             onPressed: () => _load(reset: true),
             icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
+            tooltip: Lc.current.refresh,
           ),
         ],
       ),
@@ -187,7 +188,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
               const SizedBox(height: 12),
               FilledButton.tonal(
                 onPressed: () => _load(reset: true),
-                child: const Text('重试'),
+                child: Text(Lc.current.retry),
               ),
             ],
           ),
@@ -195,7 +196,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
       );
     }
     if (_items.isEmpty) {
-      return Center(child: Text(_done ? '还没处理过' : '没有待看的需求'));
+      return Center(child: Text(_done ? Lc.current.nothingHandled : Lc.current.noPendingRequests));
     }
     return ListView.separated(
       itemCount: _items.length + 1,
@@ -213,7 +214,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
                   _page++;
                   _load();
                 },
-                child: const Text('加载更多'),
+                child: Text(Lc.current.loadMore),
               ),
             ),
           );
@@ -242,7 +243,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          status == 1 ? '采纳' : '不做',
+                          status == 1 ? Lc.current.accept : Lc.current.wontDo,
                           style: TextStyle(
                             fontSize: 11,
                             color: status == 1 ? cs.primary : cs.error,
@@ -276,13 +277,13 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                    '回复：$note',
+                    Lc.current.replyLine('${note}'),
                     style: TextStyle(fontSize: 12, color: cs.primary),
                   ),
                 ),
               const SizedBox(height: 4),
               Text(
-                '提交人：${(it['author'] ?? '')}',
+                Lc.current.submittedBy('${(it['author'] ?? '')}'),
                 style: TextStyle(fontSize: 11, color: cs.outline),
               ),
               Row(
@@ -291,7 +292,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
                     ? [
                         TextButton(
                           onPressed: () => _handle(it, 0),
-                          child: const Text('退回待看'),
+                          child: Text(Lc.current.moveBack),
                         ),
                         const SizedBox(width: 8),
                       ]
@@ -300,12 +301,12 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
                           style: TextButton.styleFrom(
                               foregroundColor: cs.error),
                           onPressed: () => _handle(it, 2),
-                          child: const Text('不做'),
+                          child: Text(Lc.current.wontDo),
                         ),
                         const SizedBox(width: 4),
                         FilledButton.tonal(
                           onPressed: () => _handle(it, 1),
-                          child: const Text('采纳'),
+                          child: Text(Lc.current.accept),
                         ),
                         const SizedBox(width: 8),
                       ],

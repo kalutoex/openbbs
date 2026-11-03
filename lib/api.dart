@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'disk_cache.dart';
 import 'site_config.dart';
 
+import '../l10n/l10n.dart';
 /// 服务端返回的错误，直接拿去显示。
 ///
 /// [code] 只在「客户端自己造的错误」上有值：那种 message 是写死的中文，
@@ -141,7 +142,7 @@ class Api {
     Uint8List bytes, {
     String name = 'a.jpg',
   }) async {
-    if (!configured) throw ApiException('还没设置服务器地址', code: 'notConfigured');
+    if (!configured) throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
     final body = jsonEncode({'name': name, 'data': base64Encode(bytes)});
     try {
       final r = await _withFailover(() => http
@@ -149,12 +150,12 @@ class Api {
           .timeout(const Duration(seconds: 60)));
       final d = _decode(r);
       final url = (d is Map ? d['url'] : null) as String?;
-      if (url == null || url.isEmpty) throw ApiException('上传没返回地址', code: 'uploadNoUrl');
+      if (url == null || url.isEmpty) throw ApiException('upload returned no url', code: 'uploadNoUrl');
       return url;
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException('上传失败：$e', code: 'uploadFailed', detail: '$e');
+      throw ApiException(Lc.current.uploadFailedWith('${e}'), code: 'uploadFailed', detail: '$e');
     }
   }
 
@@ -177,7 +178,7 @@ class Api {
       body = r.body.isEmpty ? null : jsonDecode(utf8.decode(r.bodyBytes));
     } catch (_) {
       throw ApiException(
-        '服务器返回了看不懂的东西（${r.statusCode}）',
+        'server returned something unparseable (${r.statusCode})',
         code: 'badResponse',
         status: r.statusCode,
       );
@@ -190,7 +191,7 @@ class Api {
         throw ApiException(d, status: r.statusCode);
       }
       throw ApiException(
-        '请求失败（${r.statusCode}）',
+        'request failed (${r.statusCode})',
         status: r.statusCode,
         code: 'requestFailed',
       );
@@ -213,7 +214,7 @@ class Api {
     Map<String, String>? query,
     bool cache = false,
   }) async {
-    if (!configured) throw ApiException('还没设置服务器地址');
+    if (!configured) throw ApiException(Lc.current.errNotConfigured);
     final key = cache ? _cacheKey(path, query) : '';
     try {
       final r = await _withFailover(() => http
@@ -233,12 +234,12 @@ class Api {
           return old;
         }
       }
-      throw ApiException('连不上服务器：$e');
+      throw ApiException(Lc.current.connectFailed('${e}'), code: 'connectFailed', detail: '$e');
     }
   }
 
   static Future<dynamic> post(String path, Map<String, dynamic> body) async {
-    if (!configured) throw ApiException('还没设置服务器地址');
+    if (!configured) throw ApiException(Lc.current.errNotConfigured);
     try {
       final r = await _withFailover(() => http
           .post(_uri(path), headers: _headers, body: jsonEncode(body))
@@ -247,12 +248,12 @@ class Api {
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException('连不上服务器：$e');
+      throw ApiException(Lc.current.connectFailed('${e}'), code: 'connectFailed', detail: '$e');
     }
   }
 
   static Future<dynamic> delete(String path) async {
-    if (!configured) throw ApiException('还没设置服务器地址');
+    if (!configured) throw ApiException(Lc.current.errNotConfigured);
     try {
       final r = await _withFailover(() => http
           .delete(_uri(path), headers: _headers)
@@ -261,12 +262,12 @@ class Api {
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException('连不上服务器：$e');
+      throw ApiException(Lc.current.connectFailed('${e}'), code: 'connectFailed', detail: '$e');
     }
   }
 
   static Future<dynamic> patch(String path, Map<String, dynamic> body) async {
-    if (!configured) throw ApiException('还没设置服务器地址');
+    if (!configured) throw ApiException(Lc.current.errNotConfigured);
     try {
       final r = await _withFailover(() => http
           .patch(_uri(path), headers: _headers, body: jsonEncode(body))
@@ -275,7 +276,7 @@ class Api {
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException('连不上服务器：$e');
+      throw ApiException(Lc.current.connectFailed('${e}'), code: 'connectFailed', detail: '$e');
     }
   }
 }

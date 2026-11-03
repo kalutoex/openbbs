@@ -24,7 +24,7 @@ void main() {
     await _pump(tester, const Size(390, 844));
 
     expect(find.text('板块'), findsOneWidget);
-    expect(find.text('搜團'), findsOneWidget);
+    expect(find.text('搜吧'), findsOneWidget);
     expect(find.text('刷新'), findsNothing); // tooltip 不算可见文本
 
     // 没网/没服务器应该给提示或骨架，不该抛异常

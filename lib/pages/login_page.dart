@@ -6,6 +6,7 @@ import '../api.dart';
 import '../store.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -41,22 +42,22 @@ class _LoginPageState extends State<LoginPage> {
     final tok = await showDialog<String>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('粘贴登录凭证'),
+        title: Text(Lc.current.pasteCredential),
         content: TextField(
           controller: ctl,
           autofocus: true,
           maxLines: 3,
           minLines: 1,
-          decoration: const InputDecoration(hintText: '在旧设备「设置 → 复制登录凭证」里复制'),
+          decoration: InputDecoration(hintText: Lc.current.credentialHint),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c),
-            child: const Text('算了'),
+            child: Text(Lc.current.forgetIt),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(c, ctl.text),
-            child: const Text('恢复'),
+            child: Text(Lc.current.restore),
           ),
         ],
       ),
@@ -73,10 +74,10 @@ class _LoginPageState extends State<LoginPage> {
       if (ok) {
         Navigator.of(context).pop(true);
       } else {
-        setState(() => _err = '凭证无效或已失效');
+        setState(() => _err = Lc.current.credentialInvalid);
       }
     } catch (e) {
-      if (mounted) setState(() => _err = '恢复失败：$e');
+      if (mounted) setState(() => _err = Lc.current.restoreFailed('${e}'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -98,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _sendCode() async {
     final e = _email.text.trim();
     if (e.isEmpty) {
-      setState(() => _err = '先填邮箱');
+      setState(() => _err = Lc.current.fillEmailFirst);
       return;
     }
     setState(() {
@@ -116,7 +117,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _err = errorText(context, e));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _err = '验证码没发出去：$e');
+      setState(() => _err = Lc.current.codeSendFailed('${e}'));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -129,11 +130,11 @@ class _LoginPageState extends State<LoginPage> {
     final code = _code.text.trim();
     if (_reset) {
       if (p.length < 8) {
-        setState(() => _err = '密码至少 8 位');
+        setState(() => _err = Lc.current.passwordTooShort);
         return;
       }
       if (e.isEmpty || code.isEmpty) {
-        setState(() => _err = '邮箱和验证码都要填');
+        setState(() => _err = Lc.current.emailAndCodeRequired);
         return;
       }
       setState(() {
@@ -149,18 +150,18 @@ class _LoginPageState extends State<LoginPage> {
         setState(() => _err = errorText(context, e));
       } catch (e) {
         if (!mounted) return;
-        setState(() => _err = '没改成：$e');
+        setState(() => _err = Lc.current.passwordChangeFailed('${e}'));
       } finally {
         if (mounted) setState(() => _busy = false);
       }
       return;
     }
     if (n.isEmpty || p.isEmpty) {
-      setState(() => _err = '用户名和密码都要填');
+      setState(() => _err = Lc.current.fillUserAndPassword);
       return;
     }
     if (_register && (e.isEmpty || code.isEmpty)) {
-      setState(() => _err = '邮箱和验证码都要填');
+      setState(() => _err = Lc.current.emailAndCodeRequired);
       return;
     }
     setState(() {
@@ -182,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
       // 不是 ApiException 的意外（解析、存储写入失败之类）以前会漏出去，
       // _busy 停在 true，看着就是登录页一直转圈。
       if (!mounted) return;
-      setState(() => _err = '登录没成功：$e');
+      setState(() => _err = Lc.current.loginFailed('${e}'));
     } finally {
       // 不管成没成，转圈都得停。pop 之后 mounted 为 false，不会碰已销毁的 State。
       if (mounted) setState(() => _busy = false);
@@ -194,7 +195,7 @@ class _LoginPageState extends State<LoginPage> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_reset ? '找回密码' : (_register ? '注册' : '登录')),
+        title: Text(_reset ? Lc.current.resetTitle : (_register ? Lc.current.register : Lc.current.login)),
       ),
       body: SafeArea(
         child: ListView(
@@ -206,8 +207,8 @@ class _LoginPageState extends State<LoginPage> {
               TextField(
                 controller: _name,
                 autocorrect: false,
-                decoration: const InputDecoration(
-                  labelText: '用户名',
+                decoration: InputDecoration(
+                  labelText: Lc.current.username,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -217,8 +218,8 @@ class _LoginPageState extends State<LoginPage> {
               controller: _pw,
               obscureText: true,
               decoration: InputDecoration(
-                labelText: _reset ? '新密码' : '密码',
-                helperText: (_register || _reset) ? '至少 8 位' : null,
+                labelText: _reset ? Lc.current.newPassword : Lc.current.password,
+                helperText: (_register || _reset) ? Lc.current.atLeast8 : null,
                 border: const OutlineInputBorder(),
               ),
               onSubmitted: (_) => _submit(),
@@ -230,8 +231,8 @@ class _LoginPageState extends State<LoginPage> {
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
                 decoration: InputDecoration(
-                  labelText: '邮箱',
-                  hintText: _reset ? '注册时用的邮箱' : '用来收注册验证码',
+                  labelText: Lc.current.email,
+                  hintText: _reset ? Lc.current.emailUsedToRegister : Lc.current.emailForCode,
                   border: const OutlineInputBorder(),
                 ),
               ),
@@ -240,7 +241,7 @@ class _LoginPageState extends State<LoginPage> {
                 controller: _code,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: '验证码',
+                  labelText: Lc.current.code,
                   border: const OutlineInputBorder(),
                   suffixIcon: TextButton(
                     onPressed: (_sending || _cooldown > 0 || _busy)
@@ -249,7 +250,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: Text(
                       _cooldown > 0
                           ? '${_cooldown}s'
-                          : (_sending ? '发送中' : '获取验证码'),
+                          : (_sending ? Lc.current.sending : Lc.current.getCode),
                     ),
                   ),
                 ),
@@ -268,7 +269,7 @@ class _LoginPageState extends State<LoginPage> {
                       width: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(_reset ? '改密码并登录' : (_register ? '注册并登录' : '登录')),
+                  : Text(_reset ? Lc.current.changePasswordAndLogin : (_register ? Lc.current.registerAndLogin : Lc.current.login)),
             ),
             const SizedBox(height: 6),
             if (_reset)
@@ -279,7 +280,7 @@ class _LoginPageState extends State<LoginPage> {
                         _reset = false;
                         _err = null;
                       }),
-                child: const Text('返回登录'),
+                child: Text(Lc.current.backToLogin),
               )
             else ...[
               TextButton(
@@ -289,7 +290,7 @@ class _LoginPageState extends State<LoginPage> {
                         _register = !_register;
                         _err = null;
                       }),
-                child: Text(_register ? '已有账号，去登录' : '没有账号，去注册'),
+                child: Text(_register ? Lc.current.haveAccountLogin : Lc.current.noAccountRegister),
               ),
               if (!_register)
                 TextButton(
@@ -299,7 +300,7 @@ class _LoginPageState extends State<LoginPage> {
                           _reset = true;
                           _err = null;
                         }),
-                  child: const Text('忘记密码？'),
+                  child: Text(Lc.current.forgotPasswordQuestion),
                 ),
             ],
             if (!_register && !_reset)
@@ -308,7 +309,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: TextButton.icon(
                   onPressed: _busy ? null : _useToken,
                   icon: const Icon(Icons.key_outlined, size: 16),
-                  label: const Text('用登录凭证恢复'),
+                  label: Text(Lc.current.restoreWithCredential),
                 ),
               ),
           ],

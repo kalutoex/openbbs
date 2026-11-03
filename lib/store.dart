@@ -7,6 +7,7 @@ import 'disk_cache.dart';
 import 'img_cache.dart';
 import 'token_store.dart';
 
+import '../l10n/l10n.dart';
 /// 全局状态：服务器地址、登录状态。页面用它判断要不要显示「我的」内容。
 class AppState extends ChangeNotifier {
   AppState._();
@@ -100,25 +101,25 @@ class AppState extends ChangeNotifier {
 
   final ValueNotifier<double> accentHue = ValueNotifier(defaultHue);
 
-  static const _hueNames = [
-    '红',
-    '橙红',
-    '橙',
-    '橙黄',
-    '黄',
-    '黄绿',
-    '草绿',
-    '绿',
-    '青绿',
-    '青',
-    '青蓝',
-    '蓝',
-    '靛蓝',
-    '紫蓝',
-    '紫',
-    '紫红',
-    '粉',
-    '浅粉',
+  static List<String> get _hueNames => [
+    Lc.current.hueRed,
+    Lc.current.hueOrangeRed,
+    Lc.current.hueOrange,
+    Lc.current.hueAmber,
+    Lc.current.hueYellow,
+    Lc.current.hueLime,
+    Lc.current.hueGrass,
+    Lc.current.hueGreen,
+    Lc.current.hueTeal,
+    Lc.current.hueCyan,
+    Lc.current.hueAzure,
+    Lc.current.hueBlue,
+    Lc.current.hueIndigo,
+    Lc.current.hueViolet,
+    Lc.current.huePurple,
+    Lc.current.hueMagenta,
+    Lc.current.huePink,
+    Lc.current.huePinkLight,
   ];
 
   static String hueName(double h) {

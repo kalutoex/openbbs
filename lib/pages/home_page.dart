@@ -15,6 +15,7 @@ import 'me_tab.dart';
 import 'notice_tab.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -104,7 +105,7 @@ class _HomePageState extends State<HomePage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                 child: Text(
-                  '发到哪个板块',
+                  Lc.current.chooseForum,
                   style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -171,7 +172,7 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: _index == 0
           ? FloatingActionButton(
               onPressed: _compose,
-              tooltip: '发帖',
+              tooltip: Lc.current.newThread,
               child: const Icon(Icons.add),
             )
           : null,
@@ -198,15 +199,15 @@ class _HomePageState extends State<HomePage> {
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               onDestinationSelected: _go,
               destinations: [
-                const NavigationDestination(
+                NavigationDestination(
                   icon: Icon(Icons.home_outlined),
                   selectedIcon: Icon(Icons.home_rounded),
-                  label: '首页',
+                  label: Lc.current.home,
                 ),
-                const NavigationDestination(
+                NavigationDestination(
                   icon: Icon(Icons.grid_view_outlined),
                   selectedIcon: Icon(Icons.grid_view_rounded),
-                  label: '板块',
+                  label: Lc.current.forums,
                 ),
                 NavigationDestination(
                   icon: Badge(
@@ -219,12 +220,12 @@ class _HomePageState extends State<HomePage> {
                     label: Text(unread > 99 ? '99+' : '$unread'),
                     child: const Icon(Icons.notifications_rounded),
                   ),
-                  label: '通知',
+                  label: Lc.current.notice,
                 ),
-                const NavigationDestination(
+                NavigationDestination(
                   icon: Icon(Icons.person_outline_rounded),
                   selectedIcon: Icon(Icons.person_rounded),
-                  label: '我的',
+                  label: Lc.current.me,
                 ),
               ],
             ),

@@ -6,6 +6,7 @@ import '../widgets/thread_tile.dart';
 import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 单个吧。
 class ForumPage extends StatefulWidget {
   final String name;
@@ -87,7 +88,7 @@ class _ForumPageState extends State<ForumPage> {
 
   Future<void> _toggleFollow() async {
     if (!AppState.instance.loggedIn) {
-      _toast('先登录');
+      _toast(Lc.current.needLogin);
       return;
     }
     try {
@@ -126,9 +127,9 @@ class _ForumPageState extends State<ForumPage> {
             height: 48,
             child: Row(
               children: [
-                _sortChip('最新回复', 'last', cs),
-                _sortChip('最新发布', 'new', cs),
-                _sortChip('热门', 'hot', cs),
+                _sortChip(Lc.current.sortUpdated, 'last', cs),
+                _sortChip(Lc.current.sortCreated, 'new', cs),
+                _sortChip(Lc.current.hot, 'hot', cs),
                 const Spacer(),
               ],
             ),
@@ -155,9 +156,9 @@ class _ForumPageState extends State<ForumPage> {
                 ),
               )
             else if (_items.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 60),
-                child: Center(child: Text('这个團还没有線')),
+                child: Center(child: Text(Lc.current.forumEmpty)),
               )
             else
               for (final it in _items) ...[
@@ -184,7 +185,7 @@ class _ForumPageState extends State<ForumPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Center(
-                  child: Text('到底了', style: TextStyle(color: cs.outline)),
+                  child: Text(Lc.current.endOfList, style: TextStyle(color: cs.outline)),
                 ),
               ),
           ],
@@ -274,7 +275,7 @@ class _ForumPageState extends State<ForumPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${f['thread_count'] ?? 0} 帖 · ${f['follow_count'] ?? 0} 关注',
+                      Lc.current.forumStats('${f['thread_count'] ?? 0}', '${f['follow_count'] ?? 0}'),
                       style: TextStyle(fontSize: 11, color: cs.outline),
                     ),
                   ],
@@ -285,12 +286,12 @@ class _ForumPageState extends State<ForumPage> {
                   ? OutlinedButton(
                       onPressed: _toggleFollow,
                       style: outStyle,
-                      child: const Text('已关注'),
+                      child: Text(Lc.current.following),
                     )
                   : FilledButton(
                       onPressed: _toggleFollow,
                       style: btnStyle,
-                      child: const Text('关注'),
+                      child: Text(Lc.current.follow),
                     ),
             ],
           ),

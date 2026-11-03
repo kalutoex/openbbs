@@ -26,6 +26,7 @@ String errorText(BuildContext context, Object error) {
     'badResponse' => l.errBadResponse(status),
     'requestFailed' => l.errRequestFailed(status),
     'downloadFailed' => l.errDownloadFailed(status),
+    'connectFailed' => l.connectFailed(error.detail ?? ''),
     // 新增 code 忘了在这里接上时，至少还能看见原文，不至于变成空字符串。
     _ => error.message,
   };

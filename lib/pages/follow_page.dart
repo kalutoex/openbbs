@@ -6,6 +6,7 @@ import '../widgets/name_tag.dart';
 import '../widgets/user_link.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 关注 / 粉丝。
 ///
 /// 一个页面两个列表，顶上是自己画的分段控件（原来用 TabBar 塞进 AppBar，
@@ -102,7 +103,7 @@ class _FollowPageState extends State<FollowPage> {
     });
     try {
       await Api.delete('/u/${Uri.encodeComponent(name)}/follow');
-      _say('已取消关注 ${_nameOf(u)}');
+      _say(Lc.current.unfollowed('${_nameOf(u)}'));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -129,7 +130,7 @@ class _FollowPageState extends State<FollowPage> {
           _following.items.insert(0, u);
         }
       });
-      _say('已回关 ${_nameOf(u)}');
+      _say(Lc.current.followedBack('${_nameOf(u)}'));
     } on ApiException catch (e) {
       _say(errorText(context, e));
     }
@@ -146,7 +147,7 @@ class _FollowPageState extends State<FollowPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('关注')),
+      appBar: AppBar(title: Text(Lc.current.follow)),
       body: Column(
         children: [
           _segmented(),
@@ -205,8 +206,8 @@ class _FollowPageState extends State<FollowPage> {
                 ),
                 Row(
                   children: [
-                    _seg('关注', _following.items.length, 0),
-                    _seg('粉丝', _followers.items.length, 1),
+                    _seg(Lc.current.follow, _following.items.length, 0),
+                    _seg(Lc.current.fans, _followers.items.length, 1),
                   ],
                 ),
               ],
@@ -261,16 +262,16 @@ class _FollowPageState extends State<FollowPage> {
       return _hint(
         b.error!,
         icon: Icons.cloud_off_outlined,
-        action: TextButton(onPressed: _refresh, child: const Text('重试')),
+        action: TextButton(onPressed: _refresh, child: Text(Lc.current.retry)),
       );
     }
     if (b.isEmpty) {
       return _hint(
-        following ? '还没关注谁' : '还没有粉丝',
+        following ? Lc.current.notFollowingAnyone : Lc.current.noFans,
         icon: following
             ? Icons.person_add_alt_outlined
             : Icons.people_outline,
-        action: TextButton(onPressed: _refresh, child: const Text('刷新')),
+        action: TextButton(onPressed: _refresh, child: Text(Lc.current.refresh)),
       );
     }
     return RefreshIndicator(
@@ -342,14 +343,14 @@ class _FollowPageState extends State<FollowPage> {
             const SizedBox(width: 8),
             if (following)
               _pill(
-                '已关注',
+                Lc.current.following,
                 onTap: () => _unfollow(_following, u),
                 filled: false,
               )
             else if (mutual)
-              _pill('互相关注', onTap: null, filled: false)
+              _pill(Lc.current.mutual, onTap: null, filled: false)
             else
-              _pill('回关', onTap: () => _followBack(u), filled: true),
+              _pill(Lc.current.followBack, onTap: () => _followBack(u), filled: true),
           ],
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../permissions.dart';
 
+import '../l10n/l10n.dart';
 /// 权限页：通知、相册各自显示状态，点一下就能申请或去系统设置。
 /// 联网权限装完就有，运行时没有弹窗，这里只做说明。
 class PermissionsPage extends StatefulWidget {
@@ -41,7 +42,7 @@ class _PermissionsPageState extends State<PermissionsPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('权限')),
+      appBar: AppBar(title: Text(Lc.current.permissions)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -50,17 +51,17 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
                   child: Text(
-                    '联网权限安装时已经给了，这里只剩通知和相册需要你点头。',
+                    Lc.current.permIntro,
                     style: TextStyle(fontSize: 13, color: cs.outline),
                   ),
                 ),
                 const SizedBox(height: 8),
                 ListTile(
                   leading: const Icon(Icons.wifi),
-                  title: const Text('联网'),
-                  subtitle: const Text('安装时自动授予，不用管'),
+                  title: Text(Lc.current.network),
+                  subtitle: Text(Lc.current.networkGranted),
                   trailing: Text(
-                    '已允许',
+                    Lc.current.allowed,
                     style: TextStyle(fontSize: 13, color: cs.outline),
                   ),
                 ),
@@ -84,7 +85,7 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
-                    '不想开的可以一直关着，只是发图时得手动去系统里选。',
+                    Lc.current.permOptionalNote,
                     style: TextStyle(fontSize: 12, color: cs.outline),
                   ),
                 ),

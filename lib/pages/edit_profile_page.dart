@@ -9,6 +9,7 @@ import '../store.dart';
 import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 改自己的昵称、@标识、签名、头像。
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic> info;
@@ -96,11 +97,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (u is Map<String, dynamic>) AppState.instance.applyUser(u);
       if (!mounted) return;
       setState(() => _avatar.text = url);
-      _snack('头像已换上 · ${ImgCompress.kb(out.length)}');
+      _snack(Lc.current.avatarUpdated('${ImgCompress.kb(out.length)}'));
     } on ApiException catch (e) {
       _snack(errorText(context, e));
     } catch (e) {
-      _snack('上传失败：$e');
+      _snack(Lc.current.uploadFailedWith('$e'));
     } finally {
       if (mounted) setState(() => _picking = false);
     }
@@ -162,14 +163,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
               TextButton.icon(
                 onPressed: (_busy || _picking) ? null : _pickAvatar,
                 icon: const Icon(Icons.photo_library_outlined, size: 18),
-                label: const Text('从相册选择'),
+                label: Text(Lc.current.chooseFromAlbum),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   visualDensity: VisualDensity.compact,
                 ),
               ),
               Text(
-                '自动压到 100KB 上下再上传',
+                Lc.current.compressNote,
                 style: TextStyle(fontSize: 12, color: cs.outline),
               ),
             ],
@@ -184,7 +185,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               foregroundColor: cs.outline,
               visualDensity: VisualDensity.compact,
             ),
-            child: const Text('清除'),
+            child: Text(Lc.current.clear),
           ),
       ],
     );
@@ -202,12 +203,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _save() async {
     final nick = _nick.text.trim();
     if (nick.isEmpty) {
-      setState(() => _err = '昵称不能为空');
+      setState(() => _err = Lc.current.nicknameRequired);
       return;
     }
     final tag = _tag.text.trim().replaceFirst(RegExp(r'^@'), '').toLowerCase();
     if (!RegExp(r'^[a-z0-9_]{3,16}$').hasMatch(tag)) {
-      setState(() => _err = '标识只能用小写字母、数字、下划线，3–16 位');
+      setState(() => _err = Lc.current.handleInvalid);
       return;
     }
     setState(() {
@@ -244,7 +245,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('编辑资料'),
+        title: Text(Lc.current.editProfileTitle),
         actions: [
           TextButton(
             onPressed: _busy ? null : _save,
@@ -254,7 +255,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('保存'),
+                : Text(Lc.current.save),
           ),
         ],
       ),
@@ -268,9 +269,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
           TextField(
             controller: _nick,
             maxLength: 20,
-            decoration: const InputDecoration(
-              labelText: '昵称',
-              helperText: '最多 20 个字',
+            decoration: InputDecoration(
+              labelText: Lc.current.nickname,
+              helperText: Lc.current.nicknameMax,
               border: OutlineInputBorder(),
             ),
           ),
@@ -281,10 +282,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
             ],
-            decoration: const InputDecoration(
-              labelText: '标识',
+            decoration: InputDecoration(
+              labelText: Lc.current.handle,
               prefixText: '@',
-              helperText: '别人用 @ 找到你；小写字母、数字、下划线，3–16 位',
+              helperText: Lc.current.handleHint,
               border: OutlineInputBorder(),
             ),
           ),
@@ -293,9 +294,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
             controller: _sig,
             maxLength: 80,
             maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: '签名',
-              helperText: '最多 80 个字，可以留空',
+            decoration: InputDecoration(
+              labelText: Lc.current.bio,
+              helperText: Lc.current.bioHint,
               border: OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
@@ -306,7 +307,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ],
           const SizedBox(height: 10),
           Text(
-            '改完立刻生效，回主页刷新就能看到。',
+            Lc.current.profileSavedHint,
             style: TextStyle(fontSize: 12, color: cs.outline),
           ),
         ],

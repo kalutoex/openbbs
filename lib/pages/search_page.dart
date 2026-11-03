@@ -7,6 +7,7 @@ import 'thread_page.dart';
 import 'user_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 全站搜索：按标题和正文匹配。
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -175,8 +176,8 @@ class _SearchPageState extends State<SearchPage> {
           focusNode: _focus,
           textInputAction: TextInputAction.search,
           onSubmitted: _submit,
-          decoration: const InputDecoration(
-            hintText: '搜标题或内容',
+          decoration: InputDecoration(
+            hintText: Lc.current.searchTitleOrBody,
             border: InputBorder.none,
           ),
         ),
@@ -184,7 +185,7 @@ class _SearchPageState extends State<SearchPage> {
           IconButton(
             onPressed: () => _submit(_ctl.text),
             icon: const Icon(Icons.search),
-            tooltip: '搜索',
+            tooltip: Lc.current.search,
           ),
         ],
       ),
@@ -199,7 +200,7 @@ class _SearchPageState extends State<SearchPage> {
       if (_hist.isEmpty) {
         return Center(
           child: Text(
-            '输入关键词，按回车',
+            Lc.current.searchPrompt,
             style: TextStyle(color: cs.onSurfaceVariant),
           ),
         );
@@ -209,7 +210,7 @@ class _SearchPageState extends State<SearchPage> {
         children: [
           Row(
             children: [
-              Text('最近搜索', style: TextStyle(fontSize: 12, color: cs.outline)),
+              Text(Lc.current.recentSearches, style: TextStyle(fontSize: 12, color: cs.outline)),
               const Spacer(),
               TextButton(
                 onPressed: _clearHist,
@@ -218,7 +219,7 @@ class _SearchPageState extends State<SearchPage> {
                   minimumSize: const Size(0, 28),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text('清空', style: TextStyle(fontSize: 12)),
+                child: Text(Lc.current.clearAll, style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
@@ -258,7 +259,7 @@ class _SearchPageState extends State<SearchPage> {
             const SizedBox(height: 12),
             FilledButton.tonal(
               onPressed: () => _submit(_q),
-              child: const Text('重试'),
+              child: Text(Lc.current.retry),
             ),
           ],
         ),
@@ -268,7 +269,7 @@ class _SearchPageState extends State<SearchPage> {
     if (_items.isEmpty) {
       if (_busy) return const Center(child: CircularProgressIndicator());
       return Center(
-        child: Text('没搜到「$_q」', style: TextStyle(color: cs.onSurfaceVariant)),
+        child: Text(Lc.current.noSearchResult('${_q}'), style: TextStyle(color: cs.onSurfaceVariant)),
       );
     }
 
@@ -282,7 +283,7 @@ class _SearchPageState extends State<SearchPage> {
             padding: const EdgeInsets.symmetric(vertical: 18),
             child: Center(
               child: Text(
-                _busy ? '加载中…' : (_hasMore ? '共 $_total 条' : '到底了，共 $_total 条'),
+                _busy ? Lc.current.loading : (_hasMore ? Lc.current.totalCount('${_total}') : Lc.current.endTotalCount('${_total}')),
                 style: TextStyle(color: cs.outline, fontSize: 12),
               ),
             ),

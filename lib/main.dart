@@ -30,7 +30,7 @@ Future<void> _boot() async {
   try {
     await AppState.instance.loadPrefs();
   } catch (e) {
-    debugPrint('读设置失败，按默认值启动：$e');
+    debugPrint('failed to read settings, starting with defaults: $e');
     AppState.instance.ready = true;
   }
   // 只有自动档要探：先 IPv6，通了就用，不通再走 IPv4，全程在手机上判断。
@@ -40,12 +40,12 @@ Future<void> _boot() async {
       final b = await Api.probe();
       if (b != null) {
         Api.base = b;
-        debugPrint('出口：$b');
+        debugPrint('endpoint: $b');
       } else {
-        debugPrint('两条通道都不通，用上次的：${Api.base}');
+        debugPrint('both channels unreachable, using last: ${Api.base}');
       }
     } catch (e) {
-      debugPrint('选路失败，用上次的：${Api.base} $e');
+      debugPrint('route selection failed, using last: ${Api.base} $e');
     }
   }
   // 设置读完才有 Api.token。冷启动必须在这里补一次 /me，

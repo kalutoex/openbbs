@@ -10,6 +10,7 @@ import 'name_tag.dart';
 import 'user_link.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 时间线里的一条帖子。
 class ThreadTile extends StatelessWidget {
   final Map<String, dynamic> item;
@@ -27,16 +28,16 @@ class ThreadTile extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删掉这帖？'),
-        content: const Text('帖子和下面所有回复一起消失，删了找不回来。'),
+        title: Text(Lc.current.deletePostConfirm),
+        content: Text(Lc.current.deleteThreadConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('算了'),
+            child: Text(Lc.current.forgetIt),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删掉'),
+            child: Text(Lc.current.deleteIt),
           ),
         ],
       ),
@@ -46,7 +47,7 @@ class ThreadTile extends StatelessWidget {
       await Api.delete('/t/${item['id']}');
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('帖子已删')));
+          .showSnackBar(SnackBar(content: Text(Lc.current.postDeleted)));
       onDeleted?.call();
     } on ApiException catch (e) {
       if (!context.mounted) return;
@@ -106,11 +107,11 @@ class ThreadTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                _ForumChip(text: label.isEmpty ? '综合' : label),
+                _ForumChip(text: label.isEmpty ? Lc.current.general : label),
                 const SizedBox(width: 8),
                 if (item['is_top'] == true) ...[
                   Text(
-                    '置顶',
+                    Lc.current.pinned,
                     style: tt.labelSmall?.copyWith(
                       color: cs.primary,
                       fontWeight: FontWeight.w700,
@@ -120,7 +121,7 @@ class ThreadTile extends StatelessWidget {
                 ],
                 if (good) ...[
                   Text(
-                    '精华',
+                    Lc.current.featured,
                     style: tt.labelSmall?.copyWith(
                       color: cs.error,
                       fontWeight: FontWeight.w700,
@@ -130,7 +131,7 @@ class ThreadTile extends StatelessWidget {
                 ],
                 if (imgs.length >= 2) ...[
                   Text(
-                    '多图片',
+                    Lc.current.multiImage,
                     style: tt.labelSmall?.copyWith(
                       color: cs.tertiary,
                       fontWeight: FontWeight.w700,
@@ -227,7 +228,7 @@ class ThreadTile extends StatelessWidget {
                 Icon(Icons.chat_bubble_outline, size: 14, color: cs.outline),
                 const SizedBox(width: 5),
                 Text(
-                  replies == 0 ? '评论' : bigNum(replies),
+                  replies == 0 ? Lc.current.comments : bigNum(replies),
                   style: tt.labelSmall?.copyWith(color: cs.outline),
                 ),
               ],

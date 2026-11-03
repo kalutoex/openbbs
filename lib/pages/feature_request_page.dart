@@ -4,6 +4,7 @@ import '../api.dart';
 import '../utils.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 普通用户提需求：想要什么功能写清楚，提交给管理员。
 /// 下面顺带列出自己提过的，状态和回复都能看见。
 class FeatureRequestPage extends StatefulWidget {
@@ -57,7 +58,7 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
   Future<void> _submit() async {
     final title = _title.text.trim();
     if (title.length < 4) {
-      _toast('标题再写清楚一点');
+      _toast(Lc.current.titleClearer);
       return;
     }
     setState(() => _busy = true);
@@ -70,7 +71,7 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
       _title.clear();
       _body.clear();
       FocusScope.of(context).unfocus();
-      _toast(r['duplicate'] == true ? '这条已经提过了' : '提交好了');
+      _toast(r['duplicate'] == true ? Lc.current.requestDuplicate : Lc.current.requestSubmitted);
       await _loadMine();
     } on ApiException catch (e) {
       _toast(e);
@@ -83,12 +84,12 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('想要的新功能')),
+      appBar: AppBar(title: Text(Lc.current.featureRequests)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
           Text(
-            '想到什么功能，写在这里。管理员会看，采纳了会回一句。',
+            Lc.current.requestIntro,
             style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
@@ -96,9 +97,9 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
             controller: _title,
             maxLength: 60,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: '一句话说清要什么',
-              hintText: '比如：帖子支持收藏到不同文件夹',
+            decoration: InputDecoration(
+              labelText: Lc.current.requestTitleLabel,
+              hintText: Lc.current.requestTitleHint,
               border: OutlineInputBorder(),
             ),
           ),
@@ -108,9 +109,9 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
             maxLength: 2000,
             maxLines: 6,
             minLines: 4,
-            decoration: const InputDecoration(
-              labelText: '细节（可选）',
-              hintText: '为什么需要、大概怎么用',
+            decoration: InputDecoration(
+              labelText: Lc.current.requestDetailLabel,
+              hintText: Lc.current.requestDetailHint,
               border: OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
@@ -126,14 +127,14 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('提交'),
+                  : Text(Lc.current.submit),
             ),
           ),
           const SizedBox(height: 28),
           Row(
             children: [
               Text(
-                '我提过的',
+                Lc.current.myRequests,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -143,7 +144,7 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
               const Spacer(),
               if (_loaded && _mine.isNotEmpty)
                 Text(
-                  '${_mine.length} 条',
+                  Lc.current.requestCount('${_mine.length}'),
                   style: TextStyle(fontSize: 12, color: cs.outline),
                 ),
             ],
@@ -159,7 +160,7 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Text(
-                  '还没提过',
+                  Lc.current.noRequestsYet,
                   style: TextStyle(color: cs.outline, fontSize: 13),
                 ),
               ),
@@ -174,9 +175,9 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
   Widget _card(ColorScheme cs, Map<String, dynamic> it) {
     final status = (it['status'] ?? 0) as int;
     final (label, color) = switch (status) {
-      1 => ('采纳', cs.primary),
-      2 => ('不做', cs.error),
-      _ => ('待看', cs.outline),
+      1 => (Lc.current.accept, cs.primary),
+      2 => (Lc.current.wontDo, cs.error),
+      _ => (Lc.current.statusPending, cs.outline),
     };
     final note = (it['note'] ?? '') as String;
     return Container(

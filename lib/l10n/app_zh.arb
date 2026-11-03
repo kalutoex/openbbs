@@ -9,7 +9,7 @@
   "copy": "复制",
   "close": "关闭",
   "done": "完成",
-  "confirm": "确认",
+  "confirm": "确定",
   "send": "发送",
   "submit": "提交",
   "back": "返回",
@@ -46,7 +46,7 @@
   "home": "首页",
   "forums": "板块",
   "notice": "通知",
-  "me": "我",
+  "me": "我的",
   "newThread": "发帖",
   "title": "标题",
   "body": "正文",
@@ -54,7 +54,7 @@
   "reply": "回复",
   "addImage": "添加图片",
   "confirmDelete": "删了就找不回来，确定？",
-  "confirmLogout": "确定要退出登录？",
+  "confirmLogout": "退出登录？",
   "unsavedChanges": "有没保存的内容，确定离开？",
   "errNotConfigured": "还没设置服务器地址",
   "errUploadNoUrl": "上传没返回地址",
@@ -87,6 +87,1087 @@
     "placeholders": {
       "status": {
         "type": "int"
+      }
+    }
+  },
+  "needLogin": "先登录",
+  "forgetIt": "算了",
+  "follow": "关注",
+  "connectFailed": "连不上服务器：{v1}",
+  "@connectFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "myFavorites": "我的收藏",
+  "browseHistory": "浏览历史",
+  "notLoggedIn": "还没登录",
+  "menu": "菜单",
+  "densityNormal": "标准",
+  "timeline": "时间线",
+  "deleteIt": "删掉",
+  "postDeleted": "帖子已删",
+  "emailAndCodeRequired": "邮箱和验证码都要填",
+  "maxImages": "最多 {v1} 张",
+  "@maxImages": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "imageStillTooBig": "有张图压完还是太大，跳过了",
+  "addImageShort": "加图",
+  "accept": "采纳",
+  "wontDo": "不做",
+  "endOfList": "到底了",
+  "following": "已关注",
+  "sortUpdated": "最新回复",
+  "sortCreated": "最新发布",
+  "connectFailedPlain": "连不上服务器",
+  "server": "服务器",
+  "checkUpdate": "检查更新",
+  "uploadFailedWith": "上传失败：{v1}",
+  "@uploadFailedWith": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "album": "相册",
+  "allowed": "已允许",
+  "accountManagement": "账号管理",
+  "featureRequests": "想要的新功能",
+  "tapToRetry": "点一下重试",
+  "saveFailed": "保存失败：{v1}",
+  "@saveFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteThreadConfirm": "帖子和下面所有回复一起消失，删了找不回来。",
+  "pinned": "置顶",
+  "fillEmailFirst": "先填邮箱",
+  "accountSecurity": "账号安全",
+  "code": "验证码",
+  "remove": "移除",
+  "pasteCredential": "粘贴登录凭证",
+  "ignore": "忽略",
+  "loadMore": "加载更多",
+  "post": "帖子",
+  "resetPassword": "重置密码",
+  "newPassword": "新密码",
+  "albumFailed": "打不开相册：{v1}",
+  "@albumFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "readImageFailed": "读图失败：{v1}",
+  "@readImageFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "publishing": "发布中…",
+  "clear": "清除",
+  "saving": "保存中…",
+  "editPost": "编辑帖子",
+  "clearAll": "清空",
+  "tryAgain": "再试一次",
+  "addPeople": "加人",
+  "takeDown": "拿下来",
+  "permissions": "权限",
+  "auto": "自动",
+  "manual": "手动",
+  "fontSize": "字号",
+  "listDensity": "列表密度",
+  "feedSort": "时间线排序",
+  "startTab": "启动页",
+  "sizeSmall": "小",
+  "sizeHuge": "特大",
+  "sizeLarge": "大",
+  "densityCompact": "紧凑",
+  "densityLoose": "宽松",
+  "chinese": "中文",
+  "updateChannel": "更新通道",
+  "clearCache": "清除缓存",
+  "jumpToFloor": "跳转楼层",
+  "changed": "改好了",
+  "deletePostConfirm": "删掉这帖？",
+  "edited": "已编辑",
+  "hueRed": "红",
+  "hueOrangeRed": "橙红",
+  "hueOrange": "橙",
+  "hueAmber": "橙黄",
+  "hueYellow": "黄",
+  "hueLime": "黄绿",
+  "hueGrass": "草绿",
+  "hueGreen": "绿",
+  "hueTeal": "青绿",
+  "hueCyan": "青",
+  "hueAzure": "青蓝",
+  "hueBlue": "蓝",
+  "hueIndigo": "靛蓝",
+  "hueViolet": "紫蓝",
+  "huePurple": "紫",
+  "hueMagenta": "紫红",
+  "huePink": "粉",
+  "huePinkLight": "浅粉",
+  "permNotificationWhy": "有人回复、赞你时提醒你",
+  "permPhotosWhy": "发帖、回复时从相册选图",
+  "permDeniedForever": "已拒绝 · 去系统设置开",
+  "permRestricted": "被系统限制",
+  "permAsk": "未允许 · 点一下申请",
+  "justNow": "刚刚",
+  "minutesAgo": "{v1} 分钟前",
+  "@minutesAgo": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "yesterday": "昨天",
+  "bigNumSuffix": "{v1}万",
+  "@bigNumSuffix": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "am": "上午",
+  "pm": "下午",
+  "postTimeFmt": "{v1}年{v2}月{v3}日, {v4}:{v5} {v6}",
+  "@postTimeFmt": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      },
+      "v3": {
+        "type": "String"
+      },
+      "v4": {
+        "type": "String"
+      },
+      "v5": {
+        "type": "String"
+      },
+      "v6": {
+        "type": "String"
+      }
+    }
+  },
+  "threadSpacing": "帖子之间的间距",
+  "browseSection": "浏览",
+  "startTabHint": "打开 app 先看哪个",
+  "showThumbnails": "显示缩略图",
+  "showThumbnailsHint": "关掉后时间线只留文字，省流量",
+  "autoCheckNotice": "自动检查通知",
+  "autoCheckNoticeHint": "每分钟问一次未读数",
+  "networkSection": "网络",
+  "contentSection": "内容",
+  "clearSearchHistory": "清除搜索记录",
+  "searchHistoryCleared": "搜索记录已清除",
+  "permSubtitle": "通知、相册",
+  "currentAccount": "当前账号",
+  "noEmailBoundHint": "还没绑邮箱，忘了密码只能找管理员",
+  "copyCredential": "复制登录凭证",
+  "copyCredentialHint": "重装或换机后，登录页可粘贴恢复",
+  "credentialCopied": "凭证已复制",
+  "webAccessSection": "网页访问",
+  "aboutBrand": "关于{v1}",
+  "@aboutBrand": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutSubtitle": "开源信息、更新日志、许可证",
+  "logoutShort": "退出",
+  "version": "版本",
+  "tapToCheckUpdate": "点一下检查更新",
+  "betaChannelHint": "内测版，只推给你",
+  "stableChannelHint": "稳定版，所有人都在用",
+  "stableOption": "稳定版　验证过的",
+  "betaOption": "内测版　改一点就推给你",
+  "betaVersion": "内测版 {v1}",
+  "@betaVersion": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "newVersion": "有新版本 {v1}",
+  "@newVersion": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "installOverwrite": "大小 {v1}，装完会覆盖当前版本，登录和设置都还在。",
+  "@installOverwrite": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "later": "以后再说",
+  "downloadAndInstall": "下载并安装",
+  "downloading": "正在下载",
+  "handedToSystem": "已交给系统打开",
+  "handedToInstaller": "已交给系统安装，没反应就去设置里允许安装未知应用",
+  "downloadFailedWith": "下载失败：{v1}",
+  "@downloadFailedWith": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "primaryEndpoint": "当前入口",
+  "backupEndpoint": "备用入口",
+  "endpointHint": "两个地址是同一个站。主入口连不上时会自己走备用那条。",
+  "addressCopied": "地址已复制",
+  "clearing": "正在清…",
+  "calculating": "正在算…",
+  "cacheEmpty": "暂时是空的",
+  "cacheSize": "占 {v1}",
+  "@cacheSize": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "cleared": "已清除",
+  "clearedAmount": "已清除 {v1}",
+  "@clearedAmount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "newerThanServer": "你手上是 build {v1}，比{v2}版的 {v3} 还新。同签名的包不能往低号装，要回退得先卸载。",
+  "@newerThanServer": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      },
+      "v3": {
+        "type": "String"
+      }
+    }
+  },
+  "upToDate": "已是最新版（{v1}）",
+  "@upToDate": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountLine": "{v1} · 本机 {v2} 个账号",
+  "@accountLine": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "betaShort": "内测",
+  "stableShort": "稳定",
+  "releaseNotes": "{v1}\n\n大小 {v2}，装完会覆盖当前版本，登录和设置都还在。",
+  "@releaseNotes": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheConfirm": "图片和接口缓存都会删掉，下次打开重新下载。\n登录状态和设置不受影响。",
+  "floorJumpHint": "输入楼层号，比如 128",
+  "jump": "跳",
+  "notReachedFloor": "还没翻到第 {v1} 楼",
+  "@notReachedFloor": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "noSuchFloor": "没有第 {v1} 楼",
+  "@noSuchFloor": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineCached": "网络不通，下面是上次缓存的内容",
+  "pinnedToast": "已置顶",
+  "unpinnedToast": "已取消置顶",
+  "featuredToast": "已加精",
+  "unfeaturedToast": "已取消加精",
+  "reportReason": "举报理由",
+  "reportSpam": "垃圾广告",
+  "reportAbuse": "人身攻击",
+  "reportIllegal": "违法违规",
+  "reportFalse": "内容不实",
+  "reportOther": "其他",
+  "reportDuplicate": "已经报过一次了",
+  "reportThanks": "收到了，会看",
+  "editFloor": "改这一楼",
+  "saySomething": "说点什么…",
+  "replaceWithPlaceholder": "换成占位图？",
+  "replacePlaceholderConfirm": "这一帖和下面所有回复里的图都会换成同一张占位图，原图找不回来。",
+  "replacedImages": "已换掉 {v1} 张图",
+  "@replacedImages": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFloorConfirm": "删除这楼？",
+  "deleteThreadBody": "帖子连同所有回复一起删掉，删了不能恢复。",
+  "deleteFloorBody": "这楼和它下面的楼中楼一起删掉。",
+  "deleteReplyConfirm": "删除这条回复？",
+  "cannotUndo": "删了不能恢复。",
+  "onlyAuthorOn": "已只看楼主",
+  "onlyAuthorOff": "只看楼主",
+  "jumpToFloorPages": "跳转楼层（共 {v1} 页）",
+  "@jumpToFloorPages": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "unpin": "取消置顶",
+  "unfeature": "取消加精",
+  "feature": "加精",
+  "replaceAllImages": "一键替换图片",
+  "deletePost": "删除帖子",
+  "viewsCount": "{v1} 浏览",
+  "@viewsCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "related": "相关",
+  "repliesCount": "{v1} 条回复",
+  "@repliesCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "noReplies": "还没有回复",
+  "favorited": "已收藏",
+  "unfavorite": "取消收藏",
+  "meShort": "我",
+  "replyTo": "回复 {v1}",
+  "@replyTo": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "replyHint": "发布你的回复",
+  "maxNineImages": "最多 9 张",
+  "opAuthor": "楼主",
+  "copyFullText": "复制全文",
+  "copied": "已复制",
+  "collapse": "收起",
+  "expandAllReplies": "展开全部 {v1} 条回复",
+  "@expandAllReplies": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "resumeDraft": "接着上次的写",
+  "resumeDraftImages": "接着上次的写，带 {v1} 张图",
+  "@resumeDraftImages": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "discardDraft": "清掉",
+  "pickFromAlbum": "从相册选",
+  "canAddMore": "还能加 {v1} 张",
+  "@canAddMore": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "takePhoto": "拍一张",
+  "cameraFailed": "打不开相机：{v1}",
+  "@cameraFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "tooManyImages": "最多 {v1} 张，多的没收",
+  "@tooManyImages": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteThisImage": "删掉这张",
+  "uploadingStart": "上传图片 0/{v1}",
+  "@uploadingStart": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadingImages": "上传图片 {v1}/{v2}",
+  "@uploadingImages": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "postFailed": "发不出去：{v1}",
+  "@postFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "draftUnsaved": "这篇还没发出去",
+  "draftImagesNote": "图片不进草稿，只有标题和正文会留着",
+  "saveDraftAndLeave": "存草稿，先走",
+  "discardPost": "扔掉这篇",
+  "keepEditing": "再改改",
+  "composeTitle": "发新帖",
+  "forumSuffix": "吧",
+  "composeHint": "说点什么…（@ 找人）",
+  "imageCount": "图片 {v1}/{v2}",
+  "@imageCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "dragToReorder": "长按拖动换顺序",
+  "titleRequiredMaxImages": "标题必填 · 最多 {v1} 张图",
+  "@titleRequiredMaxImages": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "imageCountPrefix": "{v1}/{v2} 张 · {v3}",
+  "@imageCountPrefix": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      },
+      "v3": {
+        "type": "String"
+      }
+    }
+  },
+  "bodyLength": "{v1} 字",
+  "@bodyLength": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "credentialHint": "在旧设备「设置 → 复制登录凭证」里复制",
+  "restore": "恢复",
+  "credentialInvalid": "凭证无效或已失效",
+  "restoreFailed": "恢复失败：{v1}",
+  "@restoreFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "codeSendFailed": "验证码没发出去：{v1}",
+  "@codeSendFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "passwordTooShort": "密码至少 8 位",
+  "passwordChangeFailed": "没改成：{v1}",
+  "@passwordChangeFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "fillUserAndPassword": "用户名和密码都要填",
+  "loginFailed": "登录没成功：{v1}",
+  "@loginFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "resetTitle": "找回密码",
+  "atLeast8": "至少 8 位",
+  "emailUsedToRegister": "注册时用的邮箱",
+  "emailForCode": "用来收注册验证码",
+  "sending": "发送中",
+  "getCode": "获取验证码",
+  "changePasswordAndLogin": "改密码并登录",
+  "registerAndLogin": "注册并登录",
+  "backToLogin": "返回登录",
+  "haveAccountLogin": "已有账号，去登录",
+  "noAccountRegister": "没有账号，去注册",
+  "forgotPasswordQuestion": "忘记密码？",
+  "restoreWithCredential": "用登录凭证恢复",
+  "accountCopied": "账号已复制",
+  "coverUpdated": "封面已换",
+  "coverFailed": "换封面失败：{v1}",
+  "@coverFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "saveCover": "保存背景图",
+  "saveCoverConfirm": "把这张背景图存到相册？",
+  "savedTo": "已保存到 {v1}",
+  "@savedTo": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "changeCover": "换封面",
+  "addCover": "加封面",
+  "joinedAt": "加入于 {v1}",
+  "@joinedAt": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "followingCount": "正在关注",
+  "followers": "关注者",
+  "editProfile": "编辑个人资料",
+  "noPostsYet": "还没有人发帖",
+  "longAgo": "很久以前",
+  "yearMonth": "{v1} 年 {v2} 月",
+  "@yearMonth": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "acceptConfirm": "采纳这条？",
+  "rejectConfirm": "不做这条？",
+  "reopenConfirm": "退回待看？",
+  "replyOptional": "回一句（可选）",
+  "adminReplyHint": "排期中 / 做不了，原因是……",
+  "accepted": "已采纳",
+  "markedWontDo": "已标记不做",
+  "movedBack": "已退回待看",
+  "requestsDone": "需求 · 已处理",
+  "requestsCount": "需求（{v1}）",
+  "@requestsCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "requests": "需求",
+  "viewPending": "看待看",
+  "viewDone": "看已处理",
+  "nothingHandled": "还没处理过",
+  "noPendingRequests": "没有待看的需求",
+  "replyLine": "回复：{v1}",
+  "@replyLine": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "submittedBy": "提交人：{v1}",
+  "@submittedBy": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "moveBack": "退回待看",
+  "avatarUpdated": "头像已换上 · {v1}",
+  "@avatarUpdated": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseFromAlbum": "从相册选择",
+  "compressNote": "自动压到 100KB 上下再上传",
+  "nicknameRequired": "昵称不能为空",
+  "handleInvalid": "标识只能用小写字母、数字、下划线，3–16 位",
+  "editProfileTitle": "编辑资料",
+  "nickname": "昵称",
+  "nicknameMax": "最多 20 个字",
+  "handle": "标识",
+  "handleHint": "别人用 @ 找到你；小写字母、数字、下划线，3–16 位",
+  "bio": "签名",
+  "bioHint": "最多 80 个字，可以留空",
+  "profileSavedHint": "改完立刻生效，回主页刷新就能看到。",
+  "openSource": "开源",
+  "thanksFriends": "致谢我的朋友们",
+  "thanksFriendsSub": "这里是他们的账号",
+  "thirdPartyLicenses": "第三方许可证",
+  "thirdPartyLicensesSub": "各依赖自带的许可文本",
+  "gplLicense": "GPL-3.0 许可证",
+  "gplLicenseSub": "本项目以 GPL-3.0 发布",
+  "links": "链接",
+  "sourceCode": "源代码",
+  "issues": "问题反馈",
+  "issuesSub": "发现什么不对，记在这里",
+  "cantOpenLink": "打不开这个链接",
+  "reportKeepNote": "这条没问题，关掉举报。",
+  "reportDeleteFloorNote": "楼层内容会被删掉，删了找不回来。",
+  "reportDeletePostNote": "整个帖子连同回复一起删掉，删了找不回来。",
+  "ignoreReportConfirm": "忽略这条举报？",
+  "deleteContentConfirm": "删掉这条内容？",
+  "ignored": "已忽略",
+  "deleted": "已删掉",
+  "reportsCount": "举报（{v1}）",
+  "@reportsCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "noReports": "没有待处理的举报",
+  "floor": "楼层",
+  "reportLine": "理由：{v1}　举报人：{v2}",
+  "@reportLine": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "galleryReadFailed": "相册读不出来：{v1}",
+  "@galleryReadFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "albumOpenFailed": "这个相册打不开：{v1}",
+  "@albumOpenFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "maxSelectImages": "最多选 {v1} 张",
+  "@maxSelectImages": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "pickPhotos": "选择照片",
+  "doneWithCount": "完成 ({v1})",
+  "@doneWithCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "albumEmpty": "这个相册里没有图片",
+  "needsAlbumPermission": "需要相册权限才能列出照片",
+  "noAlbumUsePicker": "这台机器没有相册，用系统的文件选择",
+  "localThumbsOnly": "只在本机缩略图里挑，不上传整本相册。",
+  "grantPermission": "去开权限",
+  "pickAnotherWay": "换个方式选图",
+  "titleClearer": "标题再写清楚一点",
+  "requestDuplicate": "这条已经提过了",
+  "requestSubmitted": "提交好了",
+  "requestIntro": "想到什么功能，写在这里。管理员会看，采纳了会回一句。",
+  "requestTitleLabel": "一句话说清要什么",
+  "requestTitleHint": "比如：帖子支持收藏到不同文件夹",
+  "requestDetailLabel": "细节（可选）",
+  "requestDetailHint": "为什么需要、大概怎么用",
+  "myRequests": "我提过的",
+  "requestCount": "{v1} 条",
+  "@requestCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "noRequestsYet": "还没提过",
+  "statusPending": "待看",
+  "codeSentCheckEmail": "验证码发出去了，去邮箱里看看",
+  "emailBound": "绑好了",
+  "noEmailWarning": "这个账号还没绑邮箱。忘了密码的话，现在只能找管理员重置。",
+  "emailBoundHint": "已绑定，忘了密码可以自己重置",
+  "bindEmail": "绑定邮箱",
+  "changeEmail": "换一个邮箱",
+  "sendCode": "发送验证码",
+  "processing": "处理中…",
+  "bind": "绑定",
+  "rebind": "换绑",
+  "bindEmailWhy": "绑了之后，忘记密码不用找人：登录页点「忘记密码」，收个验证码就能改。",
+  "titleEmpty": "标题不能空",
+  "bodyOrImageRequired": "正文或图片至少留一样",
+  "uploadingNewStart": "上传新图 0/{v1}",
+  "@uploadingNewStart": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadingNewImages": "上传新图 {v1}/{v2}",
+  "@uploadingNewImages": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "changesUnsaved": "改动还没保存",
+  "continueEditing": "继续改",
+  "leaveWithoutSaving": "不保存，退出",
+  "imageCountShort": "图片 {v1}/{v2}",
+  "@imageCountShort": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "noImagesYet": "还没有图",
+  "searchForumsHint": "搜吧",
+  "noSearchResult": "没搜到「{v1}」",
+  "@noSearchResult": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "searchResultCount": "搜到 {v1} 个",
+  "@searchResultCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "myFollowedForums": "我关注的 {v1}",
+  "@myFollowedForums": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "allForums": "全部 {v1}",
+  "@allForums": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "noForums": "还没建板块",
+  "loginToSeeFollowed": "登录后能看到关注过的吧",
+  "goLogin": "去登录",
+  "noFollowedForums": "还没关注吧，进一个点关注",
+  "noIntro": "还没有简介",
+  "forumStats": "{v1} 帖 · {v2} 关注",
+  "@forumStats": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "nRepliedPost": "回复了你的帖",
+  "nRepliedYou": "回复了你",
+  "nLiked": "赞了你",
+  "nMentioned": "在帖子里 @ 了你",
+  "nFeatured": "把你的帖加精了",
+  "nDeleted": "删了你的内容",
+  "nNew": "有新消息",
+  "noticeLoginNeeded": "登录后才能收到通知",
+  "noticeLoginHint": "去「我的」登录",
+  "noNotifications": "还没有通知",
+  "noNotificationsHint": "别人回复你、赞你，会出现在这里",
+  "reset": "重置",
+  "newPasswordFor": "给「{v1}」的新密码：",
+  "@newPasswordFor": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "newPasswordOnce": "关掉就看不到了。让本人登录后马上改成自己记得的。",
+  "copyAndClose": "复制并关闭",
+  "searchUsername": "搜用户名",
+  "noEmail": "没绑邮箱",
+  "manualNeedsAddress": "手动要填地址",
+  "serverOkUsing": "通了，当前用 {v1}",
+  "@serverOkUsing": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "connectFailedBody": "连不上：{v1}",
+  "@connectFailedBody": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "ipv6FirstHint": "先试 IPv6，连不上再用 IPv4",
+  "channelIpv6": "IPv6 通道",
+  "channelIpv4": "IPv4 通道",
+  "enterManually": "自己填地址",
+  "serverAddress": "服务器地址",
+  "saveAndTest": "保存并测试",
+  "currentExit": "当前出口：{v1}",
+  "@currentExit": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "switchedTo": "已切换到 {v1}",
+  "@switchedTo": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountExpiredRemoved": "{v1} 的登录已失效，已移除",
+  "@accountExpiredRemoved": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "removeAccount": "移除账号",
+  "removeAccountConfirm": "从本机移除 {v1}？只是退出这台设备，账号和帖子都还在服务器上。",
+  "@removeAccountConfirm": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "accountAdded": "已添加 {v1}",
+  "@accountAdded": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "noAccounts": "还没有账号",
+  "addAccount": "添加账号",
+  "addAccountHint": "登录另一个账号，之后可以随时切回来",
+  "addFromDevice": "把别的设备上的账号加进这台机器",
+  "friendSearchHint": "用户名 / @标识 / 昵称",
+  "enterName": "写个名字",
+  "add": "添加",
+  "removeFriendConfirm": "把 {v1} 拿下来？",
+  "@removeFriendConfirm": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "removeFriendBody": "只是从这页去掉，账号还在。",
+  "credits": "致谢",
+  "nobodyYet": "还没有人",
+  "creditsAdminOnly": "这份名单只有管理员能改（当前登录：{v1}）。",
+  "@creditsAdminOnly": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "unfollowed": "已取消关注 {v1}",
+  "@unfollowed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "followedBack": "已回关 {v1}",
+  "@followedBack": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "fans": "粉丝",
+  "notFollowingAnyone": "还没关注谁",
+  "noFans": "还没有粉丝",
+  "mutual": "互相关注",
+  "followBack": "回关",
+  "searchTitleOrBody": "搜标题或内容",
+  "searchPrompt": "输入关键词，按回车",
+  "recentSearches": "最近搜索",
+  "totalCount": "共 {v1} 条",
+  "@totalCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "endTotalCount": "到底了，共 {v1} 条",
+  "@endTotalCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "noFavoritesYet": "还没收藏过帖",
+  "reportHandling": "举报处理",
+  "requestHandling": "需求处理",
+  "noHistoryYet": "还没有浏览记录",
+  "enterBio": "请输入你的个人签名",
+  "tapToLogin": "点这里登录",
+  "general": "综合",
+  "featured": "精华",
+  "multiImage": "多图片",
+  "comments": "评论",
+  "loginBenefits": "登录后可以发帖、回复、关注吧",
+  "hot": "热门",
+  "forumEmpty": "这个吧还没有帖",
+  "permIntro": "联网权限安装时已经给了，这里只剩通知和相册需要你点头。",
+  "network": "联网",
+  "networkGranted": "安装时自动授予，不用管",
+  "permOptionalNote": "不想开的可以一直关着，只是发图时得手动去系统里选。",
+  "downloadImage": "下载这张图",
+  "backToTop": "回到顶部",
+  "offlineCacheFeed": "连不上服务器，这是上次的缓存",
+  "chooseForum": "发到哪个板块",
+  "fillAddress": "填一下地址",
+  "fillServerAddress": "填一下服务器地址",
+  "connect": "连上去",
+  "themeColorTitle": "主题颜色",
+  "accentColorHint": "上面的按钮、选中状态、输入框焦点圈都会跟着这条色带走。",
+  "moreToLoad": "还有更多",
+  "resetPasswordConfirm": "把「{v1}」的密码换成随机的一串？\n\n原密码会立刻失效。新密码只显示一次，记得发给本人。",
+  "@resetPasswordConfirm": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
       }
     }
   }

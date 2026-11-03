@@ -66,7 +66,7 @@ Future<File> downloadApk(
     );
     if (res.statusCode != 200) {
       throw ApiException(
-        '下载失败（${res.statusCode}）',
+        'download failed (${res.statusCode})',
         code: 'downloadFailed',
         status: res.statusCode,
       );

@@ -6,6 +6,7 @@ import '../store.dart';
 import 'home_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 首次启动：填服务器地址。
 class SetupPage extends StatefulWidget {
   const SetupPage({super.key});
@@ -22,7 +23,7 @@ class _SetupPageState extends State<SetupPage> {
   Future<void> _save() async {
     final v = _ctrl.text.trim();
     if (v.isEmpty) {
-      setState(() => _err = '填一下地址');
+      setState(() => _err = Lc.current.fillAddress);
       return;
     }
     setState(() {
@@ -71,7 +72,7 @@ class _SetupPageState extends State<SetupPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '填一下服务器地址',
+                  Lc.current.fillServerAddress,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: cs.onSurfaceVariant),
                 ),
@@ -80,8 +81,8 @@ class _SetupPageState extends State<SetupPage> {
                   controller: _ctrl,
                   keyboardType: TextInputType.url,
                   autocorrect: false,
-                  decoration: const InputDecoration(
-                    labelText: '服务器',
+                  decoration: InputDecoration(
+                    labelText: Lc.current.server,
                     hintText: 'http://192.168.1.10:8080',
                     border: OutlineInputBorder(),
                   ),
@@ -99,7 +100,7 @@ class _SetupPageState extends State<SetupPage> {
                           width: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('连上去'),
+                      : Text(Lc.current.connect),
                 ),
               ],
             ),

@@ -10,6 +10,7 @@ import '../img_cache.dart';
 import '../img_size_store.dart';
 import '../save_cover.dart';
 
+import '../l10n/l10n.dart';
 /// 楼层里的图片。1 张大图，多张九宫格。点开全屏。
 class PostImages extends StatelessWidget {
   final List<String> urls;
@@ -222,7 +223,7 @@ class _RetryImageState extends State<_RetryImage> {
               Icon(Icons.refresh, size: 18, color: cs.outline),
               const SizedBox(height: 2),
               Text(
-                '点一下重试',
+                Lc.current.tapToRetry,
                 style: TextStyle(fontSize: 10, color: cs.outline),
               ),
             ],
@@ -256,20 +257,20 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
           .get(Uri.parse(Api.img(widget.urls[_i])))
           .timeout(const Duration(seconds: 30));
       if (r.statusCode >= 400) {
-        throw Exception('下载失败（${r.statusCode}）');
+        throw Exception('download failed (${r.statusCode})');
       }
       final name = 'openbbs_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final where = await saveImageBytes(r.bodyBytes, name);
       messenger.showSnackBar(
         SnackBar(
-          content: Text('已保存到 $where'),
+          content: Text(Lc.current.savedTo('${where}')),
           behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text('存不下来：$e'),
+          content: Text(Lc.current.saveFailed('$e')),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -348,7 +349,7 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.download, color: Colors.white70),
-                  tooltip: '下载这张图',
+                  tooltip: Lc.current.downloadImage,
                   onPressed: _saving ? null : _save,
                 ),
                 IconButton(

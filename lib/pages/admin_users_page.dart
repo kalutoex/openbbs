@@ -5,6 +5,7 @@ import '../api.dart';
 import '../store.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 管理员：账号管理。
 ///
 /// 只干一件事——把某个人的密码重置成随机临时密码。
@@ -59,16 +60,17 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('重置密码'),
+        title: Text(Lc.current.resetPassword),
         content: Text(
-          '把「${u['nickname'] ?? u['name']}」的密码换成随机的一串？\n\n'
-          '原密码会立刻失效。新密码只显示一次，记得发给本人。',
+          Lc.current.resetPasswordConfirm(
+            '${u['nickname'] ?? u['name'] ?? ''}',
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('算了')),
+          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(Lc.current.forgetIt)),
           FilledButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('重置'),
+            child: Text(Lc.current.reset),
           ),
         ],
       ),
@@ -82,7 +84,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       await showDialog<void>(
         context: context,
         builder: (c) => AlertDialog(
-          title: const Text('新密码'),
+          title: Text(Lc.current.newPassword),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,8 +100,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                '关掉就看不到了。让本人登录后马上改成自己记得的。',
+              Text(
+                Lc.current.newPasswordOnce,
                 style: TextStyle(fontSize: 12),
               ),
             ],
@@ -110,7 +112,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 await Clipboard.setData(ClipboardData(text: pw));
                 if (c.mounted) Navigator.pop(c);
               },
-              child: const Text('复制并关闭'),
+              child: Text(Lc.current.copyAndClose),
             ),
           ],
         ),
@@ -128,7 +130,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('账号管理'),
+        title: Text(Lc.current.accountManagement),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
@@ -138,7 +140,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _load(),
               decoration: InputDecoration(
-                hintText: '搜用户名',
+                hintText: Lc.current.searchUsername,
                 isDense: true,
                 prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: IconButton(
@@ -160,7 +162,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 children: [
                   Text(_err!, style: TextStyle(color: cs.error)),
                   const SizedBox(height: 12),
-                  OutlinedButton(onPressed: _load, child: const Text('重试')),
+                  OutlinedButton(onPressed: _load, child: Text(Lc.current.retry)),
                 ],
               ),
             )
@@ -186,14 +188,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                     ],
                   ),
                   subtitle: Text(
-                    mail.isEmpty ? '没绑邮箱' : mail,
+                    mail.isEmpty ? Lc.current.noEmail : mail,
                     style: mail.isEmpty
                         ? TextStyle(color: cs.error, fontSize: 12)
                         : const TextStyle(fontSize: 12),
                   ),
                   trailing: TextButton(
                     onPressed: () => _reset(u),
-                    child: const Text('重置密码'),
+                    child: Text(Lc.current.resetPassword),
                   ),
                 );
               },

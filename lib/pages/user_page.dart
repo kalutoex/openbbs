@@ -15,6 +15,7 @@ import 'thread_page.dart';
 import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 用户主页：封面 + 资料区 + 帖子列表，结构照着 X 来。
 class UserPage extends StatefulWidget {
   final String name;
@@ -134,7 +135,7 @@ class _UserPageState extends State<UserPage> {
   Future<void> _share() async {
     final h = '${(_info ?? const {})['handle'] ?? widget.name}';
     await Clipboard.setData(ClipboardData(text: '@$h'));
-    _snack('账号已复制');
+    _snack(Lc.current.accountCopied);
   }
 
   /// 关注 / 取关。
@@ -188,11 +189,11 @@ class _UserPageState extends State<UserPage> {
       await Api.patch('/me', {'cover': url});
       if (!mounted) return;
       setState(() => _info = {...?_info, 'cover': url});
-      _snack('封面已换');
+      _snack(Lc.current.coverUpdated);
     } on ApiException catch (e) {
       _snack(errorText(context, e));
     } catch (e) {
-      _snack('换封面失败：$e');
+      _snack(Lc.current.coverFailed('${e}'));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -205,16 +206,16 @@ class _UserPageState extends State<UserPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('保存背景图'),
-        content: const Text('把这张背景图存到相册？'),
+        title: Text(Lc.current.saveCover),
+        content: Text(Lc.current.saveCoverConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(Lc.current.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('保存'),
+            child: Text(Lc.current.save),
           ),
         ],
       ),
@@ -224,9 +225,9 @@ class _UserPageState extends State<UserPage> {
       final r = await http.get(Uri.parse(Api.img(cover)));
       if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
       final where = await saveImageBytes(r.bodyBytes, 'openbbs-cover.jpg');
-      _snack('已存到 $where');
+      _snack(Lc.current.savedTo('${where}'));
     } catch (e) {
-      _snack('存不下来：$e');
+      _snack(Lc.current.saveFailed('$e'));
     }
   }
 
@@ -326,7 +327,7 @@ class _UserPageState extends State<UserPage> {
                 bottom: 10,
                 child: _hintPill(
                   icon: Icons.photo_camera_outlined,
-                  label: has ? '换封面' : '加封面',
+                  label: has ? Lc.current.changeCover : Lc.current.addCover,
                 ),
               ),
             SafeArea(
@@ -338,13 +339,13 @@ class _UserPageState extends State<UserPage> {
                     _roundIcon(
                       icon: Icons.arrow_back_rounded,
                       onTap: () => Navigator.of(context).maybePop(),
-                      tooltip: '返回',
+                      tooltip: Lc.current.back,
                     ),
                     const Spacer(),
                     _roundIcon(
                       icon: Icons.ios_share_rounded,
                       onTap: _share,
-                      tooltip: '分享',
+                      tooltip: Lc.current.share,
                     ),
                   ],
                 ),
@@ -515,7 +516,7 @@ class _UserPageState extends State<UserPage> {
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    '加入于 ${_since(info['created_at'])}',
+                    Lc.current.joinedAt('${_since(info['created_at'])}'),
                     style: TextStyle(fontSize: 12, color: cs.outline),
                   ),
                 ],
@@ -523,9 +524,9 @@ class _UserPageState extends State<UserPage> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _count(following, '正在关注', cs),
+                  _count(following, Lc.current.followingCount, cs),
                   const SizedBox(width: 18),
-                  _count(followers, '关注者', cs),
+                  _count(followers, Lc.current.followers, cs),
                 ],
               ),
             ],
@@ -555,7 +556,7 @@ class _UserPageState extends State<UserPage> {
       return OutlinedButton(
         onPressed: _acting ? null : _edit,
         style: _pill(cs),
-        child: const Text('编辑个人资料'),
+        child: Text(Lc.current.editProfile),
       );
     }
     final following = (_info ?? const {})['is_following'] == true;
@@ -563,7 +564,7 @@ class _UserPageState extends State<UserPage> {
         ? OutlinedButton(
             onPressed: _acting ? null : _toggleFollow,
             style: _pill(cs),
-            child: const Text('已关注'),
+            child: Text(Lc.current.following),
           )
         : FilledButton(
             onPressed: _acting ? null : _toggleFollow,
@@ -575,7 +576,7 @@ class _UserPageState extends State<UserPage> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            child: const Text('关注'),
+            child: Text(Lc.current.follow),
           );
   }
 
@@ -641,8 +642,8 @@ class _UserPageState extends State<UserPage> {
                   children: [
                     Icon(Icons.article_outlined, size: 17, color: cs.onSurface),
                     const SizedBox(width: 7),
-                    const Text(
-                      '帖子',
+                    Text(
+                      Lc.current.post,
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
@@ -658,7 +659,7 @@ class _UserPageState extends State<UserPage> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 44),
             child: Text(
-              '还没发过線',
+              Lc.current.noPostsYet,
               style: TextStyle(fontSize: 13, color: cs.outline),
             ),
           ),
@@ -670,7 +671,7 @@ class _UserPageState extends State<UserPage> {
 /// 加入时间只显示到年月，够用了。
 String _since(dynamic ts) {
   final t = ts is int ? ts : int.tryParse('$ts') ?? 0;
-  if (t <= 0) return '很久以前';
+  if (t <= 0) return Lc.current.longAgo;
   final d = DateTime.fromMillisecondsSinceEpoch(t * 1000);
-  return '${d.year} 年 ${d.month} 月';
+  return Lc.current.yearMonth('${d.year}', '${d.month}');
 }

@@ -202,4 +202,1586 @@ class LEn extends L {
   String errDownloadFailed(int status) {
     return 'Download failed ($status)';
   }
+
+  @override
+  String get needLogin => 'Log in first';
+
+  @override
+  String get forgetIt => 'Never mind';
+
+  @override
+  String get follow => 'Follow';
+
+  @override
+  String connectFailed(String v1) {
+    return 'Can\'t reach the server: $v1';
+  }
+
+  @override
+  String get myFavorites => 'My favorites';
+
+  @override
+  String get browseHistory => 'History';
+
+  @override
+  String get notLoggedIn => 'Not logged in';
+
+  @override
+  String get menu => 'Menu';
+
+  @override
+  String get densityNormal => 'Standard';
+
+  @override
+  String get timeline => 'Timeline';
+
+  @override
+  String get deleteIt => 'Delete';
+
+  @override
+  String get postDeleted => 'Post deleted';
+
+  @override
+  String get emailAndCodeRequired => 'Fill in both email and code';
+
+  @override
+  String maxImages(String v1) {
+    return 'Up to $v1 images';
+  }
+
+  @override
+  String get imageStillTooBig =>
+      'An image was still too big after compression, skipped';
+
+  @override
+  String get addImageShort => 'Add image';
+
+  @override
+  String get accept => 'Accept';
+
+  @override
+  String get wontDo => 'Won\'t do';
+
+  @override
+  String get endOfList => 'That\'s all';
+
+  @override
+  String get following => 'Following';
+
+  @override
+  String get sortUpdated => 'Latest reply';
+
+  @override
+  String get sortCreated => 'Latest post';
+
+  @override
+  String get connectFailedPlain => 'Can\'t reach the server';
+
+  @override
+  String get server => 'Server';
+
+  @override
+  String get checkUpdate => 'Check for updates';
+
+  @override
+  String uploadFailedWith(String v1) {
+    return 'Upload failed: $v1';
+  }
+
+  @override
+  String get album => 'Album';
+
+  @override
+  String get allowed => 'Allowed';
+
+  @override
+  String get accountManagement => 'Account management';
+
+  @override
+  String get featureRequests => 'Feature requests';
+
+  @override
+  String get tapToRetry => 'Tap to retry';
+
+  @override
+  String saveFailed(String v1) {
+    return 'Couldn\'t save: $v1';
+  }
+
+  @override
+  String get deleteThreadConfirm =>
+      'The post and all its replies disappear. This can\'t be undone.';
+
+  @override
+  String get pinned => 'Pinned';
+
+  @override
+  String get fillEmailFirst => 'Enter your email first';
+
+  @override
+  String get accountSecurity => 'Account security';
+
+  @override
+  String get code => 'Code';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get pasteCredential => 'Paste login credential';
+
+  @override
+  String get ignore => 'Ignore';
+
+  @override
+  String get loadMore => 'Load more';
+
+  @override
+  String get post => 'Post';
+
+  @override
+  String get resetPassword => 'Reset password';
+
+  @override
+  String get newPassword => 'New password';
+
+  @override
+  String albumFailed(String v1) {
+    return 'Can\'t open the album: $v1';
+  }
+
+  @override
+  String readImageFailed(String v1) {
+    return 'Couldn\'t read the image: $v1';
+  }
+
+  @override
+  String get publishing => 'Publishing…';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get saving => 'Saving…';
+
+  @override
+  String get editPost => 'Edit post';
+
+  @override
+  String get clearAll => 'Clear all';
+
+  @override
+  String get tryAgain => 'Try again';
+
+  @override
+  String get addPeople => 'Add';
+
+  @override
+  String get takeDown => 'Take down';
+
+  @override
+  String get permissions => 'Permissions';
+
+  @override
+  String get auto => 'Auto';
+
+  @override
+  String get manual => 'Manual';
+
+  @override
+  String get fontSize => 'Font size';
+
+  @override
+  String get listDensity => 'List density';
+
+  @override
+  String get feedSort => 'Feed order';
+
+  @override
+  String get startTab => 'Start tab';
+
+  @override
+  String get sizeSmall => 'Small';
+
+  @override
+  String get sizeHuge => 'Extra large';
+
+  @override
+  String get sizeLarge => 'Large';
+
+  @override
+  String get densityCompact => 'Compact';
+
+  @override
+  String get densityLoose => 'Loose';
+
+  @override
+  String get chinese => '中文';
+
+  @override
+  String get updateChannel => 'Update channel';
+
+  @override
+  String get clearCache => 'Clear cache';
+
+  @override
+  String get jumpToFloor => 'Jump to floor';
+
+  @override
+  String get changed => 'Saved';
+
+  @override
+  String get deletePostConfirm => 'Delete this post?';
+
+  @override
+  String get edited => 'Edited';
+
+  @override
+  String get hueRed => 'Red';
+
+  @override
+  String get hueOrangeRed => 'Orange red';
+
+  @override
+  String get hueOrange => 'Orange';
+
+  @override
+  String get hueAmber => 'Amber';
+
+  @override
+  String get hueYellow => 'Yellow';
+
+  @override
+  String get hueLime => 'Lime';
+
+  @override
+  String get hueGrass => 'Grass';
+
+  @override
+  String get hueGreen => 'Green';
+
+  @override
+  String get hueTeal => 'Teal';
+
+  @override
+  String get hueCyan => 'Cyan';
+
+  @override
+  String get hueAzure => 'Azure';
+
+  @override
+  String get hueBlue => 'Blue';
+
+  @override
+  String get hueIndigo => 'Indigo';
+
+  @override
+  String get hueViolet => 'Violet';
+
+  @override
+  String get huePurple => 'Purple';
+
+  @override
+  String get hueMagenta => 'Magenta';
+
+  @override
+  String get huePink => 'Pink';
+
+  @override
+  String get huePinkLight => 'Light pink';
+
+  @override
+  String get permNotificationWhy =>
+      'Pings you when someone replies to or likes your post';
+
+  @override
+  String get permPhotosWhy =>
+      'Pick images from your album when posting or replying';
+
+  @override
+  String get permDeniedForever => 'Denied · turn it on in system settings';
+
+  @override
+  String get permRestricted => 'Restricted by the system';
+
+  @override
+  String get permAsk => 'Not allowed · tap to ask';
+
+  @override
+  String get justNow => 'just now';
+
+  @override
+  String minutesAgo(String v1) {
+    return '$v1 min ago';
+  }
+
+  @override
+  String get yesterday => 'yesterday';
+
+  @override
+  String bigNumSuffix(String v1) {
+    return '${v1}k';
+  }
+
+  @override
+  String get am => 'AM';
+
+  @override
+  String get pm => 'PM';
+
+  @override
+  String postTimeFmt(
+    String v1,
+    String v2,
+    String v3,
+    String v4,
+    String v5,
+    String v6,
+  ) {
+    return '$v2/$v3/$v1, $v4:$v5 $v6';
+  }
+
+  @override
+  String get threadSpacing => 'Spacing between posts';
+
+  @override
+  String get browseSection => 'Browsing';
+
+  @override
+  String get startTabHint => 'Which tab opens first';
+
+  @override
+  String get showThumbnails => 'Show thumbnails';
+
+  @override
+  String get showThumbnailsHint =>
+      'Off means text only in the feed, saves data';
+
+  @override
+  String get autoCheckNotice => 'Poll for notifications';
+
+  @override
+  String get autoCheckNoticeHint => 'Asks for the unread count once a minute';
+
+  @override
+  String get networkSection => 'Network';
+
+  @override
+  String get contentSection => 'Content';
+
+  @override
+  String get clearSearchHistory => 'Clear search history';
+
+  @override
+  String get searchHistoryCleared => 'Search history cleared';
+
+  @override
+  String get permSubtitle => 'Notifications, photos';
+
+  @override
+  String get currentAccount => 'Current account';
+
+  @override
+  String get noEmailBoundHint =>
+      'No email bound yet — a forgotten password means asking an admin';
+
+  @override
+  String get copyCredential => 'Copy login credential';
+
+  @override
+  String get copyCredentialHint =>
+      'After a reinstall or a new device, paste it on the login page to restore';
+
+  @override
+  String get credentialCopied => 'Credential copied';
+
+  @override
+  String get webAccessSection => 'Web access';
+
+  @override
+  String aboutBrand(String v1) {
+    return 'About $v1';
+  }
+
+  @override
+  String get aboutSubtitle => 'Source, changelog, licenses';
+
+  @override
+  String get logoutShort => 'Log out';
+
+  @override
+  String get version => 'Version';
+
+  @override
+  String get tapToCheckUpdate => 'Tap to check for updates';
+
+  @override
+  String get betaChannelHint => 'Beta — only pushed to you';
+
+  @override
+  String get stableChannelHint => 'Stable — what everyone runs';
+
+  @override
+  String get stableOption => 'Stable　verified';
+
+  @override
+  String get betaOption => 'Beta　pushed on every change';
+
+  @override
+  String betaVersion(String v1) {
+    return 'Beta $v1';
+  }
+
+  @override
+  String newVersion(String v1) {
+    return 'New version $v1';
+  }
+
+  @override
+  String installOverwrite(String v1) {
+    return '$v1, installs over the current version. Login and settings stay.';
+  }
+
+  @override
+  String get later => 'Later';
+
+  @override
+  String get downloadAndInstall => 'Download and install';
+
+  @override
+  String get downloading => 'Downloading';
+
+  @override
+  String get handedToSystem => 'Handed to the system';
+
+  @override
+  String get handedToInstaller =>
+      'Handed to the system installer — if nothing happens, allow unknown installs in settings';
+
+  @override
+  String downloadFailedWith(String v1) {
+    return 'Download failed: $v1';
+  }
+
+  @override
+  String get primaryEndpoint => 'Primary address';
+
+  @override
+  String get backupEndpoint => 'Backup address';
+
+  @override
+  String get endpointHint =>
+      'Both addresses are the same site. When the primary one won\'t connect, the backup takes over.';
+
+  @override
+  String get addressCopied => 'Address copied';
+
+  @override
+  String get clearing => 'Clearing…';
+
+  @override
+  String get calculating => 'Calculating…';
+
+  @override
+  String get cacheEmpty => 'Nothing cached yet';
+
+  @override
+  String cacheSize(String v1) {
+    return 'Takes $v1';
+  }
+
+  @override
+  String get cleared => 'Cleared';
+
+  @override
+  String clearedAmount(String v1) {
+    return 'Cleared $v1';
+  }
+
+  @override
+  String newerThanServer(String v1, String v2, String v3) {
+    return 'You\'re on build $v1, newer than $v2 build $v3. The same signature can\'t install a lower build number over it — uninstall first to go back.';
+  }
+
+  @override
+  String upToDate(String v1) {
+    return 'Already the latest ($v1)';
+  }
+
+  @override
+  String accountLine(String v1, String v2) {
+    return '$v1 · $v2 accounts on this device';
+  }
+
+  @override
+  String get betaShort => 'beta';
+
+  @override
+  String get stableShort => 'stable';
+
+  @override
+  String releaseNotes(String v1, String v2) {
+    return '$v1\n\n$v2, installs over the current version. Login and settings stay.';
+  }
+
+  @override
+  String get clearCacheConfirm =>
+      'Image and API caches get deleted and re-downloaded next time. Login and settings stay.';
+
+  @override
+  String get floorJumpHint => 'Floor number, e.g. 128';
+
+  @override
+  String get jump => 'Go';
+
+  @override
+  String notReachedFloor(String v1) {
+    return 'Not there yet — only at floor $v1';
+  }
+
+  @override
+  String noSuchFloor(String v1) {
+    return 'No floor $v1';
+  }
+
+  @override
+  String get offlineCached => 'No network — showing what was cached last time';
+
+  @override
+  String get pinnedToast => 'Pinned';
+
+  @override
+  String get unpinnedToast => 'Unpinned';
+
+  @override
+  String get featuredToast => 'Featured';
+
+  @override
+  String get unfeaturedToast => 'Unfeatured';
+
+  @override
+  String get reportReason => 'Report reason';
+
+  @override
+  String get reportSpam => 'Spam';
+
+  @override
+  String get reportAbuse => 'Personal attack';
+
+  @override
+  String get reportIllegal => 'Illegal content';
+
+  @override
+  String get reportFalse => 'False information';
+
+  @override
+  String get reportOther => 'Other';
+
+  @override
+  String get reportDuplicate => 'Already reported once';
+
+  @override
+  String get reportThanks => 'Got it, we\'ll take a look';
+
+  @override
+  String get editFloor => 'Edit this floor';
+
+  @override
+  String get saySomething => 'Say something…';
+
+  @override
+  String get replaceWithPlaceholder => 'Replace with a placeholder?';
+
+  @override
+  String get replacePlaceholderConfirm =>
+      'Every image in this post and its replies becomes the same placeholder. The originals are gone.';
+
+  @override
+  String replacedImages(String v1) {
+    return 'Replaced $v1 images';
+  }
+
+  @override
+  String get deleteFloorConfirm => 'Delete this floor?';
+
+  @override
+  String get deleteThreadBody =>
+      'The post and all its replies go with it. Can\'t be undone.';
+
+  @override
+  String get deleteFloorBody => 'This floor and the replies under it go too.';
+
+  @override
+  String get deleteReplyConfirm => 'Delete this reply?';
+
+  @override
+  String get cannotUndo => 'Can\'t be undone.';
+
+  @override
+  String get onlyAuthorOn => 'Author only';
+
+  @override
+  String get onlyAuthorOff => 'Only the author';
+
+  @override
+  String jumpToFloorPages(String v1) {
+    return 'Jump to floor ($v1 pages)';
+  }
+
+  @override
+  String get unpin => 'Unpin';
+
+  @override
+  String get unfeature => 'Unfeature';
+
+  @override
+  String get feature => 'Feature';
+
+  @override
+  String get replaceAllImages => 'Replace all images';
+
+  @override
+  String get deletePost => 'Delete post';
+
+  @override
+  String viewsCount(String v1) {
+    return '$v1 views';
+  }
+
+  @override
+  String get related => 'Related';
+
+  @override
+  String repliesCount(String v1) {
+    return '$v1 replies';
+  }
+
+  @override
+  String get noReplies => 'No replies yet';
+
+  @override
+  String get favorited => 'Saved';
+
+  @override
+  String get unfavorite => 'Remove from saved';
+
+  @override
+  String get meShort => 'Me';
+
+  @override
+  String replyTo(String v1) {
+    return 'Reply to $v1';
+  }
+
+  @override
+  String get replyHint => 'Write your reply';
+
+  @override
+  String get maxNineImages => 'Up to 9 images';
+
+  @override
+  String get opAuthor => 'OP';
+
+  @override
+  String get copyFullText => 'Copy all';
+
+  @override
+  String get copied => 'Copied';
+
+  @override
+  String get collapse => 'Collapse';
+
+  @override
+  String expandAllReplies(String v1) {
+    return 'Show all $v1 replies';
+  }
+
+  @override
+  String get resumeDraft => 'Continue your draft';
+
+  @override
+  String resumeDraftImages(String v1) {
+    return 'Continue your draft, with $v1 images';
+  }
+
+  @override
+  String get discardDraft => 'Discard';
+
+  @override
+  String get pickFromAlbum => 'From album';
+
+  @override
+  String canAddMore(String v1) {
+    return 'Room for $v1 more';
+  }
+
+  @override
+  String get takePhoto => 'Take a photo';
+
+  @override
+  String cameraFailed(String v1) {
+    return 'Can\'t open the camera: $v1';
+  }
+
+  @override
+  String tooManyImages(String v1) {
+    return 'Up to $v1 images — the rest were dropped';
+  }
+
+  @override
+  String get deleteThisImage => 'Remove this image';
+
+  @override
+  String uploadingStart(String v1) {
+    return 'Uploading images 0/$v1';
+  }
+
+  @override
+  String uploadingImages(String v1, String v2) {
+    return 'Uploading images $v1/$v2';
+  }
+
+  @override
+  String postFailed(String v1) {
+    return 'Couldn\'t post: $v1';
+  }
+
+  @override
+  String get draftUnsaved => 'This post hasn\'t gone out';
+
+  @override
+  String get draftImagesNote =>
+      'Images aren\'t kept in drafts — only the title and body';
+
+  @override
+  String get saveDraftAndLeave => 'Save draft and leave';
+
+  @override
+  String get discardPost => 'Throw this away';
+
+  @override
+  String get keepEditing => 'Keep editing';
+
+  @override
+  String get composeTitle => 'New post';
+
+  @override
+  String get forumSuffix => ' ';
+
+  @override
+  String get composeHint => 'Say something… (@ to mention)';
+
+  @override
+  String imageCount(String v1, String v2) {
+    return 'Images $v1/$v2';
+  }
+
+  @override
+  String get dragToReorder => 'Press and drag to reorder';
+
+  @override
+  String titleRequiredMaxImages(String v1) {
+    return 'Title required · up to $v1 images';
+  }
+
+  @override
+  String imageCountPrefix(String v1, String v2, String v3) {
+    return '$v1/$v2 images · $v3';
+  }
+
+  @override
+  String bodyLength(String v1) {
+    return '$v1 chars';
+  }
+
+  @override
+  String get credentialHint =>
+      'Copy it on the old device under Settings → Copy login credential';
+
+  @override
+  String get restore => 'Restore';
+
+  @override
+  String get credentialInvalid => 'Credential is invalid or expired';
+
+  @override
+  String restoreFailed(String v1) {
+    return 'Restore failed: $v1';
+  }
+
+  @override
+  String codeSendFailed(String v1) {
+    return 'Couldn\'t send the code: $v1';
+  }
+
+  @override
+  String get passwordTooShort => 'Password must be at least 8 characters';
+
+  @override
+  String passwordChangeFailed(String v1) {
+    return 'Couldn\'t change it: $v1';
+  }
+
+  @override
+  String get fillUserAndPassword => 'Both username and password are required';
+
+  @override
+  String loginFailed(String v1) {
+    return 'Login failed: $v1';
+  }
+
+  @override
+  String get resetTitle => 'Reset password';
+
+  @override
+  String get atLeast8 => 'At least 8 characters';
+
+  @override
+  String get emailUsedToRegister => 'The email you signed up with';
+
+  @override
+  String get emailForCode => 'We\'ll send the signup code here';
+
+  @override
+  String get sending => 'Sending';
+
+  @override
+  String get getCode => 'Get code';
+
+  @override
+  String get changePasswordAndLogin => 'Change password and log in';
+
+  @override
+  String get registerAndLogin => 'Sign up and log in';
+
+  @override
+  String get backToLogin => 'Back to login';
+
+  @override
+  String get haveAccountLogin => 'Have an account? Log in';
+
+  @override
+  String get noAccountRegister => 'No account? Sign up';
+
+  @override
+  String get forgotPasswordQuestion => 'Forgot your password?';
+
+  @override
+  String get restoreWithCredential => 'Restore with a login credential';
+
+  @override
+  String get accountCopied => 'Account copied';
+
+  @override
+  String get coverUpdated => 'Cover updated';
+
+  @override
+  String coverFailed(String v1) {
+    return 'Couldn\'t change the cover: $v1';
+  }
+
+  @override
+  String get saveCover => 'Save background';
+
+  @override
+  String get saveCoverConfirm => 'Save this background to your album?';
+
+  @override
+  String savedTo(String v1) {
+    return 'Saved to $v1';
+  }
+
+  @override
+  String get changeCover => 'Change cover';
+
+  @override
+  String get addCover => 'Add cover';
+
+  @override
+  String joinedAt(String v1) {
+    return 'Joined $v1';
+  }
+
+  @override
+  String get followingCount => 'Following';
+
+  @override
+  String get followers => 'Followers';
+
+  @override
+  String get editProfile => 'Edit profile';
+
+  @override
+  String get noPostsYet => 'Nothing posted yet';
+
+  @override
+  String get longAgo => 'A long time ago';
+
+  @override
+  String yearMonth(String v1, String v2) {
+    return '$v1-$v2';
+  }
+
+  @override
+  String get acceptConfirm => 'Accept this one?';
+
+  @override
+  String get rejectConfirm => 'Mark as won\'t do?';
+
+  @override
+  String get reopenConfirm => 'Send back to pending?';
+
+  @override
+  String get replyOptional => 'Reply (optional)';
+
+  @override
+  String get adminReplyHint => 'Scheduled / can\'t do it, because…';
+
+  @override
+  String get accepted => 'Accepted';
+
+  @override
+  String get markedWontDo => 'Marked as won\'t do';
+
+  @override
+  String get movedBack => 'Back to pending';
+
+  @override
+  String get requestsDone => 'Requests · handled';
+
+  @override
+  String requestsCount(String v1) {
+    return 'Requests ($v1)';
+  }
+
+  @override
+  String get requests => 'Requests';
+
+  @override
+  String get viewPending => 'View pending';
+
+  @override
+  String get viewDone => 'View handled';
+
+  @override
+  String get nothingHandled => 'Nothing handled yet';
+
+  @override
+  String get noPendingRequests => 'No pending requests';
+
+  @override
+  String replyLine(String v1) {
+    return 'Reply: $v1';
+  }
+
+  @override
+  String submittedBy(String v1) {
+    return 'Submitted by $v1';
+  }
+
+  @override
+  String get moveBack => 'Back to pending';
+
+  @override
+  String avatarUpdated(String v1) {
+    return 'Avatar updated · $v1';
+  }
+
+  @override
+  String get chooseFromAlbum => 'Choose from album';
+
+  @override
+  String get compressNote => 'Compressed to around 100 KB before upload';
+
+  @override
+  String get nicknameRequired => 'Nickname can\'t be empty';
+
+  @override
+  String get handleInvalid =>
+      'Lowercase letters, digits and underscore only, 3–16 characters';
+
+  @override
+  String get editProfileTitle => 'Edit profile';
+
+  @override
+  String get nickname => 'Nickname';
+
+  @override
+  String get nicknameMax => 'Up to 20 characters';
+
+  @override
+  String get handle => 'Handle';
+
+  @override
+  String get handleHint =>
+      'Others find you with @; lowercase letters, digits, underscore, 3–16 characters';
+
+  @override
+  String get bio => 'Bio';
+
+  @override
+  String get bioHint => 'Up to 80 characters, can be empty';
+
+  @override
+  String get profileSavedHint =>
+      'Takes effect right away — refresh the home page to see it.';
+
+  @override
+  String get openSource => 'Open source';
+
+  @override
+  String get thanksFriends => 'Thanks to my friends';
+
+  @override
+  String get thanksFriendsSub => 'Their accounts are here';
+
+  @override
+  String get thirdPartyLicenses => 'Third-party licenses';
+
+  @override
+  String get thirdPartyLicensesSub =>
+      'License texts bundled with each dependency';
+
+  @override
+  String get gplLicense => 'GPL-3.0 license';
+
+  @override
+  String get gplLicenseSub => 'This project is released under GPL-3.0';
+
+  @override
+  String get links => 'Links';
+
+  @override
+  String get sourceCode => 'Source code';
+
+  @override
+  String get issues => 'Issues';
+
+  @override
+  String get issuesSub => 'Anything off? Note it here';
+
+  @override
+  String get cantOpenLink => 'Couldn\'t open that link';
+
+  @override
+  String get reportKeepNote => 'Nothing wrong here, close the report.';
+
+  @override
+  String get reportDeleteFloorNote =>
+      'The floor\'s content gets deleted. Can\'t be undone.';
+
+  @override
+  String get reportDeletePostNote =>
+      'The whole post and its replies get deleted. Can\'t be undone.';
+
+  @override
+  String get ignoreReportConfirm => 'Ignore this report?';
+
+  @override
+  String get deleteContentConfirm => 'Delete this content?';
+
+  @override
+  String get ignored => 'Ignored';
+
+  @override
+  String get deleted => 'Deleted';
+
+  @override
+  String reportsCount(String v1) {
+    return 'Reports ($v1)';
+  }
+
+  @override
+  String get noReports => 'No reports pending';
+
+  @override
+  String get floor => 'Floor';
+
+  @override
+  String reportLine(String v1, String v2) {
+    return 'Reason: $v1　Reporter: $v2';
+  }
+
+  @override
+  String galleryReadFailed(String v1) {
+    return 'Couldn\'t read the album: $v1';
+  }
+
+  @override
+  String albumOpenFailed(String v1) {
+    return 'Couldn\'t open this album: $v1';
+  }
+
+  @override
+  String maxSelectImages(String v1) {
+    return 'Up to $v1 photos';
+  }
+
+  @override
+  String get pickPhotos => 'Pick photos';
+
+  @override
+  String doneWithCount(String v1) {
+    return 'Done ($v1)';
+  }
+
+  @override
+  String get albumEmpty => 'No photos in this album';
+
+  @override
+  String get needsAlbumPermission =>
+      'Album permission is needed to list photos';
+
+  @override
+  String get noAlbumUsePicker =>
+      'No album on this machine — use the system file picker';
+
+  @override
+  String get localThumbsOnly =>
+      'Picks from on-device thumbnails only, never uploads the whole album.';
+
+  @override
+  String get grantPermission => 'Grant permission';
+
+  @override
+  String get pickAnotherWay => 'Pick another way';
+
+  @override
+  String get titleClearer => 'Make the title clearer';
+
+  @override
+  String get requestDuplicate => 'This one is already filed';
+
+  @override
+  String get requestSubmitted => 'Submitted';
+
+  @override
+  String get requestIntro =>
+      'Write down whatever feature you\'re thinking of. Admins read it, and reply when it\'s accepted.';
+
+  @override
+  String get requestTitleLabel => 'What you want, in one line';
+
+  @override
+  String get requestTitleHint =>
+      'e.g. posts can be saved into separate folders';
+
+  @override
+  String get requestDetailLabel => 'Details (optional)';
+
+  @override
+  String get requestDetailHint => 'Why you need it, roughly how it\'d work';
+
+  @override
+  String get myRequests => 'My requests';
+
+  @override
+  String requestCount(String v1) {
+    return '$v1';
+  }
+
+  @override
+  String get noRequestsYet => 'None yet';
+
+  @override
+  String get statusPending => 'Pending';
+
+  @override
+  String get codeSentCheckEmail => 'Code sent — check your inbox';
+
+  @override
+  String get emailBound => 'Bound';
+
+  @override
+  String get noEmailWarning =>
+      'This account has no email bound. If you forget your password, only an admin can reset it.';
+
+  @override
+  String get emailBoundHint => 'Bound — you can reset the password yourself';
+
+  @override
+  String get bindEmail => 'Bind email';
+
+  @override
+  String get changeEmail => 'Change email';
+
+  @override
+  String get sendCode => 'Send code';
+
+  @override
+  String get processing => 'Processing…';
+
+  @override
+  String get bind => 'Bind';
+
+  @override
+  String get rebind => 'Rebind';
+
+  @override
+  String get bindEmailWhy =>
+      'Once bound, a forgotten password needs no help: tap the reset link on the login page, get a code, set a new one.';
+
+  @override
+  String get titleEmpty => 'Title can\'t be empty';
+
+  @override
+  String get bodyOrImageRequired => 'Keep at least a body or an image';
+
+  @override
+  String uploadingNewStart(String v1) {
+    return 'Uploading new images 0/$v1';
+  }
+
+  @override
+  String uploadingNewImages(String v1, String v2) {
+    return 'Uploading new images $v1/$v2';
+  }
+
+  @override
+  String get changesUnsaved => 'Changes not saved';
+
+  @override
+  String get continueEditing => 'Keep editing';
+
+  @override
+  String get leaveWithoutSaving => 'Leave without saving';
+
+  @override
+  String imageCountShort(String v1, String v2) {
+    return 'Images $v1/$v2';
+  }
+
+  @override
+  String get noImagesYet => 'No images yet';
+
+  @override
+  String get searchForumsHint => 'Search forums';
+
+  @override
+  String noSearchResult(String v1) {
+    return 'Nothing for “$v1”';
+  }
+
+  @override
+  String searchResultCount(String v1) {
+    return '$v1 found';
+  }
+
+  @override
+  String myFollowedForums(String v1) {
+    return 'Following ($v1)';
+  }
+
+  @override
+  String allForums(String v1) {
+    return 'All ($v1)';
+  }
+
+  @override
+  String get noForums => 'No forums yet';
+
+  @override
+  String get loginToSeeFollowed => 'Log in to see the forums you follow';
+
+  @override
+  String get goLogin => 'Log in';
+
+  @override
+  String get noFollowedForums =>
+      'No forums followed yet — open one and tap follow';
+
+  @override
+  String get noIntro => 'No description';
+
+  @override
+  String forumStats(String v1, String v2) {
+    return '$v1 posts · $v2 followers';
+  }
+
+  @override
+  String get nRepliedPost => 'replied to your post';
+
+  @override
+  String get nRepliedYou => 'replied to you';
+
+  @override
+  String get nLiked => 'liked your post';
+
+  @override
+  String get nMentioned => 'mentioned you in a post';
+
+  @override
+  String get nFeatured => 'featured your post';
+
+  @override
+  String get nDeleted => 'deleted your content';
+
+  @override
+  String get nNew => 'New activity';
+
+  @override
+  String get noticeLoginNeeded => 'Log in to get notifications';
+
+  @override
+  String get noticeLoginHint => 'Log in from “Me”';
+
+  @override
+  String get noNotifications => 'No notifications yet';
+
+  @override
+  String get noNotificationsHint => 'Replies and likes show up here';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String newPasswordFor(String v1) {
+    return 'New password for “$v1”:';
+  }
+
+  @override
+  String get newPasswordOnce =>
+      'Close it and it\'s gone. Have them log in and change it right away.';
+
+  @override
+  String get copyAndClose => 'Copy and close';
+
+  @override
+  String get searchUsername => 'Search username';
+
+  @override
+  String get noEmail => 'No email';
+
+  @override
+  String get manualNeedsAddress => 'Enter the address manually';
+
+  @override
+  String serverOkUsing(String v1) {
+    return 'Connected, using $v1';
+  }
+
+  @override
+  String connectFailedBody(String v1) {
+    return 'Can\'t connect: $v1';
+  }
+
+  @override
+  String get ipv6FirstHint => 'Tries IPv6 first, falls back to IPv4';
+
+  @override
+  String get channelIpv6 => 'IPv6 channel';
+
+  @override
+  String get channelIpv4 => 'IPv4 channel';
+
+  @override
+  String get enterManually => 'Enter it yourself';
+
+  @override
+  String get serverAddress => 'Server address';
+
+  @override
+  String get saveAndTest => 'Save and test';
+
+  @override
+  String currentExit(String v1) {
+    return 'Current endpoint: $v1';
+  }
+
+  @override
+  String switchedTo(String v1) {
+    return 'Switched to $v1';
+  }
+
+  @override
+  String accountExpiredRemoved(String v1) {
+    return '$v1\'s login expired and was removed';
+  }
+
+  @override
+  String get removeAccount => 'Remove account';
+
+  @override
+  String removeAccountConfirm(String v1) {
+    return 'Remove $v1 from this device? This only logs out here — the account and posts stay on the server.';
+  }
+
+  @override
+  String accountAdded(String v1) {
+    return 'Added $v1';
+  }
+
+  @override
+  String get noAccounts => 'No accounts yet';
+
+  @override
+  String get addAccount => 'Add account';
+
+  @override
+  String get addAccountHint => 'Log in to another account, switch back anytime';
+
+  @override
+  String get addFromDevice => 'Bring an account from another device';
+
+  @override
+  String get friendSearchHint => 'Username / @handle / nickname';
+
+  @override
+  String get enterName => 'Type a name';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String removeFriendConfirm(String v1) {
+    return 'Remove $v1?';
+  }
+
+  @override
+  String get removeFriendBody => 'Just off this page — the account stays.';
+
+  @override
+  String get credits => 'Credits';
+
+  @override
+  String get nobodyYet => 'Nobody yet';
+
+  @override
+  String creditsAdminOnly(String v1) {
+    return 'Only admins can change this list (logged in as $v1).';
+  }
+
+  @override
+  String unfollowed(String v1) {
+    return 'Unfollowed $v1';
+  }
+
+  @override
+  String followedBack(String v1) {
+    return 'Followed back $v1';
+  }
+
+  @override
+  String get fans => 'Followers';
+
+  @override
+  String get notFollowingAnyone => 'Not following anyone';
+
+  @override
+  String get noFans => 'No followers';
+
+  @override
+  String get mutual => 'Mutual';
+
+  @override
+  String get followBack => 'Follow back';
+
+  @override
+  String get searchTitleOrBody => 'Search titles or text';
+
+  @override
+  String get searchPrompt => 'Type a keyword and press enter';
+
+  @override
+  String get recentSearches => 'Recent';
+
+  @override
+  String totalCount(String v1) {
+    return '$v1 in total';
+  }
+
+  @override
+  String endTotalCount(String v1) {
+    return 'That\'s all — $v1 in total';
+  }
+
+  @override
+  String get noFavoritesYet => 'Nothing saved yet';
+
+  @override
+  String get reportHandling => 'Reports';
+
+  @override
+  String get requestHandling => 'Requests';
+
+  @override
+  String get noHistoryYet => 'No history yet';
+
+  @override
+  String get enterBio => 'Enter your bio';
+
+  @override
+  String get tapToLogin => 'Tap to log in';
+
+  @override
+  String get general => 'General';
+
+  @override
+  String get featured => 'Featured';
+
+  @override
+  String get multiImage => 'Photos';
+
+  @override
+  String get comments => 'Comments';
+
+  @override
+  String get loginBenefits => 'Log in to post, reply and follow forums';
+
+  @override
+  String get hot => 'Hot';
+
+  @override
+  String get forumEmpty => 'Nothing posted in this forum yet';
+
+  @override
+  String get permIntro =>
+      'Network permission is granted at install — only notifications and photos need a yes here.';
+
+  @override
+  String get network => 'Network';
+
+  @override
+  String get networkGranted => 'Granted at install, nothing to do';
+
+  @override
+  String get permOptionalNote =>
+      'You can leave these off — you\'ll just have to pick images through the system picker.';
+
+  @override
+  String get downloadImage => 'Download this image';
+
+  @override
+  String get backToTop => 'Back to top';
+
+  @override
+  String get offlineCacheFeed =>
+      'Can\'t reach the server — this is the last cached copy';
+
+  @override
+  String get chooseForum => 'Post to which forum?';
+
+  @override
+  String get fillAddress => 'Enter an address';
+
+  @override
+  String get fillServerAddress => 'Enter the server address';
+
+  @override
+  String get connect => 'Connect';
+
+  @override
+  String get themeColorTitle => 'Accent color';
+
+  @override
+  String get accentColorHint =>
+      'Buttons, selections and input focus rings all follow this color band.';
+
+  @override
+  String get moreToLoad => 'More to come';
+
+  @override
+  String resetPasswordConfirm(String v1) {
+    return 'Set “$v1”\'s password to a random string?\n\nThe old one stops working at once. The new one is shown only once — send it to them.';
+  }
 }

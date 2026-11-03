@@ -6,6 +6,7 @@ import '../api.dart';
 import '../store.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 账号安全：绑定或换绑邮箱。
 ///
 /// 早一批账号注册时还没有邮箱这回事，忘了密码就只能找管理员。
@@ -51,7 +52,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
   Future<void> _send() async {
     final e = _email.text.trim();
     if (e.isEmpty) {
-      setState(() => _err = '先填邮箱');
+      setState(() => _err = Lc.current.fillEmailFirst);
       return;
     }
     setState(() {
@@ -63,7 +64,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
       if (!mounted) return;
       _startCool(cd);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('验证码发出去了，去邮箱里看看')),
+        SnackBar(content: Text(Lc.current.codeSentCheckEmail)),
       );
     } on ApiException catch (e2) {
       if (mounted) setState(() => _err = errorText(context, e2));
@@ -76,7 +77,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
     final e = _email.text.trim();
     final c = _code.text.trim();
     if (e.isEmpty || c.isEmpty) {
-      setState(() => _err = '邮箱和验证码都要填');
+      setState(() => _err = Lc.current.emailAndCodeRequired);
       return;
     }
     setState(() {
@@ -91,7 +92,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
       setState(() {});
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('绑好了')));
+      ).showSnackBar(SnackBar(content: Text(Lc.current.emailBound)));
     } on ApiException catch (e2) {
       if (mounted) setState(() => _err = errorText(context, e2));
     } finally {
@@ -105,7 +106,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
     final bound = _bound;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('账号安全')),
+      appBar: AppBar(title: Text(Lc.current.accountSecurity)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -125,7 +126,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '这个账号还没绑邮箱。忘了密码的话，现在只能找管理员重置。',
+                        Lc.current.noEmailWarning,
                         style: TextStyle(color: cs.onErrorContainer),
                       ),
                     ),
@@ -147,22 +148,22 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                   style: TextStyle(color: cs.onSecondaryContainer),
                 ),
                 subtitle: Text(
-                  '已绑定，忘了密码可以自己重置',
+                  Lc.current.emailBoundHint,
                   style: TextStyle(color: cs.onSecondaryContainer),
                 ),
               ),
             ),
           const SizedBox(height: 22),
           Text(
-            bound.isEmpty ? '绑定邮箱' : '换一个邮箱',
+            bound.isEmpty ? Lc.current.bindEmail : Lc.current.changeEmail,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 10),
           TextField(
             controller: _email,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: '邮箱',
+            decoration: InputDecoration(
+              labelText: Lc.current.email,
               border: OutlineInputBorder(),
             ),
           ),
@@ -174,8 +175,8 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                   controller: _code,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
-                  decoration: const InputDecoration(
-                    labelText: '验证码',
+                  decoration: InputDecoration(
+                    labelText: Lc.current.code,
                     counterText: '',
                     border: OutlineInputBorder(),
                   ),
@@ -186,7 +187,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                 height: 48,
                 child: OutlinedButton(
                   onPressed: _busy || _cool > 0 ? null : _send,
-                  child: Text(_cool > 0 ? '${_cool}s' : '发送验证码'),
+                  child: Text(_cool > 0 ? '${_cool}s' : Lc.current.sendCode),
                 ),
               ),
             ],
@@ -198,11 +199,11 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
           const SizedBox(height: 18),
           FilledButton(
             onPressed: _busy ? null : _bind,
-            child: Text(_busy ? '处理中…' : (bound.isEmpty ? '绑定' : '换绑')),
+            child: Text(_busy ? Lc.current.processing : (bound.isEmpty ? Lc.current.bind : Lc.current.rebind)),
           ),
           const SizedBox(height: 22),
           Text(
-            '绑了之后，忘记密码不用找人：登录页点「忘记密码」，收个验证码就能改。',
+            Lc.current.bindEmailWhy,
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
         ],

@@ -1,4 +1,4 @@
-package com.kalutoex.shijianxian
+package org.openbbs.app
 
 import io.flutter.embedding.android.FlutterActivity
 

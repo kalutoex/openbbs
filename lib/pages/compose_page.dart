@@ -13,6 +13,7 @@ import '../widgets/mention.dart';
 import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 /// 发主题帖。
 class ComposePage extends StatefulWidget {
   final String forumName;
@@ -113,9 +114,9 @@ class _ComposePageState extends State<ComposePage> {
       _savedImgSig = _imgs.map((e) => e.id).join(',');
     });
     _snack(
-      imgs.isEmpty ? '接着上次的写' : '接着上次的写，带 ${imgs.length} 张图',
+      imgs.isEmpty ? Lc.current.resumeDraft : Lc.current.resumeDraftImages('${imgs.length}'),
       action: SnackBarAction(
-        label: '清掉',
+        label: Lc.current.discardDraft,
         onPressed: () {
           _draftTimer?.cancel();
           _savedImgSig = '';
@@ -142,7 +143,7 @@ class _ComposePageState extends State<ComposePage> {
   Future<void> _pickSheet() async {
     if (_busy || _compressing) return;
     if (_imgs.length >= _maxImgs) {
-      _snack('最多 $_maxImgs 张');
+      _snack(Lc.current.maxImages('$_maxImgs'));
       return;
     }
     final left = _maxImgs - _imgs.length;
@@ -155,13 +156,13 @@ class _ComposePageState extends State<ComposePage> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('从相册选'),
-              subtitle: Text('还能加 $left 张'),
+              title: Text(Lc.current.pickFromAlbum),
+              subtitle: Text(Lc.current.canAddMore('${left}')),
               onTap: () => Navigator.of(c).pop('album'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('拍一张'),
+              title: Text(Lc.current.takePhoto),
               onTap: () => Navigator.of(c).pop('camera'),
             ),
             const SizedBox(height: 8),
@@ -193,7 +194,7 @@ class _ComposePageState extends State<ComposePage> {
       if (picked.isEmpty) return;
       await _ingest(picked);
     } catch (e) {
-      _snack('打不开相册：$e');
+      _snack(Lc.current.albumFailed('$e'));
     }
   }
 
@@ -203,7 +204,7 @@ class _ComposePageState extends State<ComposePage> {
       if (one == null) return;
       await _ingest([one]);
     } catch (e) {
-      _snack('打不开相机：$e');
+      _snack(Lc.current.cameraFailed('${e}'));
     }
   }
 
@@ -211,7 +212,7 @@ class _ComposePageState extends State<ComposePage> {
   Future<void> _ingest(List<XFile> picked) async {
     final room = _maxImgs - _imgs.length;
     if (room <= 0) {
-      _snack('最多 $_maxImgs 张');
+      _snack(Lc.current.maxImages('$_maxImgs'));
       return;
     }
     final take = picked.take(room).toList();
@@ -225,15 +226,15 @@ class _ComposePageState extends State<ComposePage> {
         final raw = await x.readAsBytes();
         final b = await ImgCompress.run(raw);
         if (ImgCompress.tooBig(b)) {
-          _snack('有张图压完还是太大，跳过了');
+          _snack(Lc.current.imageStillTooBig);
         } else {
           _imgs.add(_PendingImg.next(b));
         }
         if (mounted) setState(() => _compressDone++);
       }
-      if (picked.length > room) _snack('最多 $_maxImgs 张，多的没收');
+      if (picked.length > room) _snack(Lc.current.tooManyImages('${_maxImgs}'));
     } catch (e) {
-      _snack('读图失败：$e');
+      _snack(Lc.current.readImageFailed('$e'));
     } finally {
       if (mounted) {
         setState(() {
@@ -298,7 +299,7 @@ class _ComposePageState extends State<ComposePage> {
                     backgroundColor: Colors.black45,
                     foregroundColor: Colors.white,
                   ),
-                  tooltip: '删掉这张',
+                  tooltip: Lc.current.deleteThisImage,
                   icon: const Icon(Icons.delete_outline),
                   onPressed: () {
                     setState(() => _imgs.removeAt(current));
@@ -357,14 +358,14 @@ class _ComposePageState extends State<ComposePage> {
     setState(() {
       _busy = true;
       _progress = 0;
-      _status = _imgs.isEmpty ? '发布中…' : '上传图片 0/${_imgs.length}';
+      _status = _imgs.isEmpty ? Lc.current.publishing : Lc.current.uploadingStart('${_imgs.length}');
     });
     try {
       final urls = <String>[];
       for (var i = 0; i < _imgs.length; i++) {
         if (mounted) {
           setState(() {
-            _status = '上传图片 ${i + 1}/${_imgs.length}';
+            _status = Lc.current.uploadingImages('${i + 1}', '${_imgs.length}');
             _progress = i / total;
           });
         }
@@ -372,7 +373,7 @@ class _ComposePageState extends State<ComposePage> {
       }
       if (mounted) {
         setState(() {
-          _status = '发布中…';
+          _status = Lc.current.publishing;
           _progress = _imgs.length / total;
         });
       }
@@ -390,7 +391,7 @@ class _ComposePageState extends State<ComposePage> {
     } on ApiException catch (e) {
       _fail(e);
     } catch (e) {
-      _fail('发不出去：$e');
+      _fail(Lc.current.postFailed('${e}'));
     }
   }
 
@@ -425,24 +426,24 @@ class _ComposePageState extends State<ComposePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ListTile(
+            ListTile(
               dense: true,
-              title: Text('这篇还没发出去'),
-              subtitle: Text('图片不进草稿，只有标题和正文会留着'),
+              title: Text(Lc.current.draftUnsaved),
+              subtitle: Text(Lc.current.draftImagesNote),
             ),
             ListTile(
               leading: const Icon(Icons.save_outlined),
-              title: const Text('存草稿，先走'),
+              title: Text(Lc.current.saveDraftAndLeave),
               onTap: () => Navigator.of(c).pop('draft'),
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline),
-              title: const Text('扔掉这篇'),
+              title: Text(Lc.current.discardPost),
               onTap: () => Navigator.of(c).pop('discard'),
             ),
             ListTile(
               leading: const Icon(Icons.edit_outlined),
-              title: const Text('再改改'),
+              title: Text(Lc.current.keepEditing),
               onTap: () => Navigator.of(c).pop(),
             ),
             const SizedBox(height: 8),
@@ -481,7 +482,7 @@ class _ComposePageState extends State<ComposePage> {
         _handleBack();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('发新帖')),
+        appBar: AppBar(title: Text(Lc.current.composeTitle)),
         body: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => FocusScope.of(context).unfocus(),
@@ -526,7 +527,7 @@ class _ComposePageState extends State<ComposePage> {
           ),
         ),
         const SizedBox(width: 6),
-        Text('吧', style: TextStyle(fontSize: 12.5, color: cs.outline)),
+        Text(Lc.current.forumSuffix, style: TextStyle(fontSize: 12.5, color: cs.outline)),
       ],
     );
   }
@@ -561,7 +562,7 @@ class _ComposePageState extends State<ComposePage> {
       textInputAction: TextInputAction.next,
       onSubmitted: (_) => _bodyFocus.requestFocus(),
       style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-      decoration: _fieldDeco(cs, hint: '标题').copyWith(
+      decoration: _fieldDeco(cs, hint: Lc.current.title).copyWith(
         suffixText: n >= 90 ? '$n/$_titleMax' : null,
         suffixStyle: TextStyle(
           fontSize: 11,
@@ -587,7 +588,7 @@ class _ComposePageState extends State<ComposePage> {
           maxLength: 20000,
           keyboardType: TextInputType.multiline,
           style: const TextStyle(fontSize: 15, height: 1.55),
-          decoration: _fieldDeco(cs, hint: '说点什么…（@ 找人）'),
+          decoration: _fieldDeco(cs, hint: Lc.current.composeHint),
         ),
       ],
     );
@@ -597,7 +598,7 @@ class _ComposePageState extends State<ComposePage> {
     return Row(
       children: [
         Text(
-          '图片 ${_imgs.length}/$_maxImgs',
+          Lc.current.imageCount('${_imgs.length}', '${_maxImgs}'),
           style: TextStyle(
             fontSize: 12,
             color: cs.onSurfaceVariant,
@@ -606,7 +607,7 @@ class _ComposePageState extends State<ComposePage> {
         ),
         const Spacer(),
         if (_imgs.length > 1)
-          Text('长按拖动换顺序', style: TextStyle(fontSize: 11, color: cs.outline)),
+          Text(Lc.current.dragToReorder, style: TextStyle(fontSize: 11, color: cs.outline)),
       ],
     );
   }
@@ -754,7 +755,7 @@ class _ComposePageState extends State<ComposePage> {
                     IconButton.filledTonal(
                       onPressed: (_busy || _compressing) ? null : _pickSheet,
                       icon: const Icon(Icons.add_photo_alternate_outlined),
-                      tooltip: '加图',
+                      tooltip: Lc.current.addImageShort,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -762,9 +763,12 @@ class _ComposePageState extends State<ComposePage> {
                         _busy
                             ? _status
                             : _imgs.isEmpty
-                            ? '标题必填 · 最多 $_maxImgs 张图'
-                            : '${_imgs.length}/$_maxImgs 张 · '
-                                  '${ImgCompress.kb(_imgs.fold(0, (a, b) => a + b.bytes.length))}',
+                            ? Lc.current.titleRequiredMaxImages('${_maxImgs}')
+                            : Lc.current.imageCountPrefix(
+                                '${_imgs.length}',
+                                '${_maxImgs}',
+                                '${ImgCompress.kb(_imgs.fold(0, (a, b) => a + b.bytes.length))}',
+                              ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 11.5, color: cs.outline),
@@ -774,7 +778,7 @@ class _ComposePageState extends State<ComposePage> {
                       Padding(
                         padding: const EdgeInsets.only(right: 10),
                         child: Text(
-                          '$bodyLen 字',
+                          Lc.current.bodyLength('${bodyLen}'),
                           style: TextStyle(fontSize: 11.5, color: cs.outline),
                         ),
                       ),
@@ -797,7 +801,7 @@ class _ComposePageState extends State<ComposePage> {
                                 color: cs.onPrimary,
                               ),
                             )
-                          : const Text('发布'),
+                          : Text(Lc.current.publish),
                     ),
                   ],
                 ),

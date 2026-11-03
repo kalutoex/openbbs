@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "generated": "2026-11-03T12:00:00+08:00",
+  "sites": [
+    {
+      "id": "kalutoex",
+      "name": "时间線",
+      "description": "一个能自己部署的轻论坛",
+      "url": "https://ipv6bbs.kalutoex.dpdns.org:26016",
+      "endpoints": [
+        {
+          "url": "https://ipv6bbs.kalutoex.dpdns.org:26016",
+          "note": "IPv6 直连"
+        },
+        {
+          "url": "https://ipv4bbs.kalutoex.dpdns.org:24016",
+          "note": "IPv4 中转"
+        }
+      ],
+      "api": 2,
+      "lang": "zh-Hans",
+      "icon": "https://ipv6bbs.kalutoex.dpdns.org:26016/img/icon.png",
+      "tags": ["综合"],
+      "open": true,
+      "contact": "kalutoex@dpdns.org",
+      "updated": "2026-11-03"
+    },
+    {
+      "id": "example-bbs",
+      "name": "示例吧",
+      "description": "一个自己部署的小站，仅供演示清单格式",
+      "url": "https://bbs.example.com:26016",
+      "endpoints": [
+        {
+          "url": "https://bbs.example.com:26016",
+          "note": "主入口"
+        },
+        {
+          "url": "https://backup.example.com:26016",
+          "note": "备用"
+        }
+      ],
+      "api": 2,
+      "lang": "zh-Hans",
+      "icon": "https://bbs.example.com:26016/img/icon.png",
+      "tags": ["技术", "闲聊"],
+      "open": false,
+      "contact": "admin@example.com",
+      "updated": "2026-11-02"
+    }
+  ]
+}

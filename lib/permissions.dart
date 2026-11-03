@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/l10n.dart';
 /// 权限都收在这儿。
 /// 联网（INTERNET）是安装时系统直接给的，运行时没有弹窗，所以这里只管通知和相册。
 class AppPerms {
@@ -15,10 +16,10 @@ class AppPerms {
   ];
 
   static String label(Permission p) =>
-      p == Permission.notification ? '通知' : '相册';
+      p == Permission.notification ? Lc.current.notice : Lc.current.album;
 
   static String subtitle(Permission p) =>
-      p == Permission.notification ? '有人回复、赞你时提醒你' : '发帖、回复时从相册选图';
+      p == Permission.notification ? Lc.current.permNotificationWhy : Lc.current.permPhotosWhy;
 
   static Future<Map<Permission, PermissionStatus>> statuses() async {
     final out = <Permission, PermissionStatus>{};
@@ -56,9 +57,9 @@ class AppPerms {
   }
 
   static String text(PermissionStatus s) {
-    if (s.isGranted || s.isLimited) return '已允许';
-    if (s.isPermanentlyDenied) return '已拒绝 · 去系统设置开';
-    if (s.isRestricted) return '被系统限制';
-    return '未允许 · 点一下申请';
+    if (s.isGranted || s.isLimited) return Lc.current.allowed;
+    if (s.isPermanentlyDenied) return Lc.current.permDeniedForever;
+    if (s.isRestricted) return Lc.current.permRestricted;
+    return Lc.current.permAsk;
   }
 }

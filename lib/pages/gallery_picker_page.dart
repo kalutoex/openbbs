@@ -6,6 +6,7 @@ import 'package:photo_manager/photo_manager.dart';
 
 import '../plat.dart';
 
+import '../l10n/l10n.dart';
 /// 自己的相册页：直接读本机媒体库，缩略图网格 + 多选。
 ///
 /// 用它的原因：系统照片选择器在安卓 13+ 只给「选中的照片」这种受限访问，
@@ -90,7 +91,7 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _err = '相册读不出来：$e';
+          _err = Lc.current.galleryReadFailed('${e}');
         });
       }
     }
@@ -113,7 +114,7 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _err = '这个相册打不开：$e';
+          _err = Lc.current.albumOpenFailed('${e}');
         });
       }
     }
@@ -139,7 +140,7 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
     if (_selected.length >= widget.maxCount) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('最多选 ${widget.maxCount} 张')));
+        ..showSnackBar(SnackBar(content: Text(Lc.current.maxSelectImages('${widget.maxCount}'))));
       return;
     }
     setState(() {
@@ -187,12 +188,12 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('选择照片'),
+        title: Text(Lc.current.pickPhotos),
         actions: [
           TextButton(
             onPressed: _selected.isEmpty || _loading ? null : _done,
             child: Text(
-              _selected.isEmpty ? '完成' : '完成 (${_selected.length})',
+              _selected.isEmpty ? Lc.current.done : Lc.current.doneWithCount('${_selected.length}'),
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: _selected.isEmpty ? null : cs.primary,
@@ -246,7 +247,7 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
   Widget _grid(ColorScheme cs) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_assets.isEmpty) {
-      return _hint('这个相册里没有图片');
+      return _hint(Lc.current.albumEmpty);
     }
     return GridView.builder(
       padding: const EdgeInsets.all(3),
@@ -333,12 +334,12 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
             Icon(Icons.photo_library_outlined, size: 48, color: cs.outline),
             const SizedBox(height: 16),
             Text(
-              hasMediaStore ? '需要相册权限才能列出照片' : '这台机器没有相册，用系统的文件选择',
+              hasMediaStore ? Lc.current.needsAlbumPermission : Lc.current.noAlbumUsePicker,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              '只在本机缩略图里挑，不上传整本相册。',
+              Lc.current.localThumbsOnly,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
             ),
@@ -357,7 +358,7 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
                 setState(() => _denied = false);
                 await _boot();
               },
-              child: Text(hasMediaStore ? '去开权限' : '换个方式选图'),
+              child: Text(hasMediaStore ? Lc.current.grantPermission : Lc.current.pickAnotherWay),
             ),
           ],
         ),
