@@ -109,6 +109,9 @@ def current_user(request: Request, c=Depends(get_conn)):
     uid = auth.read_token(tok) if tok else None
     if not uid:
         return None
+    # 封号在网页版也算没登录：接口层挡住了，界面别留个能点的壳。
+    if blacklist.is_banned(c, uid):
+        return None
     return c.execute("SELECT id, name FROM users WHERE id=?", (uid,)).fetchone()
 
 
