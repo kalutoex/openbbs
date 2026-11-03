@@ -118,7 +118,7 @@ token 永不过期，就没法靠过期让封号生效，只能在接口层拦�
 | 1 数据模型与命名 | 完成 | 提交 `1d9f1c6` 去掉板块这一层 |
 | 2 身份与鉴权 | 完成（资料拉取待补） | Ed25519 JWT、`/meta` 发公钥、黑名单签名增量；实测封禁 54 秒、解封 48 秒生效；断网仍可验签 |
 | 3 协议与站点清单 | 完成 | `api` 升到 2；`/meta` 补全自述；`/.well-known/bbs.json`；主站目录 + 登记 + 查重；小站自动登记；三条校验在前后端各一份 |
-| 4 客户端 | 未开始 | |
+| 4 客户端 | 完成 | 站点表 `sites_v1`；每站多入口、v6 优先按序回落；站点管理页（加/删/切/设登录站/粘贴清单/拉主站目录）；403 封禁切整页；`analyze` 0 error、51 项测试全绿 |
 | 5 部署包与运维 | 未开始 | |
 
 ### 第 2 段落地细节
@@ -158,6 +158,31 @@ token 永不过期，就没法靠过期让封号生效，只能在接口层拦�
   `server/tool/check_stage3.py`（离线）和 `test/site_meta_test.dart`（客户端）各跑一遍。
 - **客户端**：启动读一次自述，`api` 高于 `SiteMeta.supportedApi`（当前 2）就在首页顶部顶一条
   「请更新客户端」，只提示不拦用。`Api.loadMeta()` 先 `.well-known` 后 `/api/meta`，两次都失败静默。
+
+### 第 4 段落地细节
+
+- **站点表**：`lib/sites.dart` 的 `SiteEntry`（id / name / urls / api / icon / lang / master），
+  运行时另有 `reachable`、`lastOk`，不落盘。存 SharedPreferences `sites_v1`（`lib/site_store.dart`），
+  解析失败当空表，不抛。
+- **升级不丢地址**：老版本只存 `server_base`。首次启动读到空表时，把它 + 出厂 `SiteConfig.servers`
+  +（网页版）当前 origin 合成一座站写回，用户填过的地址不会丢。
+- **选路**：`Api.endpoints` 是一行站的入口列表，`Api.probe()` 逐条真发 `/api/feed`，
+  v6 入口 3 秒、其余 10 秒，串行，全通时稳定落在前面那条；`Api._withFailover` 在请求失败时按同一顺序换入口，
+  服务器回了 `ApiException` 就不换（那不是路的问题）。切网络回前台会重探一次（5 秒节流）。
+- **v6 判定**：只认三种写法——IPv6 字面量（含 `:`）、`ipv6` 开头域名、带 `-v6.` 的域名。别的域名不猜。
+- **合并去重**：`mergeSites()` 先按 `id` 认，其次按地址重叠认，都对不上才追加；登录站强制唯一，
+  一座都没有时第一座顶上。
+- **站点管理页**（`lib/pages/sites_page.dart`，原 `server_page.dart` 已删）：一行一座站，
+  左侧圆点标连通（灰=连不上、主色=通、空心=没探过），连不上的行变灰且点不动，
+  标「登录站」「当前」。操作：加站、切换、设登录站、删除（确认）、粘贴清单、
+  从主站拉 `GET /api/sites` 一键导入。导入结果按 `no_url / duplicate_id / api_too_new / bad_format`
+  分类报「跳过几条、为什么」。
+- **登录站**：注册、登录、找回密码走 `Api.postAt(loginUrls, …)`，只发登录站，站内按入口顺序回落；
+  token 全局共用，换站只重新拉一次 `/me`，不用重登。
+- **封禁页**：`_decode` 见 403 且 detail 含「账号已被封禁」就置 `AppState.banned`，
+  `main.dart` 的 `_Root` 把整棵树换成 `banned_page.dart`，只留「退出登录」（退出清标记）。
+- **空表引导**：`_Root` 在 `ready && sites.isEmpty` 时出 `setup_page.dart`，
+  手填地址连不上也入表（标灰）并在原地报错，不用再去设置里找。
 
 ### 第 2 段未做
 

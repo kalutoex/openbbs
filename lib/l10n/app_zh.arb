@@ -1147,5 +1147,83 @@
         "type": "String"
       }
     }
-  }
+  },
+  "sitesManage": "站点管理",
+  "sitesManageHint": "一个入口管多个站，连不上的自动跳过",
+  "siteAdd": "添加站点",
+  "siteAddHint": "填对方给的地址，带不带 http:// 都行",
+  "siteImportPaste": "粘贴清单",
+  "siteImportPasteHint": "把 bbs.json 的内容贴进来，一个文件可以有多座站",
+  "siteImportMaster": "从主站拉目录",
+  "importIt": "导入",
+  "siteImportFailed": "读不出清单：{v1}",
+  "@siteImportFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteImportEmpty": "这份清单里没有站点",
+  "siteImportNone": "没有可导入的站：{v1}",
+  "@siteImportNone": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteImported": "导入 {v1} 座站",
+  "@siteImported": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteImportedSkipped": "导入 {v1} 座站，跳过 {v2} 条：{v3}",
+  "@siteImportedSkipped": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      },
+      "v3": {
+        "type": "String"
+      }
+    }
+  },
+  "skipNoUrl": "没有地址",
+  "skipDuplicateId": "id 重复",
+  "skipApiTooNew": "接口版本太新",
+  "skipBadFormat": "不是清单格式",
+  "siteEmpty": "还没有站点",
+  "siteEmptyHint": "填一个地址就能开始，账号和帖子都在对方服务器上。",
+  "siteLoginSite": "登录站",
+  "siteCurrentNow": "当前",
+  "siteUnreachable": "连不上",
+  "siteSetLogin": "设为登录站",
+  "siteSwitch": "切换",
+  "siteProbe": "重新探测",
+  "siteRemoveConfirm": "从这台设备移除 {v1}？账号和帖子都还在服务器上。",
+  "@siteRemoveConfirm": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteLoginSet": "登录站改成 {v1}",
+  "@siteLoginSet": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "listSep": "、",
+  "bannedTitle": "账号已被封禁",
+  "bannedBody": "这个账号被管理员封了，帖子也发不出去。换个号，或者找站长问原因。"
 }

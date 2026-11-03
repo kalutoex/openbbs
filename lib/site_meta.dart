@@ -43,6 +43,12 @@ class SiteMeta {
   final List<String> capabilities;
   final List<SiteEndpoint> endpoints;
 
+  /// 这座站是不是登录站。老服务端不报，null = 不知道，按本机记录算。
+  final bool? master;
+
+  /// 小站指向的主站地址。主站是空字符串。
+  final String masterUrl;
+
   const SiteMeta({
     this.schema = 1,
     this.api = 0,
@@ -57,6 +63,8 @@ class SiteMeta {
     this.tags = const [],
     this.capabilities = const [],
     this.endpoints = const [],
+    this.master,
+    this.masterUrl = '',
   });
 
   /// 服务端比这台客户端新。别拿它当老接口用。
@@ -117,6 +125,8 @@ class SiteMeta {
       tags: _strList(raw['tags']),
       capabilities: _strList(raw['capabilities']),
       endpoints: endpoints,
+      master: raw['master'] is bool ? raw['master'] as bool : null,
+      masterUrl: '${raw['master_url'] ?? ''}'.trim().replaceAll(RegExp(r'/+$'), ''),
     );
   }
 

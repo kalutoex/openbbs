@@ -1753,4 +1753,111 @@ class LEn extends L {
   String siteNeedsUpdate(String v1, String v2) {
     return 'This site speaks API $v1, but this client only supports up to $v2. Update the app to keep using it.';
   }
+
+  @override
+  String get sitesManage => 'Sites';
+
+  @override
+  String get sitesManageHint =>
+      'One app, many sites — unreachable ones are skipped';
+
+  @override
+  String get siteAdd => 'Add site';
+
+  @override
+  String get siteAddHint =>
+      'Enter the address you were given; http:// is optional';
+
+  @override
+  String get siteImportPaste => 'Paste a manifest';
+
+  @override
+  String get siteImportPasteHint =>
+      'Paste the contents of bbs.json — one file can list many sites';
+
+  @override
+  String get siteImportMaster => 'Fetch from the master site';
+
+  @override
+  String get importIt => 'Import';
+
+  @override
+  String siteImportFailed(String v1) {
+    return 'Can\'t read the manifest: $v1';
+  }
+
+  @override
+  String get siteImportEmpty => 'No sites in that manifest';
+
+  @override
+  String siteImportNone(String v1) {
+    return 'Nothing to import: $v1';
+  }
+
+  @override
+  String siteImported(String v1) {
+    return 'Imported $v1 sites';
+  }
+
+  @override
+  String siteImportedSkipped(String v1, String v2, String v3) {
+    return 'Imported $v1 sites, skipped $v2: $v3';
+  }
+
+  @override
+  String get skipNoUrl => 'no address';
+
+  @override
+  String get skipDuplicateId => 'duplicate id';
+
+  @override
+  String get skipApiTooNew => 'API too new';
+
+  @override
+  String get skipBadFormat => 'not a manifest';
+
+  @override
+  String get siteEmpty => 'No sites yet';
+
+  @override
+  String get siteEmptyHint =>
+      'Add an address to start — accounts and posts live on that server.';
+
+  @override
+  String get siteLoginSite => 'Login site';
+
+  @override
+  String get siteCurrentNow => 'Current';
+
+  @override
+  String get siteUnreachable => 'unreachable';
+
+  @override
+  String get siteSetLogin => 'Set as login site';
+
+  @override
+  String get siteSwitch => 'Switch';
+
+  @override
+  String get siteProbe => 'Probe again';
+
+  @override
+  String siteRemoveConfirm(String v1) {
+    return 'Remove $v1 from this device? The account and posts stay on the server.';
+  }
+
+  @override
+  String siteLoginSet(String v1) {
+    return 'Login site is now $v1';
+  }
+
+  @override
+  String get listSep => ', ';
+
+  @override
+  String get bannedTitle => 'Account banned';
+
+  @override
+  String get bannedBody =>
+      'An admin banned this account, so posts won\'t go through. Use another account or ask the site owner why.';
 }

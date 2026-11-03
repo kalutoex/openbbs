@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -5,7 +6,10 @@ import 'accounts.dart';
 import 'api.dart';
 import 'disk_cache.dart';
 import 'img_cache.dart';
+import 'site_config.dart';
 import 'site_meta.dart';
+import 'site_store.dart';
+import 'sites.dart';
 import 'token_store.dart';
 
 import '../l10n/l10n.dart';
@@ -15,8 +19,8 @@ class AppState extends ChangeNotifier {
   static final AppState instance = AppState._();
 
   static const _kBase = 'server_base';
-  static const _kMode = 'server_mode';
   static const _kLastGood = 'server_last_good';
+  static const _kActive = 'active_site';
   static const _kFont = 'font_scale';
   static const _kTheme = 'theme_mode';
   static const _kHue = 'accent_hue';
@@ -38,8 +42,44 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 服务器选路：自动 / 仅 IPv6 / 仅 IPv4 / 手动。
-  ServerMode serverMode = ServerMode.auto;
+  /// 本机站点表。第 4 段起所有网络请求都在这张表里选一座站。
+  List<SiteEntry> sites = [];
+
+  /// 当前在用的那座站（[SiteEntry.key]）。
+  String activeKey = '';
+
+  /// 当前账号被服务端封了。全应用只显示封禁页，直到退出登录。
+  bool banned = false;
+
+  SiteEntry? get activeSite {
+    for (final s in sites) {
+      if (s.key == activeKey) return s;
+    }
+    return sites.isEmpty ? null : sites.first;
+  }
+
+  /// 登录站：注册、登录、找回密码只发这里。
+  SiteEntry? get loginSite {
+    for (final s in sites) {
+      if (s.master) return s;
+    }
+    return activeSite;
+  }
+
+  /// 登录站的全部入口，v6 优先；没有站点就是空。
+  List<String> get loginUrls => loginSite?.orderedUrls ?? const [];
+
+  void markBanned() {
+    if (banned) return;
+    banned = true;
+    notifyListeners();
+  }
+
+  void clearBanned() {
+    if (!banned) return;
+    banned = false;
+    notifyListeners();
+  }
 
   /// 管理员：未处理举报数。抽屉角标读这里，处理完就地改。
   int reportOpen = 0;
@@ -256,31 +296,50 @@ class AppState extends ChangeNotifier {
     if (ti != null && ti >= 0 && ti < ThemeMode.values.length) {
       themeMode.value = ThemeMode.values[ti];
     }
-    // 服务器选路：默认自动（先 IPv6，不通再 IPv4），判断全在手机上做。
-    final m = p.getString(_kMode);
-    serverMode = ServerMode.values.firstWhere(
-      (e) => e.name == m,
-      orElse: () => ServerMode.auto,
-    );
-    final savedBase = p.getString(_kBase) ?? '';
-    Api.mode = serverMode;
-    Api.lastGood = p.getString(_kLastGood) ?? '';
-    switch (serverMode) {
-      case ServerMode.ipv6:
-        Api.base = Api.chIpv6;
-      case ServerMode.ipv4:
-        Api.base = Api.chIpv4;
-      case ServerMode.manual:
-        Api.base = savedBase.isNotEmpty ? savedBase : Api.chIpv4;
-      case ServerMode.auto:
-        Api.base = Api.lastGood.isNotEmpty ? Api.lastGood : Api.chIpv6;
+    // 站点表：第 4 段起地址不再是一个字符串。老版本只存 server_base，
+    // 升级时把它并进出厂地址，当成一座站，不丢用户填过的地址。
+    sites = await SiteStore.read();
+    if (sites.isEmpty) {
+      final seed = <String>[];
+      final old = normalizeUrl(p.getString(_kBase) ?? '');
+      if (old.isNotEmpty) seed.add(old);
+      for (final u in SiteConfig.servers) {
+        final v = normalizeUrl(u);
+        if (v.isNotEmpty && !seed.contains(v)) seed.add(v);
+      }
+      if (kIsWeb) {
+        final o = normalizeUrl(Uri.base.origin);
+        if (o.isNotEmpty && !seed.contains(o)) seed.add(o);
+      }
+      if (seed.isNotEmpty) {
+        sites = [SiteEntry(urls: seed, name: SiteConfig.brand, master: true)];
+        await SiteStore.write(sites);
+      }
+    }
+    activeKey = p.getString(_kActive) ?? '';
+    if (sites.isEmpty) {
+      activeKey = '';
+      Api.setEndpoints(const []);
+      Api.base = normalizeUrl(Api.defaultBase);
+    } else {
+      if (sites.every((s) => s.key != activeKey)) activeKey = sites.first.key;
+      final a = activeSite!;
+      final urls = a.orderedUrls;
+      final pref = a.lastOk ?? normalizeUrl(p.getString(_kLastGood) ?? '');
+      Api.setEndpoints(urls);
+      // 上次连通的入口优先，其次第一条（v6 优先排序后的第一条）。
+      Api.base = urls.contains(pref) ? pref : (urls.isEmpty ? '' : urls.first);
     }
     // 换通道时把新地址记下来，下次冷启动先用它，省一轮探路。
     Api.onChannelChanged = (b) async {
+      final a = activeSite;
+      if (a != null) a.lastOk = b;
       final p = await SharedPreferences.getInstance();
       await p.setString(_kLastGood, b);
       notifyListeners();
     };
+    // 接口层回「账号已被封禁」就切全局封禁页。
+    Api.onBanned = markBanned;
     ready = true;
   }
 
@@ -306,46 +365,108 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// 手填地址：顺手切成手动档。
-  Future<void> setBase(String base) async {
-    var b = base.trim();
-    if (b.endsWith('/')) b = b.substring(0, b.length - 1);
-    if (b.isNotEmpty && !b.startsWith('http')) b = 'http://$b';
-    Api.base = b;
-    serverMode = ServerMode.manual;
-    Api.mode = ServerMode.manual;
-    final p = await SharedPreferences.getInstance();
-    await p.setString(_kBase, b);
-    await p.setString(_kMode, ServerMode.manual.name);
-    notifyListeners();
+  /// 手填地址：并进站点表并切过去。设置页/首次启动用。
+  /// 返回连不连得上——连不上也照样入表（标灰），让用户能改地址再试。
+  Future<bool> setBase(String base) async {
+    final u = normalizeUrl(base);
+    if (u.isEmpty) return false;
+    final hit = sites.indexWhere((s) => s.urls.contains(u));
+    if (hit >= 0) {
+      return switchSite(sites[hit]);
+    }
+    sites = mergeSites(sites, [SiteEntry(urls: [u])]);
+    final s = sites.firstWhere((x) => x.urls.contains(u));
+    await SiteStore.write(sites);
+    return switchSite(s);
   }
 
-  /// 切换选路档位。
+  /// 切到另一座站。
   ///
-  /// 单通道（仅 IPv4 / 仅 IPv6）直接定死地址，不探测，点了就生效；
-  /// 自动档在手机上探一遍：先 IPv6，通了就用，不通再走 IPv4。
-  /// 探测失败时退回上次连通的地址，别让用户面对一个死地址。
-  Future<void> setServerMode(ServerMode m) async {
-    serverMode = m;
-    Api.mode = m;
+  /// 连不上也切（标灰、不弹窗），返回 false 让界面自己决定怎么说。
+  /// 登录态不随站点走：token 全局共用，换站只重新拉一次 /me。
+  Future<bool> switchSite(SiteEntry s) async {
+    activeKey = s.key;
     final p = await SharedPreferences.getInstance();
-    await p.setString(_kMode, m.name);
-    switch (m) {
-      case ServerMode.ipv6:
-        Api.base = Api.chIpv6;
-      case ServerMode.ipv4:
-        Api.base = Api.chIpv4;
-      case ServerMode.manual:
-        final saved = p.getString(_kBase) ?? '';
-        Api.base = saved.isNotEmpty ? saved : Api.chIpv4;
-      case ServerMode.auto:
-        Api.base = Api.lastGood.isNotEmpty ? Api.lastGood : Api.chIpv6;
-        final b = await Api.probe();
-        if (b != null) {
-          Api.base = b;
-          await p.setString(_kLastGood, b);
-        }
+    await p.setString(_kActive, activeKey);
+    final urls = s.orderedUrls;
+    Api.setEndpoints(urls);
+    final pref = s.lastOk ?? '';
+    Api.base = urls.contains(pref) ? pref : (urls.isEmpty ? '' : urls.first);
+    final ok = await Api.probe();
+    s.reachable = ok != null;
+    if (ok != null) {
+      Api.base = ok;
+      s.lastOk = ok;
     }
+    // 自述回来补 id / 名字 / 入口；登录站以服务端说的为准。
+    final meta = await Api.loadMeta();
+    if (meta != null) {
+      s.applyMeta(meta, master: meta.master);
+      if (meta.master == true) {
+        for (final x in sites) {
+          if (x.key != s.key) x.master = false;
+        }
+      }
+      siteMeta = meta;
+    }
+    // id 可能刚从空变成有值，key 变了，当前标记重新对上。
+    activeKey = s.key;
+    await p.setString(_kActive, activeKey);
+    user = null;
+    _applyCacheScope(null);
+    await SiteStore.write(sites);
+    notifyListeners();
+    await refreshUser();
+    feedVersion++;
+    await refreshUnread();
+    notifyListeners();
+    return ok != null;
+  }
+
+  /// 把新站点并进表里，返回新增的行数（更新已有行不算）。
+  Future<int> addSites(List<SiteEntry> incoming) async {
+    final before = sites.length;
+    sites = mergeSites(sites, incoming);
+    final added = sites.length - before;
+    await SiteStore.write(sites);
+    if (activeKey.isEmpty && sites.isNotEmpty) {
+      await switchSite(sites.first);
+    } else {
+      notifyListeners();
+    }
+    return added;
+  }
+
+  /// 删一座站。删的是当前站就落到下一座；一座不剩就断开，界面自己处理空表。
+  Future<void> removeSite(SiteEntry s) async {
+    final wasActive = s.key == activeKey;
+    sites = sites.where((x) => x.key != s.key).toList();
+    if (sites.isNotEmpty && !sites.any((x) => x.master)) {
+      sites.first.master = true;
+    }
+    await SiteStore.write(sites);
+    if (!wasActive) {
+      notifyListeners();
+      return;
+    }
+    if (sites.isEmpty) {
+      activeKey = '';
+      Api.setEndpoints(const []);
+      Api.base = '';
+      user = null;
+      _applyCacheScope(null);
+      notifyListeners();
+      return;
+    }
+    await switchSite(sites.first);
+  }
+
+  /// 指定登录站。同一时间只有一个。
+  Future<void> setLoginSite(SiteEntry s) async {
+    for (final x in sites) {
+      x.master = x.key == s.key;
+    }
+    await SiteStore.write(sites);
     notifyListeners();
   }
 
@@ -468,9 +589,20 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String name, String password) async {
-    final d = await Api.post('/login', {'name': name, 'password': password});
+  /// 登录只能由登录站做，做完 token 全局共用。
+  ///
+  /// 当前站不是登录站时，登录回的是主站的行，得再拉一次 /me 换成这一站的影子行。
+  Future<void> _afterLogin(Map<String, dynamic> d) async {
     await _saveToken(d['token'] as String, d['user'] as Map<String, dynamic>);
+    if (!loginUrls.contains(Api.base)) await refreshUser();
+  }
+
+  Future<void> login(String name, String password) async {
+    final d = await Api.postAt(loginUrls, '/login', {
+      'name': name,
+      'password': password,
+    });
+    await _afterLogin(d as Map<String, dynamic>);
   }
 
   Future<void> register(
@@ -479,35 +611,35 @@ class AppState extends ChangeNotifier {
     String email,
     String code,
   ) async {
-    final d = await Api.post('/register', {
+    final d = await Api.postAt(loginUrls, '/register', {
       'name': name,
       'password': password,
       'email': email,
       'code': code,
     });
-    await _saveToken(d['token'] as String, d['user'] as Map<String, dynamic>);
+    await _afterLogin(d as Map<String, dynamic>);
   }
 
   /// 注册前先发验证码。返回冷却秒数。
   Future<int> requestCode(String email) async {
-    final d = await Api.post('/register/code', {'email': email});
+    final d = await Api.postAt(loginUrls, '/register/code', {'email': email});
     return (d['cooldown'] as num?)?.toInt() ?? 60;
   }
 
   /// 找回密码：发重置验证码。返回冷却秒数。
   Future<int> requestResetCode(String email) async {
-    final d = await Api.post('/password/code', {'email': email});
+    final d = await Api.postAt(loginUrls, '/password/code', {'email': email});
     return (d['cooldown'] as num?)?.toInt() ?? 60;
   }
 
   /// 找回密码：验证码换新密码，成功直接登录。
   Future<void> resetPassword(String email, String code, String password) async {
-    final d = await Api.post('/password/reset', {
+    final d = await Api.postAt(loginUrls, '/password/reset', {
       'email': email,
       'code': code,
       'password': password,
     });
-    await _saveToken(d['token'] as String, d['user'] as Map<String, dynamic>);
+    await _afterLogin(d as Map<String, dynamic>);
   }
 
   /// 绑定/换绑邮箱：先发码。返回冷却秒数。
@@ -551,6 +683,7 @@ class AppState extends ChangeNotifier {
   Future<void> logout() async {
     Api.token = null;
     user = null;
+    banned = false;
     _applyCacheScope(null);
     await TokenStore.clear();
     notifyListeners();

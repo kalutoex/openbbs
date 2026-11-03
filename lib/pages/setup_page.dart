@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../site_config.dart';
 import '../api.dart';
+import '../site_config.dart';
 import '../store.dart';
-import 'home_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
-/// 首次启动：填服务器地址。
+/// 首次启动：站点表是空的，先要一个地址。
+///
+/// 包里有出厂种子，导入过清单也不会走到这儿。真走到这儿说明一个地址都没有，
+/// 手填一个就能开始——连上之后由站点表接管，这里不再管选路。
 class SetupPage extends StatefulWidget {
   const SetupPage({super.key});
 
@@ -30,13 +32,20 @@ class _SetupPageState extends State<SetupPage> {
       _busy = true;
       _err = null;
     });
-    await AppState.instance.setBase(v);
     try {
-      await Api.get('/feed');
+      final ok = await AppState.instance.setBase(v);
       if (!mounted) return;
-      Navigator.of(context)
-          .pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+      if (!ok) {
+        // 连不上也入表了，标灰；人在这儿能改地址再试，不用去设置里找。
+        setState(() {
+          _busy = false;
+          _err = Lc.current.connectFailedBody(v);
+        });
+        return;
+      }
+      // 不用自己跳页：站点表一有站，外层就换成首页了。
     } on ApiException catch (e) {
+      if (!mounted) return;
       setState(() {
         _busy = false;
         _err = errorText(context, e);
@@ -72,7 +81,7 @@ class _SetupPageState extends State<SetupPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  Lc.current.fillServerAddress,
+                  Lc.current.siteEmptyHint,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: cs.onSurfaceVariant),
                 ),
@@ -82,10 +91,13 @@ class _SetupPageState extends State<SetupPage> {
                   keyboardType: TextInputType.url,
                   autocorrect: false,
                   decoration: InputDecoration(
-                    labelText: Lc.current.server,
+                    labelText: Lc.current.serverAddress,
                     hintText: 'http://192.168.1.10:8080',
-                    border: OutlineInputBorder(),
+                    helperText: Lc.current.siteAddHint,
+                    helperMaxLines: 3,
+                    border: const OutlineInputBorder(),
                   ),
+                  onSubmitted: (_) => _busy ? null : _save(),
                 ),
                 if (_err != null) ...[
                   const SizedBox(height: 12),

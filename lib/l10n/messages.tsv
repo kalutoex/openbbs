@@ -499,3 +499,33 @@ ${f['thread_count'] ?? 0} 帖 · ${f['follow_count'] ?? 0} 关注	forumStats	{v1
 没搜到「$_q」	noSearchResult	Nothing for “{v1}”
 这一版太旧了，先更新才能继续用。	mustUpdate	This build is too old. Update first to keep using the app.
 这个站点的接口版本是 {v1}，当前客户端只认到 {v2}。请更新客户端后再用。	siteNeedsUpdate	This site speaks API {v1}, but this client only supports up to {v2}. Update the app to keep using it.
+站点管理	sitesManage	Sites
+一个入口管多个站，连不上的自动跳过	sitesManageHint	One app, many sites — unreachable ones are skipped
+添加站点	siteAdd	Add site
+填对方给的地址，带不带 http:// 都行	siteAddHint	Enter the address you were given; http:// is optional
+粘贴清单	siteImportPaste	Paste a manifest
+把 bbs.json 的内容贴进来，一个文件可以有多座站	siteImportPasteHint	Paste the contents of bbs.json — one file can list many sites
+从主站拉目录	siteImportMaster	Fetch from the master site
+导入	importIt	Import
+读不出清单：$v1	siteImportFailed	Can't read the manifest: {v1}
+这份清单里没有站点	siteImportEmpty	No sites in that manifest
+没有可导入的站：$v1	siteImportNone	Nothing to import: {v1}
+导入 $v1 座站	siteImported	Imported {v1} sites
+导入 $v1 座站，跳过 $v2 条：$v3	siteImportedSkipped	Imported {v1} sites, skipped {v2}: {v3}
+没有地址	skipNoUrl	no address
+id 重复	skipDuplicateId	duplicate id
+接口版本太新	skipApiTooNew	API too new
+不是清单格式	skipBadFormat	not a manifest
+还没有站点	siteEmpty	No sites yet
+填一个地址就能开始，账号和帖子都在对方服务器上。	siteEmptyHint	Add an address to start — accounts and posts live on that server.
+登录站	siteLoginSite	Login site
+当前	siteCurrentNow	Current
+连不上	siteUnreachable	unreachable
+设为登录站	siteSetLogin	Set as login site
+切换	siteSwitch	Switch
+重新探测	siteProbe	Probe again
+从这台设备移除 $v1？账号和帖子都还在服务器上。	siteRemoveConfirm	Remove {v1} from this device? The account and posts stay on the server.
+登录站改成 $v1	siteLoginSet	Login site is now {v1}
+、	listSep	, 
+账号已被封禁	bannedTitle	Account banned
+这个账号被管理员封了，帖子也发不出去。换个号，或者找站长问原因。	bannedBody	An admin banned this account, so posts won't go through. Use another account or ask the site owner why.

@@ -3181,6 +3181,186 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'这个站点的接口版本是 {v1}，当前客户端只认到 {v2}。请更新客户端后再用。'**
   String siteNeedsUpdate(String v1, String v2);
+
+  /// No description provided for @sitesManage.
+  ///
+  /// In zh, this message translates to:
+  /// **'站点管理'**
+  String get sitesManage;
+
+  /// No description provided for @sitesManageHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'一个入口管多个站，连不上的自动跳过'**
+  String get sitesManageHint;
+
+  /// No description provided for @siteAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加站点'**
+  String get siteAdd;
+
+  /// No description provided for @siteAddHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'填对方给的地址，带不带 http:// 都行'**
+  String get siteAddHint;
+
+  /// No description provided for @siteImportPaste.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴清单'**
+  String get siteImportPaste;
+
+  /// No description provided for @siteImportPasteHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'把 bbs.json 的内容贴进来，一个文件可以有多座站'**
+  String get siteImportPasteHint;
+
+  /// No description provided for @siteImportMaster.
+  ///
+  /// In zh, this message translates to:
+  /// **'从主站拉目录'**
+  String get siteImportMaster;
+
+  /// No description provided for @importIt.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入'**
+  String get importIt;
+
+  /// No description provided for @siteImportFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'读不出清单：{v1}'**
+  String siteImportFailed(String v1);
+
+  /// No description provided for @siteImportEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份清单里没有站点'**
+  String get siteImportEmpty;
+
+  /// No description provided for @siteImportNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有可导入的站：{v1}'**
+  String siteImportNone(String v1);
+
+  /// No description provided for @siteImported.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入 {v1} 座站'**
+  String siteImported(String v1);
+
+  /// No description provided for @siteImportedSkipped.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入 {v1} 座站，跳过 {v2} 条：{v3}'**
+  String siteImportedSkipped(String v1, String v2, String v3);
+
+  /// No description provided for @skipNoUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有地址'**
+  String get skipNoUrl;
+
+  /// No description provided for @skipDuplicateId.
+  ///
+  /// In zh, this message translates to:
+  /// **'id 重复'**
+  String get skipDuplicateId;
+
+  /// No description provided for @skipApiTooNew.
+  ///
+  /// In zh, this message translates to:
+  /// **'接口版本太新'**
+  String get skipApiTooNew;
+
+  /// No description provided for @skipBadFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'不是清单格式'**
+  String get skipBadFormat;
+
+  /// No description provided for @siteEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有站点'**
+  String get siteEmpty;
+
+  /// No description provided for @siteEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'填一个地址就能开始，账号和帖子都在对方服务器上。'**
+  String get siteEmptyHint;
+
+  /// No description provided for @siteLoginSite.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录站'**
+  String get siteLoginSite;
+
+  /// No description provided for @siteCurrentNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前'**
+  String get siteCurrentNow;
+
+  /// No description provided for @siteUnreachable.
+  ///
+  /// In zh, this message translates to:
+  /// **'连不上'**
+  String get siteUnreachable;
+
+  /// No description provided for @siteSetLogin.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为登录站'**
+  String get siteSetLogin;
+
+  /// No description provided for @siteSwitch.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换'**
+  String get siteSwitch;
+
+  /// No description provided for @siteProbe.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新探测'**
+  String get siteProbe;
+
+  /// No description provided for @siteRemoveConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'从这台设备移除 {v1}？账号和帖子都还在服务器上。'**
+  String siteRemoveConfirm(String v1);
+
+  /// No description provided for @siteLoginSet.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录站改成 {v1}'**
+  String siteLoginSet(String v1);
+
+  /// No description provided for @listSep.
+  ///
+  /// In zh, this message translates to:
+  /// **'、'**
+  String get listSep;
+
+  /// No description provided for @bannedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'账号已被封禁'**
+  String get bannedTitle;
+
+  /// No description provided for @bannedBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个账号被管理员封了，帖子也发不出去。换个号，或者找站长问原因。'**
+  String get bannedBody;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

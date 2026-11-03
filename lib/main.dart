@@ -8,6 +8,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'api.dart';
 import 'l10n/app_localizations.dart';
 import 'pages/home_page.dart';
+import 'pages/banned_page.dart';
+import 'pages/setup_page.dart';
 import 'store.dart';
 import 'theme.dart';
 
@@ -33,20 +35,18 @@ Future<void> _boot() async {
     debugPrint('failed to read settings, starting with defaults: $e');
     AppState.instance.ready = true;
   }
-  // 只有自动档要探：先 IPv6，通了就用，不通再走 IPv4，全程在手机上判断。
-  // 其余三档地址是定死的，启动时不用再问一遍。
-  if (Api.mode == ServerMode.auto) {
-    try {
-      final b = await Api.probe();
-      if (b != null) {
-        Api.base = b;
-        debugPrint('endpoint: $b');
-      } else {
-        debugPrint('both channels unreachable, using last: ${Api.base}');
-      }
-    } catch (e) {
-      debugPrint('route selection failed, using last: ${Api.base} $e');
+  // 当前站点探一遍：v6 入口先，连不上按入口顺序回落。
+  // 选路全在手机上判断，失败就退回上次连通的地址，别让用户对着死地址。
+  try {
+    final b = await Api.probe();
+    if (b != null) {
+      Api.base = b;
+      debugPrint('endpoint: $b');
+    } else {
+      debugPrint('site unreachable, using last: ${Api.base}');
     }
+  } catch (e) {
+    debugPrint('route selection failed, using last: ${Api.base} $e');
   }
   // 站点自述：协议版本、站点名、可用入口。读不到就静默——
   // 老站没有 /.well-known，这不该挡住任何东西。
@@ -93,7 +93,7 @@ class _ShijianxianAppState extends State<ShijianxianApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
-    if (Api.mode != ServerMode.auto) return;
+    if (Api.endpoints.isEmpty) return;
     final now = DateTime.now();
     if (now.difference(_lastProbe) < const Duration(seconds: 5)) return;
     _lastProbe = now;
@@ -165,8 +165,29 @@ class _ShijianxianAppState extends State<ShijianxianApp>
             );
           },
         ),
-        home: const HomePage(),
+        home: const _Root(),
       ),
+    );
+  }
+}
+
+/// 最外层三选一：封禁页 / 首次引导 / 首页。
+///
+/// 账号被封时整棵树换掉——点哪个页面都是这一页，直到退出登录。
+/// 站点表空了才出引导；出厂种子在就不会走到那儿。
+class _Root extends StatelessWidget {
+  const _Root();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AppState.instance,
+      builder: (_, _) {
+        final st = AppState.instance;
+        if (st.banned) return const BannedPage();
+        if (st.ready && st.sites.isEmpty) return const SetupPage();
+        return const HomePage();
+      },
     );
   }
 }

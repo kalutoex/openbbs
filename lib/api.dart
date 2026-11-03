@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'disk_cache.dart';
 import 'site_config.dart';
 import 'site_meta.dart';
+import 'sites.dart';
 
 import '../l10n/l10n.dart';
 /// 服务端返回的错误，直接拿去显示。
@@ -28,10 +29,7 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-/// 服务器选路方式。
-enum ServerMode { auto, ipv6, ipv4, manual }
-
-/// 一个极薄的 JSON 客户端。base 和 token 都是可变的，设置页会改。
+/// 一个极薄的 JSON 客户端。base 和 token 都是可变的，站点页会改。
 class Api {
   /// 出厂默认地址。
   ///
@@ -40,59 +38,66 @@ class Api {
   static String get defaultBase =>
       kIsWeb ? Uri.base.origin : SiteConfig.defaultServer;
 
-  /// 主通道 / 备用通道。
-  ///
-  /// 原来是「IPv6 直连 + IPv4 frp 兜底」写死的两个域名，现在改成构建参数：
-  ///   --dart-define=SERVERS=https://主,https://备
-  /// 只配一个就只有一个通道，选路那几档自然退化成单通道。
-  static String get chIpv6 =>
-      SiteConfig.servers.isNotEmpty ? SiteConfig.servers[0] : '';
-  static String get chIpv4 =>
-      SiteConfig.servers.length > 1 ? SiteConfig.servers[1] : chIpv6;
+  /// 当前出口，形如 http://1.2.3.4:8080，不带结尾斜杠。
+  static String base = '';
 
-  /// 当前选路方式。判断都在手机本地做。
-  static ServerMode mode = ServerMode.auto;
+  /// 当前站点的全部入口，v6 在前。换站时整组换掉。
+  static List<String> endpoints = const [];
 
-  /// 上次连通的地址，自动档探测失败时退回这里。
+  static String? token;
+
+  static bool get configured => base.isNotEmpty;
+
+  /// 上次连通的地址。切站和冷启动先用它，省一轮探路。
   static String lastGood = '';
 
-  static List<String> get candidates {
-    switch (mode) {
-      case ServerMode.auto:
-        return [chIpv6, chIpv4];
-      case ServerMode.ipv6:
-        return [chIpv6];
-      case ServerMode.ipv4:
-        return [chIpv4];
-      case ServerMode.manual:
-        return [base.isEmpty ? chIpv4 : base];
+  /// 通道被换掉时通知外面（存盘、刷新界面），由 store 挂上去。
+  static void Function(String base)? onChannelChanged;
+
+  /// 服务端回「账号已被封禁」时通知外面切封禁页。
+  static void Function()? onBanned;
+
+  /// 封禁文案是服务端写死的，客户端按它认。
+  static const bannedMessage = '账号已被封禁';
+
+  /// 换一组入口。重复地址去掉，顺序保持调用方给的（已 v6 优先）。
+  static void setEndpoints(List<String> urls, {String? preferred}) {
+    final out = <String>[];
+    for (final u in urls) {
+      final v = u.trim().replaceAll(RegExp(r'/+$'), '');
+      if (v.isNotEmpty && !out.contains(v)) out.add(v);
+    }
+    endpoints = out;
+    final p = (preferred ?? '').trim();
+    if (p.isNotEmpty && out.contains(p)) {
+      base = p;
     }
   }
 
-  /// 手机上逐条探一遍，每条都真发一次请求，回 200 才算通。
+  /// 逐条探一遍这座站的入口，每条都真发一次请求，回 200 才算通。
   ///
-  /// 自动档：先 IPv6，通了就用，不通再试 IPv4。串行，不并发——
-  /// 两边都通时必须稳定落在 IPv6 上。
-  /// 超时给得宽：IPv6 直连 3 秒（慢就说明没 IPv6）；IPv4 走 frp，
-  /// 绕公网一圈，首包 10 秒都算正常，卡太紧会把能用的判成不通。
-  static Future<String?> probe() async {
-    final list = candidates;
-    for (var i = 0; i < list.length; i++) {
-      final c = list[i];
+  /// 串行，不并发——两条都通时必须稳定落在前面那条（v6）。
+  /// 超时给得宽：v6 直连 3 秒，其余走公网/中转，10 秒都算正常。
+  /// [mark] 为假时只探不记，站点管理页给别的站探路用它。
+  static Future<String?> probeAt(List<String> urls, {bool mark = true}) async {
+    for (final c in urls) {
       if (c.isEmpty) continue;
-      final ms = i == 0 ? 3000 : 10000;
+      final ms = looksV6(c) ? 3000 : 10000;
       try {
         final r = await http
             .get(Uri.parse('$c/api/feed'))
             .timeout(Duration(milliseconds: ms));
         if (r.statusCode == 200) {
-          lastGood = c;
+          if (mark) lastGood = c;
           return c;
         }
       } catch (_) {}
     }
     return null;
   }
+
+  /// 探当前站点。
+  static Future<String?> probe() => probeAt(endpoints);
 
   /// 站点自述。启动时读一次，界面拿它判断协议版本和能力位。
   ///
@@ -115,41 +120,101 @@ class Api {
     return null;
   }
 
-  /// 形如 http://1.2.3.4:8080，不带结尾斜杠
-  static String base = '';
-  static String? token;
-
-  static bool get configured => base.isNotEmpty;
-
-  /// 服务端给的是 /img/xxx 相对路径，拼上 base 才能显示。
-  /// 通道被换掉时通知外面（存盘、刷新设置页显示），由 store 挂上去。
-  static void Function(String base)? onChannelChanged;
-
-  /// 自动档专用：当前通道连不上，就换另一条再试一次。
+  /// 当前出口连不上，就按 endpoints 顺序换下一条再试一次。
   ///
   /// 用户切网络（家里 WiFi → 校园网 → 流量）时，缓存里的地址不一定还对，
-  /// 靠这个自己换过去，不用人去设置页点。换通了就把 base 定在新的那条上。
+  /// 靠这个自己换过去，不用人去站点页点。换通了就把 base 定在新的那条上。
   /// 服务器真回了错误（ApiException）不换——那不是路的问题。
   static Future<T> _withFailover<T>(Future<T> Function() run) async {
     try {
       return await run();
     } catch (e) {
       if (e is ApiException) rethrow;
-      if (mode != ServerMode.auto) rethrow;
-      final other = base == chIpv4 ? chIpv6 : chIpv4;
-      if (other.isEmpty || other == base) rethrow;
       final prev = base;
-      base = other;
+      for (final other in endpoints) {
+        if (other == prev) continue;
+        base = other;
+        try {
+          final r = await run();
+          lastGood = other;
+          onChannelChanged?.call(other);
+          return r;
+        } on ApiException {
+          // 这条路上服务器答了话，问题不在路，回原路重抛。
+          base = prev;
+          rethrow;
+        } catch (_) {
+          // 继续下一条
+        }
+      }
+      base = prev;
+      rethrow;
+    }
+  }
+
+  /// 对着指定的站点发 POST，不碰当前出口。
+  ///
+  /// 登录、注册、找回密码都走这里：这些只在登录站做，站内按入口顺序回落。
+  static Future<dynamic> postAt(
+    List<String> urls,
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    Object? last;
+    for (final b in urls) {
+      if (b.isEmpty) continue;
       try {
-        final r = await run();
-        lastGood = other;
-        onChannelChanged?.call(other);
-        return r;
-      } catch (_) {
-        base = prev;
-        rethrow;
+        final r = await http
+            .post(
+              _uriAt(b, path),
+              headers: {
+                'Content-Type': 'application/json',
+                if (token != null && token!.isNotEmpty)
+                  'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 15));
+        return _decode(r);
+      } on ApiException {
+        rethrow; // 服务端答了话，别换入口重试
+      } catch (e) {
+        last = e;
       }
     }
+    if (last is ApiException) throw last;
+    throw ApiException(
+      Lc.current.connectFailed('${last ?? ''}'),
+      code: 'connectFailed',
+      detail: '$last',
+    );
+  }
+
+
+
+  /// 对着指定的站点发 GET，不碰当前出口。
+  ///
+  /// 站点管理页拉主站目录用它：目录属于登录站，跟当前在看哪座站无关。
+  static Future<dynamic> getAt(List<String> urls, String path) async {
+    Object? last;
+    for (final b in urls) {
+      if (b.isEmpty) continue;
+      try {
+        final r = await http
+            .get(_uriAt(b, path), headers: _headers)
+            .timeout(const Duration(seconds: 15));
+        return _decode(r);
+      } on ApiException {
+        rethrow; // 服务端答了话，别换入口重试
+      } catch (e) {
+        last = e;
+      }
+    }
+    throw ApiException(
+      Lc.current.connectFailed('${last ?? ''}'),
+      code: 'connectFailed',
+      detail: '$last',
+    );
   }
 
   static String img(String path) {
@@ -181,8 +246,17 @@ class Api {
     }
   }
 
-  static Uri _uri(String path, [Map<String, String>? query]) {
-    final b = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+  static Uri _uri(String path, [Map<String, String>? query]) =>
+      _uriAt(base, path, query);
+
+  static Uri _uriAt(
+    String baseUrl,
+    String path, [
+    Map<String, String>? query,
+  ]) {
+    final b = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
     final uri = Uri.parse('$b/api$path');
     return query == null || query.isEmpty
         ? uri
@@ -207,6 +281,12 @@ class Api {
     }
     if (r.statusCode >= 400) {
       final d = body is Map ? body['detail'] : null;
+      // 封号：接口层统一回 403 + 固定文案，客户端据此切全局封禁页。
+      if (r.statusCode == 403 &&
+          d is String &&
+          d.contains(bannedMessage)) {
+        onBanned?.call();
+      }
       // 服务端给了 detail 就用它（原文，服务端说了算）；
       // 没给才是客户端自己兜的这句，得能翻译。
       if (d is String && d.isNotEmpty) {

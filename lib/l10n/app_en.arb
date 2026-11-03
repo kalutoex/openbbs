@@ -668,5 +668,83 @@
         "type": "String"
       }
     }
-  }
+  },
+  "sitesManage": "Sites",
+  "sitesManageHint": "One app, many sites — unreachable ones are skipped",
+  "siteAdd": "Add site",
+  "siteAddHint": "Enter the address you were given; http:// is optional",
+  "siteImportPaste": "Paste a manifest",
+  "siteImportPasteHint": "Paste the contents of bbs.json — one file can list many sites",
+  "siteImportMaster": "Fetch from the master site",
+  "importIt": "Import",
+  "siteImportFailed": "Can't read the manifest: {v1}",
+  "@siteImportFailed": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteImportEmpty": "No sites in that manifest",
+  "siteImportNone": "Nothing to import: {v1}",
+  "@siteImportNone": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteImported": "Imported {v1} sites",
+  "@siteImported": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteImportedSkipped": "Imported {v1} sites, skipped {v2}: {v3}",
+  "@siteImportedSkipped": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      },
+      "v3": {
+        "type": "String"
+      }
+    }
+  },
+  "skipNoUrl": "no address",
+  "skipDuplicateId": "duplicate id",
+  "skipApiTooNew": "API too new",
+  "skipBadFormat": "not a manifest",
+  "siteEmpty": "No sites yet",
+  "siteEmptyHint": "Add an address to start — accounts and posts live on that server.",
+  "siteLoginSite": "Login site",
+  "siteCurrentNow": "Current",
+  "siteUnreachable": "unreachable",
+  "siteSetLogin": "Set as login site",
+  "siteSwitch": "Switch",
+  "siteProbe": "Probe again",
+  "siteRemoveConfirm": "Remove {v1} from this device? The account and posts stay on the server.",
+  "@siteRemoveConfirm": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteLoginSet": "Login site is now {v1}",
+  "@siteLoginSet": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "listSep": ", ",
+  "bannedTitle": "Account banned",
+  "bannedBody": "An admin banned this account, so posts won't go through. Use another account or ask the site owner why."
 }

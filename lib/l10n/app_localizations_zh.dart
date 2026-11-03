@@ -1720,4 +1720,106 @@ class LZh extends L {
   String siteNeedsUpdate(String v1, String v2) {
     return '这个站点的接口版本是 $v1，当前客户端只认到 $v2。请更新客户端后再用。';
   }
+
+  @override
+  String get sitesManage => '站点管理';
+
+  @override
+  String get sitesManageHint => '一个入口管多个站，连不上的自动跳过';
+
+  @override
+  String get siteAdd => '添加站点';
+
+  @override
+  String get siteAddHint => '填对方给的地址，带不带 http:// 都行';
+
+  @override
+  String get siteImportPaste => '粘贴清单';
+
+  @override
+  String get siteImportPasteHint => '把 bbs.json 的内容贴进来，一个文件可以有多座站';
+
+  @override
+  String get siteImportMaster => '从主站拉目录';
+
+  @override
+  String get importIt => '导入';
+
+  @override
+  String siteImportFailed(String v1) {
+    return '读不出清单：$v1';
+  }
+
+  @override
+  String get siteImportEmpty => '这份清单里没有站点';
+
+  @override
+  String siteImportNone(String v1) {
+    return '没有可导入的站：$v1';
+  }
+
+  @override
+  String siteImported(String v1) {
+    return '导入 $v1 座站';
+  }
+
+  @override
+  String siteImportedSkipped(String v1, String v2, String v3) {
+    return '导入 $v1 座站，跳过 $v2 条：$v3';
+  }
+
+  @override
+  String get skipNoUrl => '没有地址';
+
+  @override
+  String get skipDuplicateId => 'id 重复';
+
+  @override
+  String get skipApiTooNew => '接口版本太新';
+
+  @override
+  String get skipBadFormat => '不是清单格式';
+
+  @override
+  String get siteEmpty => '还没有站点';
+
+  @override
+  String get siteEmptyHint => '填一个地址就能开始，账号和帖子都在对方服务器上。';
+
+  @override
+  String get siteLoginSite => '登录站';
+
+  @override
+  String get siteCurrentNow => '当前';
+
+  @override
+  String get siteUnreachable => '连不上';
+
+  @override
+  String get siteSetLogin => '设为登录站';
+
+  @override
+  String get siteSwitch => '切换';
+
+  @override
+  String get siteProbe => '重新探测';
+
+  @override
+  String siteRemoveConfirm(String v1) {
+    return '从这台设备移除 $v1？账号和帖子都还在服务器上。';
+  }
+
+  @override
+  String siteLoginSet(String v1) {
+    return '登录站改成 $v1';
+  }
+
+  @override
+  String get listSep => '、';
+
+  @override
+  String get bannedTitle => '账号已被封禁';
+
+  @override
+  String get bannedBody => '这个账号被管理员封了，帖子也发不出去。换个号，或者找站长问原因。';
 }

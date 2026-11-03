@@ -19,7 +19,7 @@ import '../update.dart';
 import 'about_page.dart';
 import 'accounts_page.dart';
 import 'permissions_page.dart';
-import 'server_page.dart';
+import 'sites_page.dart';
 import 'theme_color_page.dart';
 
 import '../l10n/error_text.dart';
@@ -145,17 +145,14 @@ class SettingsPage extends StatelessWidget {
               _row(
                 context,
                 icon: Icons.dns_outlined,
-                title: Lc.current.server,
-                subtitle: Api.base,
-                value: switch (st.serverMode) {
-                  ServerMode.auto => Lc.current.auto,
-                  ServerMode.ipv6 => 'IPv6',
-                  ServerMode.ipv4 => 'IPv4',
-                  ServerMode.manual => Lc.current.manual,
-                },
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ServerPage()),
-                ),
+                title: Lc.current.sitesManage,
+                subtitle: st.sites.isEmpty
+                    ? Lc.current.siteEmptyHint
+                    : '${st.activeSite?.display ?? ''} Â· ${st.sites.length}',
+                value: st.activeSite?.host ?? '',
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const SitesPage())),
               ),
               const Divider(height: 24),
               _label(context, Lc.current.contentSection),
