@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shijianxian_app/pages/theme_color_page.dart';
-import 'package:shijianxian_app/store.dart';
-import 'package:shijianxian_app/theme.dart';
+import 'package:openbbs/pages/theme_color_page.dart';
+import 'package:openbbs/store.dart';
+import 'package:openbbs/theme.dart';
 
 void main() {
   setUp(() async {

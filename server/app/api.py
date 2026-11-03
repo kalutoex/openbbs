@@ -9,22 +9,23 @@
 
 楼层号不落库，按 id 顺序算，省一层状态。
 """
-import base64, hashlib, hmac, json, os, re, shutil, struct, time
+import base64, hashlib, hmac, json, os, random, re, secrets, shutil, struct, time
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from . import auth, db, mailer
+from . import auth, config, db, mailer
 
 router = APIRouter(prefix="/api")
-PER_PAGE = 20
-PER_FLOOR_PAGE = 20
 
+PER_PAGE = config.get("limits", "per_page", 20)
+PER_FLOOR_PAGE = config.get("limits", "floor_per_page", 20)
+
+# 首次启动初始化哪些板块，写在配置里，部署的人自己加。
 DEFAULT_FORUMS = [
-    ("chitchat", "闲聊", "什么都聊，别吵架"),
-    ("tech", "技术", "写代码、折腾机器、修电脑"),
-    ("minecraft", "我的世界", "本服开在黑森林，欢迎进来玩"),
+    (f["name"], f.get("title") or f["name"], f.get("desc") or "")
+    for f in (config.get("forums") or [])
 ]
 
 
@@ -76,8 +77,40 @@ HANDLE_RESERVED = {
 }
 
 
-ADMIN_NAME = "admin"
-ADMIN_PW = "a1d9m9i8n"
+ADMIN_NAME = config.get("admin", "name") or "admin"
+
+
+def _initial_admin_pw():
+    """首个管理员的初始密码。
+
+    配置里没给就随机生成一串，落在 data/admin_initial.txt（600），
+    只给部署的人看一眼。默认密码写死在代码里等于没有密码。
+    """
+    fixed = config.get("admin", "password") or ""
+    if fixed:
+        return fixed
+
+    f = os.path.join(config.path("data"), "admin_initial.txt")
+    if os.path.exists(f):
+        try:
+            with open(f, "r", encoding="utf-8") as fh:
+                got = fh.read().strip()
+            if got:
+                return got
+        except OSError:
+            pass
+
+    pw = "".join(secrets.choice("abcdefghjkmnpqrstuvwxyz23456789") for _ in range(12))
+    try:
+        os.makedirs(os.path.dirname(f), exist_ok=True)
+        with open(f, "w", encoding="utf-8") as fh:
+            fh.write(pw + "\n")
+        os.chmod(f, 0o600)
+    except OSError:
+        pass
+    print("[openbbs] 首次启动，管理员 %s 的初始密码：%s（也写在 %s）"
+          % (ADMIN_NAME, pw, f))
+    return pw
 
 
 def ensure_admin():
@@ -89,7 +122,7 @@ def ensure_admin():
             # 两个进程会同时起来，谁先插入都行，冲突就忽略
             c.execute(
                 "INSERT OR IGNORE INTO users(name, pw, created_at, is_admin) VALUES(?,?,?,1)",
-                (ADMIN_NAME, auth.hash_pw(ADMIN_PW), int(time.time())))
+                (ADMIN_NAME, auth.hash_pw(_initial_admin_pw()), int(time.time())))
             c.commit()
         elif not row["is_admin"]:
             c.execute("UPDATE users SET is_admin=1 WHERE id=?", (row["id"],))
@@ -121,7 +154,7 @@ def require_user(request: Request, c=Depends(get_conn)):
     return u
 
 
-MAX_LEVEL = 99  # 等级上限
+MAX_LEVEL = config.get("limits", "max_level", 99)  # 等级上限
 
 
 def _level_of(c, uid):
@@ -193,10 +226,16 @@ class NewImage(BaseModel):
     data: str
 
 
-UPLOAD_DIR = "/vol1/1000/data/code/ongoing/bbs/server/data/uploads"
-MAX_IMAGE = 5 * 1024 * 1024
-MAX_ANIM = 10 * 1024 * 1024  # 客户端已经压过，超过就是没压
-MAX_IMAGES = 9
+UPLOAD_DIR = config.path("uploads")
+MAX_IMAGE = config.get("limits", "max_image_mb", 5) * 1024 * 1024
+MAX_ANIM = config.get("limits", "max_anim_mb", 10) * 1024 * 1024  # 客户端已经压过，超过就是没压
+MAX_IMAGES = config.get("limits", "max_images", 9)
+
+NAME_MIN = config.get("limits", "username_min", 2)
+NAME_MAX = config.get("limits", "username_max", 20)
+PW_MIN = config.get("limits", "password_min", 8)
+TITLE_MAX = config.get("limits", "title_max", 120)
+BODY_MAX = config.get("limits", "body_max", 20000)
 
 
 def _norm_imgs(v):
@@ -376,14 +415,14 @@ def _notify_mentions(c, body, actor_id, tid, rid, now, skip=()):
 # 邮箱注册：先发 6 位验证码，验证过了才建号。
 # 老用户 email 为空，登录照旧，不补不拦。
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
-CODE_TTL = 600
-CODE_MAX_TRIES = 5
-SEND_COOLDOWN = 60          # 同一邮箱两次发码间隔
-SEND_PER_HOUR_EMAIL = 3     # 同一邮箱每小时发码上限
-SEND_PER_HOUR_IP = 5        # 同一 IP 每小时发码上限
-REG_PER_HOUR_IP = 5         # 同一 IP 每小时注册上限
-LOGIN_FAIL_MAX = 5          # 同一 IP 每分钟密码错几次就拦
-LOGIN_FAIL_WINDOW = 60
+CODE_TTL = config.get("auth", "code_ttl", 600)
+CODE_MAX_TRIES = config.get("auth", "code_max_tries", 5)
+SEND_COOLDOWN = config.get("auth", "send_cooldown", 60)          # 同一邮箱两次发码间隔
+SEND_PER_HOUR_EMAIL = config.get("auth", "send_per_hour_email", 3)
+SEND_PER_HOUR_IP = config.get("auth", "send_per_hour_ip", 5)
+REG_PER_HOUR_IP = config.get("auth", "reg_per_hour_ip", 5)
+LOGIN_FAIL_MAX = config.get("auth", "login_fail_max", 5)          # 同一 IP 每分钟密码错几次就拦
+LOGIN_FAIL_WINDOW = config.get("auth", "login_fail_window", 60)
 _LOGIN_FAIL = {}
 
 
@@ -438,7 +477,7 @@ def register_code(p: EmailAsk, request: Request, c=Depends(get_conn)):
     c.commit()
 
     try:
-        mailer.send_code(email, code, CODE_TTL // 60)
+        mailer.send_code(email, code, CODE_TTL // 60, kind="register")
     except mailer.MailNotConfigured:
         raise HTTPException(503, "邮件服务没配好，注册暂时关着")
     except mailer.MailSendError:
@@ -450,10 +489,10 @@ def register_code(p: EmailAsk, request: Request, c=Depends(get_conn)):
 @router.post("/register")
 def register(p: RegisterIn, request: Request, c=Depends(get_conn)):
     name = p.name.strip()
-    if not (2 <= len(name) <= 20):
-        raise HTTPException(400, "用户名 2–20 个字符")
-    if len(p.password) < 8:
-        raise HTTPException(400, "密码至少 8 位")
+    if not (NAME_MIN <= len(name) <= NAME_MAX):
+        raise HTTPException(400, "用户名 %d–%d 个字符" % (NAME_MIN, NAME_MAX))
+    if len(p.password) < PW_MIN:
+        raise HTTPException(400, "密码至少 %d 位" % PW_MIN)
     if not p.email or not p.code:
         raise HTTPException(400, "注册要用邮箱，先收验证码")
     email = _norm_email(p.email)
@@ -500,7 +539,7 @@ def register(p: RegisterIn, request: Request, c=Depends(get_conn)):
 # 找回密码：发码 → 校验 → 改密码。
 # 用途前缀塞进 email_codes.email，避免和注册码互相覆盖。
 # 邮箱不存在也返回 ok，不给枚举账号的口子。
-def _send_code(c, key, email, ip, now):
+def _send_code(c, key, email, ip, now, kind="reset"):
     code = "%06d" % (int.from_bytes(os.urandom(4), "big") % 1000000)
     c.execute("""INSERT INTO email_codes(email, code_hash, expires_at, sent_at, ip, tries)
                  VALUES(?,?,?,?,?,0)
@@ -510,7 +549,7 @@ def _send_code(c, key, email, ip, now):
               (key, _code_hash(key, code), now + CODE_TTL, now, ip))
     c.execute("INSERT INTO email_sends(email, ip, created_at) VALUES(?,?,?)", (email, ip, now))
     c.commit()
-    mailer.send_code(email, code, CODE_TTL // 60)
+    mailer.send_code(email, code, CODE_TTL // 60, kind=kind)
 
 
 @router.post("/password/code")
@@ -534,7 +573,7 @@ def password_code(p: EmailAsk, request: Request, c=Depends(get_conn)):
 
     if c.execute("SELECT 1 FROM users WHERE lower(email)=?", (email,)).fetchone():
         try:
-            _send_code(c, key, email, ip, now)
+            _send_code(c, key, email, ip, now, kind="reset")
         except mailer.MailNotConfigured:
             raise HTTPException(503, "邮件服务没配好，暂时发不出")
         except mailer.MailSendError:
@@ -544,8 +583,8 @@ def password_code(p: EmailAsk, request: Request, c=Depends(get_conn)):
 
 @router.post("/password/reset")
 def password_reset(p: ResetIn, c=Depends(get_conn)):
-    if len(p.password) < 8:
-        raise HTTPException(400, "密码至少 8 位")
+    if len(p.password) < PW_MIN:
+        raise HTTPException(400, "密码至少 %d 位" % PW_MIN)
     if not p.email or not p.code:
         raise HTTPException(400, "要填邮箱和验证码")
     email = _norm_email(p.email)
@@ -614,7 +653,7 @@ def account_email_code(p: EmailAsk, request: Request,
         raise HTTPException(429, "发得太频繁了，过一会儿再试")
 
     try:
-        _send_code(c, key, email, ip, now)
+        _send_code(c, key, email, ip, now, kind="bind")
     except mailer.MailNotConfigured:
         raise HTTPException(503, "邮件服务没配好，暂时发不出")
     except mailer.MailSendError:
@@ -845,7 +884,7 @@ def follow(name: str, c=Depends(get_conn), user=Depends(require_user)):
 @router.post("/f/{name}/threads")
 def create_thread(name: str, p: NewThread, c=Depends(get_conn), user=Depends(require_user)):
     f = _forum(c, name)
-    title, body = p.title.strip()[:120], p.body.strip()[:20000]
+    title, body = p.title.strip()[:TITLE_MAX], p.body.strip()[:BODY_MAX]
     if not title or (not body and not p.images):
         raise HTTPException(400, "标题要填，正文或图片至少一样")
     now = int(time.time())
@@ -864,7 +903,7 @@ def create_thread(name: str, p: NewThread, c=Depends(get_conn), user=Depends(req
 # ---------------------------------------------------------------- 主题帖
 
 
-APK_ROOT = "/vol1/1000/data/code/ongoing/bbs/server/data/apk"
+APK_ROOT = config.path("apk")
 # stable 给所有人，beta 只给管理员。旧包全在 stable 里。
 APK_DIRS = {
     "stable": os.path.join(APK_ROOT, "stable"),
@@ -1150,7 +1189,7 @@ def reply(tid: int, p: NewReply, c=Depends(get_conn), user=Depends(require_user)
     t = c.execute("SELECT * FROM threads WHERE id=?", (tid,)).fetchone()
     if not t:
         raise HTTPException(404, "帖子不存在")
-    body = p.body.strip()[:20000]
+    body = p.body.strip()[:BODY_MAX]
     if not body and not p.images:
         raise HTTPException(400, "内容不能为空")
     parent = p.parent_id or 0
@@ -1202,8 +1241,8 @@ def edit_thread(tid: int, p: PatchThread, c=Depends(get_conn), user=Depends(requ
     if t["user_id"] != user["id"] and not user["is_admin"]:
         raise HTTPException(403, "只能改自己的帖子")
 
-    title = (t["title"] or "") if p.title is None else p.title.strip()[:120]
-    body = (t["body"] or "") if p.body is None else p.body.strip()[:20000]
+    title = (t["title"] or "") if p.title is None else p.title.strip()[:TITLE_MAX]
+    body = (t["body"] or "") if p.body is None else p.body.strip()[:BODY_MAX]
     images = _load_imgs(t["images"]) if p.images is None else _norm_imgs(p.images)
     if not title:
         raise HTTPException(400, "标题要填")
@@ -1226,7 +1265,7 @@ def edit_reply(cid: int, p: PatchReply, c=Depends(get_conn), user=Depends(requir
     if r["user_id"] != user["id"] and not user["is_admin"]:
         raise HTTPException(403, "只能改自己的回复")
 
-    body = (r["body"] or "") if p.body is None else p.body.strip()[:20000]
+    body = (r["body"] or "") if p.body is None else p.body.strip()[:BODY_MAX]
     images = _load_imgs(r["images"]) if p.images is None else _norm_imgs(p.images)
     if not body and not images:
         raise HTTPException(400, "内容不能为空")

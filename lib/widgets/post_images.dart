@@ -258,7 +258,7 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
       if (r.statusCode >= 400) {
         throw Exception('下载失败（${r.statusCode}）');
       }
-      final name = 'shijianxian_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final name = 'openbbs_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final where = await saveImageBytes(r.bodyBytes, name);
       messenger.showSnackBar(
         SnackBar(

@@ -1,45 +1,68 @@
 #!/bin/bash
-# 论坛保活：IPv4 与 IPv6 各起一个进程（uvicorn 不支持单进程双栈）。
-# 项目根：/vol1/1000/data/code/ongoing/bbs/server
-# 日志：$ROOT/logs/forum.log
-ROOT=/vol1/1000/data/code/ongoing/bbs/server
+# OpenBBS 启动脚本。
+#
+#   ./run.sh              明文起在 0.0.0.0:8080
+#   ./run.sh --tls        带 HTTPS，证书路径用下面两个环境变量给
+#   OPENBBS_HOST / OPENBBS_PORT / OPENBBS_CERT_DIR 都可以覆盖
+#
+# 不传 --tls 又没配证书，就当纯 HTTP 跑。放在 nginx 后面的部署走这个模式。
+set -u
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT" || exit 1
-LOG=$ROOT/logs/forum.log
-PY=$ROOT/.venv/bin/uvicorn
-CERT=/home/060923/certs/main
-mkdir -p "$ROOT/logs" "$ROOT/data"
 
-up() {
-  local host=$1 pf=$2 p
-  if [ -f "$pf" ]; then
-    p=$(cat "$pf" 2>/dev/null)
-    if [ -n "$p" ] && kill -0 "$p" 2>/dev/null \
-       && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q uvicorn; then
-      return 0
+PY="$ROOT/.venv/bin/uvicorn"
+[ -x "$PY" ] || PY="$(command -v uvicorn)"
+if [ -z "$PY" ]; then
+  echo "找不到 uvicorn。先建虚拟环境："
+  echo "  python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt"
+  exit 1
+fi
+
+LOG_DIR="${OPENBBS_LOG_DIR:-$ROOT/logs}"
+mkdir -p "$LOG_DIR" "$ROOT/data"
+LOG="$LOG_DIR/forum.log"
+
+HOST="${OPENBBS_HOST:-0.0.0.0}"
+PORT="${OPENBBS_PORT:-8080}"
+CERT_DIR="${OPENBBS_CERT_DIR:-}"
+PIDFILE="$ROOT/data/forum.pid"
+
+TLS=0
+for arg in "$@"; do
+  if [ "$arg" = "--stop" ]; then
+    if [ -f "$PIDFILE" ]; then
+      kill "$(cat "$PIDFILE")" 2>/dev/null && echo "已停" || echo "进程不在了，清掉 pid 文件"
+      rm -f "$PIDFILE"
+    else
+      echo "没在跑"
     fi
+    exit 0
   fi
-  nohup "$PY" app.main:app --host "$host" --port 8080 >> "$LOG" 2>&1 &
-  echo $! > "$pf"
-}
+  [ "$arg" = "--tls" ] && TLS=1
+done
 
-up 0.0.0.0 "$ROOT/data/forum4.pid"
-up ::      "$ROOT/data/forum6.pid"
-
-# 电脑网页版：ipv6bbs.kalutoex.dpdns.org 直连 IPv6，自带 TLS，端口 26016。
-up_tls() {
-  local host=$1 pf=$2 p
-  if [ -f "$pf" ]; then
-    p=$(cat "$pf" 2>/dev/null)
-    if [ -n "$p" ] && kill -0 "$p" 2>/dev/null \
-       && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q uvicorn; then
-      return 0
-    fi
+if [ "$TLS" = "1" ]; then
+  if [ -z "$CERT_DIR" ] || [ ! -f "$CERT_DIR/fullchain.pem" ] || [ ! -f "$CERT_DIR/privkey.pem" ]; then
+    echo "开了 --tls 但没找到证书。设 OPENBBS_CERT_DIR 指向含 fullchain.pem / privkey.pem 的目录。"
+    exit 1
   fi
-  nohup "$PY" app.main:app --host "$host" --port 26016 \
-    --ssl-keyfile "$CERT/privkey.pem" \
-    --ssl-certfile "$CERT/fullchain.pem" >> "$LOG" 2>&1 &
-  echo $! > "$pf"
-}
+  EXTRA=(--ssl-certfile "$CERT_DIR/fullchain.pem" --ssl-keyfile "$CERT_DIR/privkey.pem")
+  echo "HTTPS  $HOST:$PORT"
+else
+  EXTRA=()
+  echo "HTTP   $HOST:$PORT"
+fi
 
-up_tls 0.0.0.0 "$ROOT/data/forum4tls.pid"
-up_tls ::      "$ROOT/data/forum6tls.pid"
+# 已经在跑就不重复起。
+if [ -f "$PIDFILE" ]; then
+  OLD=$(cat "$PIDFILE" 2>/dev/null)
+  if [ -n "$OLD" ] && kill -0 "$OLD" 2>/dev/null; then
+    echo "已经在跑了，pid $OLD。要重启先 ./run.sh --stop"
+    exit 0
+  fi
+fi
+
+nohup "$PY" app.main:app --host "$HOST" --port "$PORT" "${EXTRA[@]}" >> "$LOG" 2>&1 &
+echo $! > "$PIDFILE"
+echo "pid $(cat "$PIDFILE")，日志 $LOG"

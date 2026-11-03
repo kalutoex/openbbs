@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shijianxian_app/main.dart';
-import 'package:shijianxian_app/store.dart';
+import 'package:openbbs/main.dart';
+import 'package:openbbs/store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../site_config.dart';
 import '../api.dart';
 import '../store.dart';
 import 'home_page.dart';
@@ -62,7 +63,7 @@ class _SetupPageState extends State<SetupPage> {
                 Icon(Icons.forum_rounded, size: 64, color: cs.primary),
                 const SizedBox(height: 16),
                 Text(
-                  '时间線',
+                  SiteConfig.brand,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium
                       ?.copyWith(fontWeight: FontWeight.w700),

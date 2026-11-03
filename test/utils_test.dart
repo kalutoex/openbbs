@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shijianxian_app/utils.dart';
+import 'package:openbbs/utils.dart';
 
 void main() {
   test('大数字缩写', () {

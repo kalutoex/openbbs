@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../site_config.dart';
 import 'friends_page.dart';
 
 /// 关于：只放开源信息和链接。
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
-  static const _repo = 'https://github.com/kalutoex/shijianxian';
+  /// 项目地址来自构建参数 REPO，没配就不显示那一行。
+  static String get _repo => SiteConfig.repo;
 
   @override
   Widget build(BuildContext context) {
@@ -16,11 +18,11 @@ class AboutPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 6),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
             child: Text(
-              '时间線',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+              SiteConfig.brand,
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
             ),
           ),
 
@@ -39,7 +41,8 @@ class AboutPage extends StatelessWidget {
             title: const Text('第三方许可证'),
             subtitle: const Text('各依赖自带的许可文本'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => showLicensePage(context: context, applicationName: '时间線'),
+            onTap: () => showLicensePage(
+                context: context, applicationName: SiteConfig.brand),
           ),
           ListTile(
             leading: const Icon(Icons.balance),
@@ -50,13 +53,14 @@ class AboutPage extends StatelessWidget {
           ),
 
           _label(context, '链接'),
-          ListTile(
-            leading: const Icon(Icons.code),
-            title: const Text('源代码'),
-            subtitle: const Text('github.com/kalutoex/shijianxian'),
-            trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () => _open(context, _repo),
-          ),
+          if (_repo.isNotEmpty)
+            ListTile(
+              leading: const Icon(Icons.code),
+              title: const Text('源代码'),
+              subtitle: Text(_repo.replaceFirst(RegExp(r'^https?://'), '')),
+              trailing: const Icon(Icons.open_in_new, size: 18),
+              onTap: () => _open(context, _repo),
+            ),
           ListTile(
             leading: const Icon(Icons.bug_report_outlined),
             title: const Text('问题反馈'),

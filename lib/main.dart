@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import 'site_config.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
@@ -11,8 +13,9 @@ import 'theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 地址在 runApp 之前就定死，任何页面发请求都不会撞上空 base。
-  // 先用 IPv4 通道顶着：它在校园网和老网络里都能用，等 _boot 探完再切到更快的 IPv6。
-  Api.base = Api.chIpv4;
+  // 先用出厂默认地址顶着（构建时 SERVERS 的第一个），等 _boot 探完再切到更好的那条。
+  // 一个都没配就是空，首页会落到设置页。
+  Api.base = Api.defaultBase;
   // 先把界面放上来，再读设置。
   // 之前是 await 完再 runApp，读盘一旦卡住（或抛异常），首帧永远不画，
   // 表现就是点开一片空白、以为打不开。设置读完会自己触发一次重建，
@@ -114,7 +117,7 @@ class _ShijianxianAppState extends State<ShijianxianApp>
     return ListenableBuilder(
       listenable: _themeKeys,
       builder: (_, _) => MaterialApp(
-        title: '时间線',
+        title: SiteConfig.brand,
         debugShowCheckedModeBanner: false,
         // 不给中文词条，长按文字那排按钮就是 Copy / Paste / Select all。
         locale: const Locale('zh', 'CN'),

@@ -1,6 +1,6 @@
 {
-    "name": "时间線",
-    "short_name": "时间線",
+    "name": "OpenBBS",
+    "short_name": "OpenBBS",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

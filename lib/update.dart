@@ -56,7 +56,7 @@ Future<File> downloadApk(
   void Function(double progress) onProgress,
 ) async {
   final dir = await getTemporaryDirectory();
-  final file = File('${dir.path}/shijianxian-${r.version}.apk');
+  final file = File('${dir.path}/openbbs-${r.version}.apk');
   if (await file.exists()) await file.delete();
 
   final client = http.Client();

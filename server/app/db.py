@@ -9,10 +9,11 @@ import os
 import re
 import sqlite3
 
-# 默认走生产库；设 BBS_DB 可以指到测试库，用来起第二实例（26017）联调，
-# 两边共用同一份代码、各写各的库，互不影响。
-DB = os.environ.get(
-    "BBS_DB", "/vol1/1000/data/code/ongoing/bbs/server/data/forum.db")
+from . import config
+
+# 库文件位置由 config 决定：默认 server/data/forum.db，
+# 要起第二实例就设 OPENBBS_DB，两份代码各写各的库，互不影响。
+DB = config.path("db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (

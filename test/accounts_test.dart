@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shijianxian_app/accounts.dart';
+import 'package:openbbs/accounts.dart';
 
 void main() {
   test('Account 能从 user 建出来并原样存回 json', () {

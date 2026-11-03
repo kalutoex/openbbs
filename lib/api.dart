@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 import 'disk_cache.dart';
+import 'site_config.dart';
 
 /// 服务端返回的错误，直接拿去显示。
 class ApiException implements Exception {
@@ -21,19 +22,22 @@ enum ServerMode { auto, ipv6, ipv4, manual }
 
 /// 一个极薄的 JSON 客户端。base 和 token 都是可变的，设置页会改。
 class Api {
-  /// 出厂默认地址：直接走 IPv6 的域名，家里和外面都能用。
-  /// 网页版跑在 bbs 域名上，接口同源，直接拿当前页面的 origin，省得跨域和混内容。
-  static String get defaultBase => kIsWeb
-      ? Uri.base.origin
-      : 'https://ipv6bbs.kalutoex.dpdns.org:26016';
-
-  /// 两条固定通道。
+  /// 出厂默认地址。
   ///
-  /// IPv6：26016 直连，证书在 ipv6bbs 域名上。
-  /// IPv4：SakuraFrp 隧道 24016 转到本机 26016，域名 ipv4bbs，
-  /// A 记录指向 frp 节点，TLS 证书照样验得过，校园网这种没 IPv6 的靠它。
-  static const String chIpv6 = 'https://ipv6bbs.kalutoex.dpdns.org:26016';
-  static const String chIpv4 = 'https://ipv4bbs.kalutoex.dpdns.org:24016';
+  /// 网页版跑在自己的域名上，接口同源，直接拿当前页面的 origin。
+  /// 原生版来自构建参数 SERVERS；一个都没配就留空，首次启动进设置页。
+  static String get defaultBase =>
+      kIsWeb ? Uri.base.origin : SiteConfig.defaultServer;
+
+  /// 主通道 / 备用通道。
+  ///
+  /// 原来是「IPv6 直连 + IPv4 frp 兜底」写死的两个域名，现在改成构建参数：
+  ///   --dart-define=SERVERS=https://主,https://备
+  /// 只配一个就只有一个通道，选路那几档自然退化成单通道。
+  static String get chIpv6 =>
+      SiteConfig.servers.isNotEmpty ? SiteConfig.servers[0] : '';
+  static String get chIpv4 =>
+      SiteConfig.servers.length > 1 ? SiteConfig.servers[1] : chIpv6;
 
   /// 当前选路方式。判断都在手机本地做。
   static ServerMode mode = ServerMode.auto;

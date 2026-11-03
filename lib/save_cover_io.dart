@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:gal/gal.dart';
+
+import 'site_config.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// 把一张图存到相册（手机）或图片目录（桌面）。
@@ -13,7 +15,7 @@ Future<String> saveImageBytes(Uint8List bytes, String name) async {
     await f.writeAsBytes(bytes);
     return f.path;
   }
-  await Gal.putImageBytes(bytes, album: '时间線');
+  await Gal.putImageBytes(bytes, album: SiteConfig.brand);
   return '相册';
 }
 

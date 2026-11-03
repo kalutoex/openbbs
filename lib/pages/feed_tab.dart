@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../site_config.dart';
 import '../api.dart';
 import '../store.dart';
 import '../widgets/skeleton.dart';
@@ -184,7 +185,7 @@ class _FeedTabState extends State<FeedTab> {
         ),
         titleSpacing: 0,
         title: Text(
-          '时间線',
+          SiteConfig.brand,
           style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
         actions: [

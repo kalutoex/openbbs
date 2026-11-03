@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../site_config.dart';
 import '../api.dart';
 import '../pages/admin_users_page.dart';
 import '../pages/admin_reports_page.dart';
@@ -392,7 +393,7 @@ class _Top extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                '时间線',
+                SiteConfig.brand,
                 style: tt.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   letterSpacing: 4,

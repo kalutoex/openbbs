@@ -222,7 +222,7 @@ class _UserPageState extends State<UserPage> {
     try {
       final r = await http.get(Uri.parse(Api.img(cover)));
       if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
-      final where = await saveImageBytes(r.bodyBytes, 'shijianxian-cover.jpg');
+      final where = await saveImageBytes(r.bodyBytes, 'openbbs-cover.jpg');
       _snack('已存到 $where');
     } catch (e) {
       _snack('存不下来：$e');

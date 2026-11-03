@@ -6,20 +6,29 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import db, auth, api
+from . import api, auth, config, db
 
-ROOT = "/vol1/1000/data/code/ongoing/bbs/server"
-PER_PAGE = 20
+ROOT = config.ROOT
+PER_PAGE = config.get("limits", "per_page", 20)
 
-app = FastAPI(title="bbs")
-app.mount("/static", StaticFiles(directory=ROOT + "/static"), name="static")
-# 上传目录同样可覆盖：测试实例写自己的 uploads_test，别往生产图库里丢东西。
-UPLOADS = os.environ.get("BBS_UPLOADS", ROOT + "/data/uploads")
+config.ensure_dirs()
+
+app = FastAPI(title=config.get("site", "name") or "OpenBBS")
+
+# 网页前端（Flutter web）和静态资源都是可选的：只跑 API 的部署不该起不来。
+_WEB_DIR = os.path.join(ROOT, "web")
+STATIC_DIR = os.path.join(ROOT, "static")
+TEMPLATE_DIR = os.path.join(ROOT, "templates")
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR, check_dir=False), name="static")
+# 上传目录：容器里一般挂到外部卷，由 config 决定。
+UPLOADS = config.path("uploads")
 os.makedirs(UPLOADS, exist_ok=True)
 app.mount("/img", StaticFiles(directory=UPLOADS), name="img")
-os.makedirs(ROOT + "/data/apk", exist_ok=True)
-app.mount("/apk", StaticFiles(directory=ROOT + "/data/apk"), name="apk")
-tpl = Jinja2Templates(directory=ROOT + "/templates")
+APK_DIR = config.path("apk")
+os.makedirs(APK_DIR, exist_ok=True)
+app.mount("/apk", StaticFiles(directory=APK_DIR), name="apk")
+tpl = Jinja2Templates(directory=TEMPLATE_DIR)
 
 
 # 缓存策略：入口文件不缓存（发版立刻生效），带指纹的资源长缓存。
@@ -31,17 +40,12 @@ _IMMUTABLE_FILE = set()
 
 from fastapi.middleware.cors import CORSMiddleware
 
-# 网页端从 ipv6bbs:26016（直连）或 ipv4bbs:24016（frp 兜底）进来。
-# 同域名不同端口，属跨源，接口得放行，否则跨端口进来的页面调不动接口。
+# 跨源放行名单写在配置里（http.cors_origins）。
+# 网页和接口同域名不同端口算跨源，不放行的话页面调不动接口。
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        # 2026-10-21 端口重排：IPv6 直连 26016，IPv4 走樱花 frp 24016
-        "https://ipv6bbs.kalutoex.dpdns.org:26016",
-        "https://ipv4bbs.kalutoex.dpdns.org:24016",
-        "http://share.kalutoex.dpdns.org:8080",
-    ],
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origins=config.get("http", "cors_origins") or [],
+    allow_origin_regex=config.get("http", "cors_origin_regex") or None,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -50,44 +54,18 @@ app.add_middleware(
 @app.get("/go", response_class=HTMLResponse)
 def entry_page():
     # 兜底入口页：纯静态，不依赖 Flutter，任何端口都能开。
-    return FileResponse(ROOT + "/web/go.html", media_type="text/html")
+    f = os.path.join(_WEB_DIR, "go.html")
+    if not os.path.exists(f):
+        f = os.path.join(STATIC_DIR, "go.html")
+    if os.path.exists(f):
+        return FileResponse(f, media_type="text/html")
+    return HTMLResponse("<h1>OpenBBS</h1><p>接口正常，前端还没放上去。</p>")
 
 
-
-# share.kalutoex.dpdns.org 2026-11-01 下线：旧版 App 的 8080 明文入口。
-# 11-02 DNS 记录已删、HOSTS 已移除；这里的分支留着防旧 DNS 缓存，无害。
-# 只对这个 Host 做 301，局域网 IP:8080 照旧（阿尔说 8080 端口不关）。
-_SHARE_HOST = "share.kalutoex.dpdns.org"
-_SHARE_TARGET = "https://ipv6bbs.kalutoex.dpdns.org:26016"
-_ACCESS_8080 = ROOT + "/logs/access-8080.log"
-
-
-def _log_8080(request: Request):
-    """只记 8080 进来的请求，用来判断还有没有人在走明文入口。"""
-    port = (request.scope.get("server") or ("", 0))[1]
-    if port != 8080:
-        return
-    try:
-        ip = request.client.host if request.client else ""
-        host = request.headers.get("host", "")
-        ua = request.headers.get("user-agent", "")[:90]
-        with open(_ACCESS_8080, "a", encoding="utf-8") as f:
-            f.write("%s\t%s\t%s\t%s %s\t%s\n" % (
-                time.strftime("%Y-%m-%d %H:%M:%S"), ip, host,
-                request.method, request.url.path, ua))
-    except Exception:
-        pass
 
 
 @app.middleware("http")
 async def cache_headers(request: Request, call_next):
-    _log_8080(request)
-    host = (request.headers.get("host") or "").split(":")[0].lower()
-    if host == _SHARE_HOST:
-        target = _SHARE_TARGET + request.url.path
-        if request.url.query:
-            target += "?" + request.url.query
-        return RedirectResponse(target, status_code=301)
     resp = await call_next(request)
     path = request.url.path
     if path in _NOCACHE:
@@ -261,4 +239,6 @@ def logout():
 # mount 必须放在所有路由之后，否则会把 /api、/login 这些全吃掉。
 # base href "/"，Flutter 用 hash 路由（#/t/5），不会和 /t/{tid} 冲突。
 # 老的 Jinja 页面还在 /classic。
-app.mount("/", StaticFiles(directory=ROOT + "/web", html=True), name="web")
+# 没放网页包也照样能起——只跑接口的部署不需要 web 目录。
+if os.path.isdir(_WEB_DIR):
+    app.mount("/", StaticFiles(directory=_WEB_DIR, html=True), name="web")

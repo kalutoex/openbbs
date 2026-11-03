@@ -11,7 +11,10 @@ import ssl
 from email.header import Header
 from email.mime.text import MIMEText
 
-CONFIG_FILE = "/vol1/1000/data/code/ongoing/bbs/server/config/mail.json"
+from . import config
+
+# 邮件账号信息放在 config/mail.json，位置可由 OPENBBS_MAIL_CONFIG 覆盖。
+CONFIG_FILE = config.path("mail_config")
 TIMEOUT = 12
 
 
@@ -33,19 +36,29 @@ def _config():
     return cfg
 
 
-def send_code(to_addr: str, code: str, minutes: int = 10) -> None:
+SUBJECT_KEYS = {
+    "register": "subject_register",
+    "reset": "subject_reset",
+    "bind": "subject_bind",
+}
+
+
+def send_code(to_addr: str, code: str, minutes: int = 10,
+              kind: str = "register") -> None:
+    """kind: register / reset / bind —— 三种码用途不同，标题也该不同。"""
     cfg = _config()
-    title = "时间線 注册验证码"
-    body = (
-        "你的注册验证码是：\n\n"
-        f"        {code}\n\n"
-        f"{minutes} 分钟内有效，只能用一次。\n"
-        "不是你本人操作的话，忽略这封邮件就行。\n"
+    mail_cfg = config.get("mail")
+    title = "%s %s" % (
+        config.get("site", "name"),
+        mail_cfg.get(SUBJECT_KEYS.get(kind, "subject_register"), "验证码"),
     )
+    tpl = mail_cfg.get("body") or "你的验证码是：{code}\n\n{minutes} 分钟内有效。"
+    body = tpl.replace("{code}", code).replace("{minutes}", str(minutes))
     msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = Header(title, "utf-8")
     msg["From"] = "%s <%s>" % (
-        Header(cfg.get("from_name") or "时间線", "utf-8").encode(),
+        Header(cfg.get("from_name") or mail_cfg.get("from_name")
+               or config.get("site", "name"), "utf-8").encode(),
         cfg.get("from_addr") or cfg["user"],
     )
     msg["To"] = to_addr

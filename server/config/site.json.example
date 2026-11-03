@@ -1,0 +1,74 @@
+{
+  "_说明": [
+    "复制成 site.json 就生效，不改代码。",
+    "优先级：环境变量 > site.json > 程序内默认值。",
+    "改完要重启进程。删除本文件就回到全默认。"
+  ],
+
+  "site": {
+    "name": "OpenBBS",
+    "description": "一个能自己部署的轻论坛",
+    "base_url": ""
+  },
+
+  "paths": {
+    "_说明": "留空就用 server/data。容器里一般全挂卷，写绝对路径。",
+    "data": "",
+    "db": "",
+    "uploads": "",
+    "apk": "",
+    "secret": "",
+    "mail_config": "",
+    "logs": ""
+  },
+
+  "limits": {
+    "per_page": 20,
+    "floor_per_page": 20,
+    "max_image_mb": 5,
+    "max_anim_mb": 10,
+    "max_images": 9,
+    "max_level": 99,
+    "username_min": 2,
+    "username_max": 20,
+    "password_min": 8,
+    "title_max": 120,
+    "body_max": 20000
+  },
+
+  "auth": {
+    "register_open": true,
+    "require_email": true,
+    "code_ttl": 600,
+    "code_max_tries": 5,
+    "send_cooldown": 60,
+    "send_per_hour_email": 3,
+    "send_per_hour_ip": 5,
+    "reg_per_hour_ip": 5,
+    "login_fail_max": 5,
+    "login_fail_window": 60
+  },
+
+  "http": {
+    "cors_origins": [],
+    "cors_origin_regex": "http://(localhost|127\\.0\\.0\\.1)(:\\d+)?"
+  },
+
+  "forums": [
+    { "name": "chitchat", "title": "闲聊", "desc": "什么都聊，别吵架" },
+    { "name": "tech", "title": "技术", "desc": "写代码、折腾机器、修电脑" }
+  ],
+
+  "admin": {
+    "name": "admin",
+    "password": ""
+  },
+
+  "mail": {
+    "from_name": "OpenBBS",
+    "subject_register": "注册验证码",
+    "subject_reset": "找回密码验证码",
+    "subject_bind": "绑定邮箱验证码",
+    "body": "你的验证码是：{code}\n\n{minutes} 分钟内有效，只能用一次。不是你本人操作就忽略这封邮件。"
+  }
+}

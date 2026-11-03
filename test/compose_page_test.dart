@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shijianxian_app/pages/compose_page.dart';
+import 'package:openbbs/pages/compose_page.dart';
 
 Future<void> _pumpPage(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;

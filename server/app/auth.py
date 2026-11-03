@@ -2,7 +2,10 @@
 """口令哈希 + 签名 cookie。全用标准库，不引第三方。"""
 import hashlib, hmac, base64, os, time
 
-SECRET_FILE = "/vol1/1000/data/code/ongoing/bbs/server/data/secret"
+from . import config
+
+# 签名密钥位置同样交给 config，默认 server/data/secret，首次启动自动生成。
+SECRET_FILE = config.path("secret")
 
 
 def _secret() -> bytes:

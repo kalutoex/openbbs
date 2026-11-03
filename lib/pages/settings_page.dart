@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
+import '../site_config.dart';
 import '../cache_clear.dart';
 import '../open_path.dart';
 import '../plat.dart';
@@ -227,7 +228,7 @@ class SettingsPage extends StatelessWidget {
               const _VersionRow(),
               ListTile(
                 leading: const Icon(Icons.info_outline),
-                title: const Text('关于时间線'),
+                title: Text('关于${SiteConfig.brand}'),
                 subtitle: const Text('开源信息、更新日志、许可证'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
@@ -652,15 +653,17 @@ class _WebEntryRow extends StatelessWidget {
 
   static String get _current => _fmt(Uri.base);
 
-  /// 26016（IPv6 直连）与 24016（frp 兜底）互指。
-  /// 按域名前缀判断方向，避免端口写成死值。
+  /// 备用入口：构建时配了第二个服务器就显示它，没有就返回空。
+  /// 以前是按域名前缀硬推「IPv6 那个 / frp 那个」，换域名就得改代码。
   static String get _alt {
-    final isV4 = Uri.base.host.startsWith('ipv4');
-    final host = isV4
-        ? 'ipv6bbs.kalutoex.dpdns.org'
-        : 'ipv4bbs.kalutoex.dpdns.org';
-    final port = isV4 ? 26016 : 24016;
-    return 'https://$host:$port';
+    final cur = _current;
+    for (final s in SiteConfig.servers) {
+      final u = Uri.tryParse(s);
+      if (u == null) continue;
+      final f = _fmt(u);
+      if (f != cur) return f;
+    }
+    return '';
   }
 
   @override
@@ -674,20 +677,22 @@ class _WebEntryRow extends StatelessWidget {
           trailing: const Icon(Icons.copy, size: 18),
           onTap: () => _copy(context, _current),
         ),
-        ListTile(
-          leading: const Icon(Icons.swap_horiz),
-          title: const Text('备用入口'),
-          subtitle: Text(_alt, style: const TextStyle(fontSize: 12)),
-          trailing: const Icon(Icons.copy, size: 18),
-          onTap: () => _copy(context, _alt),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-          child: Text(
-            '两个端口是同一个站。没有 IPv6 的设备走备用那条。',
-            style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+        if (_alt.isNotEmpty) ...[
+          ListTile(
+            leading: const Icon(Icons.swap_horiz),
+            title: const Text('备用入口'),
+            subtitle: Text(_alt, style: const TextStyle(fontSize: 12)),
+            trailing: const Icon(Icons.copy, size: 18),
+            onTap: () => _copy(context, _alt),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Text(
+              '两个地址是同一个站。主入口连不上时会自己走备用那条。',
+              style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+            ),
+          ),
+        ],
       ],
     );
   }

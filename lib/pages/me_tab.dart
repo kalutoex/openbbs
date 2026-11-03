@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../api.dart';
+import '../site_config.dart';
 import '../store.dart';
 import '../widgets/name_tag.dart';
 import 'login_page.dart';
@@ -242,8 +243,8 @@ class _VersionFooter extends StatelessWidget {
       builder: (context, snap) {
         final p = snap.data;
         final text = p == null
-            ? '时间線'
-            : '时间線 · ${p.version} (${p.buildNumber})';
+            ? SiteConfig.brand
+            : '${SiteConfig.brand} · ${p.version} (${p.buildNumber})';
         return Text(text, style: TextStyle(fontSize: 11, color: color));
       },
     );
