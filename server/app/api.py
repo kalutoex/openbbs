@@ -14,7 +14,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from . import auth, config, db, mailer
+from . import auth, blacklist, config, db, mailer
 
 router = APIRouter(prefix="/api")
 
@@ -132,17 +132,58 @@ def _may_delete(user, owner_id):
 
 
 def _load_user(c, uid):
+    """token 里的 uid 是「权威用户 id」：主站就是本机 id，小站是主站的 id。
+
+    小站先按 master_uid 找影子行。**找不到就不再退回本地 id** ——
+    否则主站的 uid=2 会直接认成本站 id=2 的另一个人，等于越权。
+    主站没有 master_uid 这一层，按 id 走。
+    """
     if not uid:
         return None
+    row = c.execute("SELECT %s FROM users WHERE master_uid=?" % USER_COLS, (uid,)).fetchone()
+    if row is not None:
+        return row
+    if config.get("site", "master_url"):
+        return _ensure_shadow(c, uid)
     return c.execute("SELECT %s FROM users WHERE id=?" % USER_COLS, (uid,)).fetchone()
 
 
+def _ensure_shadow(c, muid):
+    """小站第一次见到某个主站账号：建一条影子行，只认 master_uid。
+
+    资料（昵称、头像）之后按主站地址取，这里先占个名，别让页面空着。
+    """
+    base = "u%d" % int(muid)
+    name = base
+    for i in range(1, 200):
+        if not c.execute("SELECT 1 FROM users WHERE name=?", (name,)).fetchone():
+            break
+        name = "%s_%d" % (base, i)
+    else:
+        return None
+    try:
+        c.execute("INSERT INTO users(name, pw, created_at, master_uid, nickname) "
+                  "VALUES(?,?,?,?,?)",
+                  (name, "", int(time.time()), int(muid), base))
+        c.commit()
+    except Exception:
+        c.rollback()
+    return c.execute("SELECT %s FROM users WHERE master_uid=?" % USER_COLS, (int(muid),)).fetchone()
+
+
 def optional_user(request: Request, c=Depends(get_conn)):
-    return _load_user(c, auth.read_token(_token(request)))
+    uid = auth.read_token(_token(request))
+    # 读接口也拦：封号之后这个账号什么都看不到。
+    if blacklist.is_banned(c, uid):
+        raise HTTPException(403, blacklist.BANNED_MSG)
+    return _load_user(c, uid)
 
 
 def require_user(request: Request, c=Depends(get_conn)):
-    u = _load_user(c, auth.read_token(_token(request)))
+    uid = auth.read_token(_token(request))
+    if blacklist.is_banned(c, uid):
+        raise HTTPException(403, blacklist.BANNED_MSG)
+    u = _load_user(c, uid)
     if not u:
         raise HTTPException(401, "请先登录")
     return u
@@ -835,6 +876,9 @@ def _latest_apk(channel: str = "stable"):
 
 @router.get("/app/latest")
 def app_latest(channel: str = "", user=Depends(optional_user)):
+    # 站长可以整体关掉更新检查；关掉后自动检查静默跳过，手动检查会看到这句话。
+    if not config.get("update", "enabled", True):
+        raise HTTPException(404, "本站没有开启更新检查")
     # 内测通道只对管理员开：普通用户传了 channel 也按稳定版走。
     want = "beta" if (user and user["is_admin"] and channel.lower() != "stable") else "stable"
     best = _latest_apk(want)
@@ -857,6 +901,12 @@ def app_latest(channel: str = "", user=Depends(optional_user)):
         "url": f"/apk/{want}/{name}",
         "channel": want,
         "notes": notes,
+        # 下面几项是弹窗策略，客户端拿去决定什么时候弹、能不能跳过。
+        "force_below": config.get("update", "force_below", 0) or 0,
+        "check_hours": config.get("update", "check_hours", 24),
+        "remind_hours": config.get("update", "remind_hours", 24),
+        "title": config.get("update", "title", "") or "",
+        "message": config.get("update", "message", "") or "",
     }
 
 
@@ -1922,6 +1972,103 @@ def friend_add(req: FriendReq, c=Depends(get_conn), user=Depends(require_user)):
               (u["id"], int(time.time())))
     c.commit()
     return {"ok": True, "user": user_json(u)}
+
+
+# ---------------------------------------------------------------- 站点自述 / 黑名单
+# PLAN-5-STEPS 第 2 段：主站签 JWT + 发公钥，小站离线验签；
+# 黑名单由主站签名下发，小站定时拉，接口层拦。
+# token 不过期，所以封号只在这条链路上生效。
+
+API_VERSION = 1
+CAPABILITIES = ["jwt-eddsa", "blacklist", "meta"]
+
+
+@router.get("/meta")
+def site_meta():
+    """小站靠这个认人：接口版本、site_id、能力位、验签公钥。"""
+    return {
+        "api": API_VERSION,
+        "site_id": config.get("site", "site_id", ""),
+        "name": config.get("site", "name", ""),
+        "base_url": config.get("site", "base_url", ""),
+        "capabilities": CAPABILITIES,
+        "public_key": auth.public_pem(),
+        "blacklist": blacklist.status(),
+    }
+
+
+@router.get("/blacklist")
+def blacklist_export(since: int = 0, c=Depends(get_conn)):
+    """增量黑名单，条目列表带主站签名。小站验不过签名就不收。"""
+    return blacklist.export_since(c, since)
+
+
+class BanReq(BaseModel):
+    q: str = ""
+    uid: Optional[int] = None
+    reason: str = ""
+
+
+def _resolve_user(c, p: BanReq):
+    """认用户名 / @标识 / 昵称 / UID。管理员手输的东西别太挑剔。"""
+    if p.uid:
+        u = c.execute("SELECT * FROM users WHERE id=? OR uid=?", (p.uid, p.uid)).fetchone()
+        if u:
+            return u
+    raw = (p.q or "").strip().lstrip("@")
+    if not raw:
+        return None
+    u = c.execute("SELECT * FROM users WHERE name=? OR handle=?", (raw, raw.lower())).fetchone()
+    if u:
+        return u
+    if raw.isdigit():
+        u = c.execute("SELECT * FROM users WHERE uid=? OR id=?", (int(raw), int(raw))).fetchone()
+        if u:
+            return u
+    rows = c.execute("SELECT * FROM users WHERE nickname=?", (raw,)).fetchall()
+    return rows[0] if len(rows) == 1 else None
+
+
+def _ban_target(u):
+    """黑名单里的 uid 一律用本机主键；主站主键就是全网权威 id。"""
+    return int(u["master_uid"] or u["id"])
+
+
+@router.post("/admin/ban")
+def admin_ban(p: BanReq, c=Depends(get_conn), user=Depends(require_user)):
+    """封号。写库即可，小站 60 秒内自己拉到。"""
+    _need_admin(user)
+    u = _resolve_user(c, p)
+    if not u:
+        raise HTTPException(404, "没这个人")
+    if u["is_admin"]:
+        raise HTTPException(400, "不能封管理员")
+    ts = blacklist.ban(c, _ban_target(u), p.reason.strip()[:200])
+    return {"ok": True, "uid": _ban_target(u), "ts": ts, "user": user_json(u)}
+
+
+@router.post("/admin/unban")
+def admin_unban(p: BanReq, c=Depends(get_conn), user=Depends(require_user)):
+    _need_admin(user)
+    u = _resolve_user(c, p)
+    if not u:
+        raise HTTPException(404, "没这个人")
+    blacklist.unban(c, _ban_target(u))
+    return {"ok": True, "uid": _ban_target(u)}
+
+
+@router.get("/admin/blacklist")
+def admin_blacklist(c=Depends(get_conn), user=Depends(require_user)):
+    _need_admin(user)
+    rows = c.execute(
+        "SELECT b.uid, b.ts, b.reason, b.synced_at, u.name, u.nickname "
+        "FROM blacklist b LEFT JOIN users u ON u.id=b.uid ORDER BY b.ts DESC LIMIT 500").fetchall()
+    return {
+        "items": [{"uid": r["uid"], "ts": r["ts"], "reason": r["reason"] or "",
+                   "name": r["name"] or "", "nickname": r["nickname"] or "",
+                   "synced_at": r["synced_at"] or 0} for r in rows],
+        "status": blacklist.status(),
+    }
 
 
 @router.delete("/friends/{uid}")

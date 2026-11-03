@@ -134,6 +134,23 @@ CREATE TABLE IF NOT EXISTS email_sends (
   ip         TEXT,
   created_at INTEGER NOT NULL
 );
+
+-- 全局黑名单。uid 是主站用户 id，跨站稳定。
+-- 主站是权威；小站定时拉取后落在同一张表，synced_at 记拉到的时间。
+-- banned=0 是解封的墓碑行：增量同步靠 ts 走，删掉行小站就永远学不到「解封」。
+CREATE TABLE IF NOT EXISTS blacklist (
+  uid        INTEGER PRIMARY KEY,
+  ts         INTEGER NOT NULL,
+  reason     TEXT NOT NULL DEFAULT '',
+  synced_at  INTEGER NOT NULL DEFAULT 0,
+  banned     INTEGER NOT NULL DEFAULT 1
+);
+
+-- 小站同步游标，只存最后拉到的 ts。
+CREATE TABLE IF NOT EXISTS sync_state (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL DEFAULT ''
+);
 """
 
 # 依赖 ALTER 加出来的列，必须在补列之后才能建。
@@ -172,6 +189,10 @@ EXTRA_COLUMNS = [
     ("users", "email", "TEXT"),
     ("users", "email_verified", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "reg_ip", "TEXT"),
+    # 主站用户 id。主站自己等于 id；小站存影子行，靠它跟主站对齐。
+    ("users", "master_uid", "INTEGER"),
+    # 老库的黑名单表没有 banned 列，补上（1=封禁，0=解封墓碑）。
+    ("blacklist", "banned", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 # 用户名太长不好看，handle 统一小写、字母数字下划线。

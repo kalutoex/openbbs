@@ -20,6 +20,10 @@ DEFAULTS = {
         "name": "OpenBBS",
         "description": "一个能自己部署的轻论坛",
         "base_url": "",
+        # 主站登记的站点 id。空 = 这台就是主站（或还没登记）。
+        "site_id": "",
+        # 主站地址。空 = 本机即主站，签发自签，黑名单直接读本地表。
+        "master_url": "",
     },
     "paths": {
         # 空字符串 = 落在 server/data 下，开箱即用。
@@ -46,7 +50,12 @@ DEFAULTS = {
     },
     "auth": {
         "register_open": True,
+        # 小站（M1）不放注册，账号只在主站建。
         "require_email": True,
+        # 黑名单拉取间隔（秒）。主站自己不用。
+        "blacklist_pull_seconds": 60,
+        # 小站的验签公钥。空 + 配了 master_url 时，首次从主站 /meta 取回来存这里。
+        "public_key": "",
         "code_ttl": 600,
         "code_max_tries": 5,
         "send_cooldown": 60,
@@ -59,6 +68,19 @@ DEFAULTS = {
     "http": {
         "cors_origins": [],
         "cors_origin_regex": r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    },
+    "update": {
+        # 关掉后 /app/latest 直接 404，客户端自动检查会静默跳过。
+        "enabled": True,
+        # 客户端多久自动查一次（小时）。0 = 每次启动都查。
+        "check_hours": 24,
+        # 点过「以后再说」之后隔多久再弹（小时）。0 = 每次启动都弹。
+        "remind_hours": 24,
+        # 客户端 build 低于这个数就必须更新，弹窗关不掉。0 = 不强制。
+        "force_below": 0,
+        # 弹窗文案，可用 {version} {current} {notes} {size}。留空由客户端自己拼。
+        "title": "发现新版本 {version}",
+        "message": "当前版本 {current}，最新 {version}。\n\n{notes}",
     },
     "admin": {
         "name": "admin",
@@ -78,6 +100,10 @@ DEFAULTS = {
 _ENV_MAP = {
     "OPENBBS_SITE_NAME": ("site", "name"),
     "OPENBBS_SITE_BASE_URL": ("site", "base_url"),
+    "OPENBBS_SITE_ID": ("site", "site_id"),
+    "OPENBBS_MASTER_URL": ("site", "master_url"),
+    "OPENBBS_PUBLIC_KEY": ("auth", "public_key"),
+    "OPENBBS_BLACKLIST_PULL_SECONDS": ("auth", "blacklist_pull_seconds"),
     "OPENBBS_DATA_DIR": ("paths", "data"),
     "OPENBBS_DB": ("paths", "db"),
     "OPENBBS_UPLOAD_DIR": ("paths", "uploads"),
@@ -88,6 +114,10 @@ _ENV_MAP = {
     "OPENBBS_CORS_ORIGINS": ("http", "cors_origins"),
     "OPENBBS_REGISTER_OPEN": ("auth", "register_open"),
     "OPENBBS_REQUIRE_EMAIL": ("auth", "require_email"),
+    "OPENBBS_UPDATE_ENABLED": ("update", "enabled"),
+    "OPENBBS_UPDATE_CHECK_HOURS": ("update", "check_hours"),
+    "OPENBBS_UPDATE_REMIND_HOURS": ("update", "remind_hours"),
+    "OPENBBS_UPDATE_FORCE_BELOW": ("update", "force_below"),
     "OPENBBS_ADMIN_PASSWORD": ("admin", "password"),
 }
 
@@ -195,6 +225,9 @@ def public():
         "name": cfg["site"]["name"],
         "description": cfg["site"]["description"],
         "base_url": cfg["site"]["base_url"],
+        "site_id": cfg["site"]["site_id"],
+        # 主站地址只给出「是不是主站」，具体地址放 /meta
+        "is_master": not cfg["site"]["master_url"],
         "register_open": cfg["auth"]["register_open"],
         "require_email": cfg["auth"]["require_email"],
         "limits": {

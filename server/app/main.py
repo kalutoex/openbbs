@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import api, auth, config, db
+from . import api, auth, blacklist, config, db
 
 ROOT = config.ROOT
 PER_PAGE = config.get("limits", "per_page", 20)
@@ -85,6 +85,15 @@ tpl.env.filters["ts"] = ts
 db.init()
 api.seed()
 app.include_router(api.router)
+
+# 小站才需要后台拉黑名单；主站直接读自己的表，这个函数会自己判断角色。
+blacklist.start_puller()
+
+
+@app.get("/meta")
+def root_meta():
+    """根级别名：小站只需要填个域名，不该得记 /api 前缀。"""
+    return api.site_meta()
 
 
 def get_conn():
