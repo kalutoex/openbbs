@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}论坛{% endblock %}
+{% block body %}
+{% if rows %}
+<ul class="threads">
+  {% for r in rows %}
+  <li>
+    <a class="t" href="/t/{{ r.id }}">{{ r.title }}</a>
+    <div class="meta">{{ r.name }} · {{ r.created_at|ts }} · {{ r.reply_count }} 回复</div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">还没有帖子。{% if user %}<a href="/new">发第一条</a>{% else %}<a href="/register">先注册</a>{% endif %}</p>
+{% endif %}
+{% if pages > 1 %}
+<nav class="pages">
+  {% if page > 1 %}<a href="/?p={{ page - 1 }}">上一页</a>{% endif %}
+  <span>{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a href="/?p={{ page + 1 }}">下一页</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

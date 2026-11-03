@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}注册{% endblock %}
+{% block body %}
+<h1>注册</h1>
+{% if err %}<p class="err">{{ err }}</p>{% endif %}
+<form class="box" method="post" action="/register">
+  <input name="name" value="{{ name }}" placeholder="用户名（2–20 个字符）" autocomplete="username">
+  <input type="password" name="password" placeholder="密码（至少 8 位）" autocomplete="new-password">
+  <button type="submit">注册</button>
+</form>
+<p class="empty">已有账号？<a href="/login">登录</a></p>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}登录{% endblock %}
+{% block body %}
+<h1>登录</h1>
+{% if err %}<p class="err">{{ err }}</p>{% endif %}
+<form class="box" method="post" action="/login">
+  <input type="hidden" name="nxt" value="{{ nxt }}">
+  <input name="name" value="{{ name }}" placeholder="用户名" autocomplete="username">
+  <input type="password" name="password" placeholder="密码" autocomplete="current-password">
+  <button type="submit">登录</button>
+</form>
+<p class="empty">还没有账号？<a href="/register">注册</a></p>
+{% endblock %}

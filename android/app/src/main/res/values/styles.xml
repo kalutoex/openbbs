@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 进程启动时的窗口：底色直接给 @color/launch_bg，
+         不再经过一层白色 layer-list，免得暗色下先白一下。 -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@color/launch_bg</item>
+    </style>
+    <!-- Flutter 引擎起来之后、首帧画出来之前的窗口底色。 -->
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@color/launch_bg</item>
+    </style>
+</resources>

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}发帖{% endblock %}
+{% block body %}
+<h1>发帖</h1>
+{% if err %}<p class="err">{{ err }}</p>{% endif %}
+<form class="box" method="post" action="/new">
+  <input name="title" value="{{ title }}" placeholder="标题" maxlength="200">
+  <textarea name="body" rows="10" placeholder="正文">{{ body }}</textarea>
+  <button type="submit">发布</button>
+</form>
+{% endblock %}

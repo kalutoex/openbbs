@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 启动窗口底色，跟 Flutter 首帧的 surface 尽量对齐，
+         免得从系统窗口切到界面时闪一下。 -->
+    <color name="launch_bg">#FFFBFE</color>
+    <color name="launch_bg_dark">#121212</color>
+</resources>

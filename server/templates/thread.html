@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ t.title }}{% endblock %}
+{% block body %}
+<article class="post">
+  <h1>{{ t.title }}</h1>
+  <div class="meta">{{ t.name }} · {{ t.created_at|ts }}</div>
+  <div class="body">{{ t.body }}</div>
+</article>
+
+<h2 class="c">{{ rs|length }} 条回复</h2>
+{% for r in rs %}
+<div class="reply">
+  <div class="meta">{{ r.name }} · {{ r.created_at|ts }}</div>
+  <div class="body">{{ r.body }}</div>
+</div>
+{% endfor %}
+
+{% if user %}
+<form class="box" method="post" action="/t/{{ t.id }}/reply">
+  <textarea name="body" rows="4" placeholder="说点什么"></textarea>
+  <button type="submit">回复</button>
+</form>
+{% else %}
+<p class="empty"><a href="/login?nxt=/t/{{ t.id }}">登录</a>后可以回复。</p>
+{% endif %}
+{% endblock %}
