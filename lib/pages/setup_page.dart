@@ -5,6 +5,7 @@ import '../api.dart';
 import '../store.dart';
 import 'home_page.dart';
 
+import '../l10n/error_text.dart';
 /// 首次启动：填服务器地址。
 class SetupPage extends StatefulWidget {
   const SetupPage({super.key});
@@ -37,7 +38,7 @@ class _SetupPageState extends State<SetupPage> {
     } on ApiException catch (e) {
       setState(() {
         _busy = false;
-        _err = e.message;
+        _err = errorText(context, e);
       });
     }
   }

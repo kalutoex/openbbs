@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../api.dart';
 import '../store.dart';
 
+import '../l10n/error_text.dart';
 /// 管理员：账号管理。
 ///
 /// 只干一件事——把某个人的密码重置成随机临时密码。
@@ -48,7 +49,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _err = e.message;
+        _err = errorText(context, e);
         _loading = false;
       });
     }
@@ -118,7 +119,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      ).showSnackBar(SnackBar(content: Text(errorText(context, e))));
     }
   }
 

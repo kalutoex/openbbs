@@ -6,6 +6,7 @@ import 'site_config.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
+import 'l10n/app_localizations.dart';
 import 'pages/home_page.dart';
 import 'store.dart';
 import 'theme.dart';
@@ -101,7 +102,17 @@ class _ShijianxianAppState extends State<ShijianxianApp>
   late final Listenable _themeKeys = Listenable.merge([
     AppState.instance.themeMode,
     AppState.instance.accentHue,
+    AppState.instance.localeCode,
   ]);
+
+  /// '' 跟随系统；zh / en 强制。
+  /// 系统语言两种都不是时落到中文 —— ARB 模板就是中文，别给个空界面。
+  Locale _resolveLocale(String code, Locale? system) {
+    if (code == 'zh') return const Locale('zh');
+    if (code == 'en') return const Locale('en');
+    if (system?.languageCode == 'en') return const Locale('en');
+    return const Locale('zh');
+  }
 
   ThemeData _theme(Brightness b) {
     final hue = AppState.instance.accentHue.value;
@@ -119,14 +130,14 @@ class _ShijianxianAppState extends State<ShijianxianApp>
       builder: (_, _) => MaterialApp(
         title: SiteConfig.brand,
         debugShowCheckedModeBanner: false,
-        // 不给中文词条，长按文字那排按钮就是 Copy / Paste / Select all。
-        locale: const Locale('zh', 'CN'),
-        supportedLocales: const [
-          Locale('zh', 'CN'),
-          Locale('zh', 'TW'),
-          Locale('en', 'US'),
-        ],
+        // 界面文案走 ARB；系统组件（长按菜单、日期选择）跟着语言走。
+        locale: _resolveLocale(
+          AppState.instance.localeCode.value,
+          WidgetsBinding.instance.platformDispatcher.locale,
+        ),
+        supportedLocales: L.supportedLocales,
         localizationsDelegates: const [
+          L.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,

@@ -8,6 +8,7 @@ import '../img_compress.dart';
 import '../store.dart';
 import 'gallery_picker_page.dart';
 
+import '../l10n/error_text.dart';
 /// 改自己的昵称、@标识、签名、头像。
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic> info;
@@ -97,7 +98,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       setState(() => _avatar.text = url);
       _snack('头像已换上 · ${ImgCompress.kb(out.length)}');
     } on ApiException catch (e) {
-      _snack(e.message);
+      _snack(errorText(context, e));
     } catch (e) {
       _snack('上传失败：$e');
     } finally {
@@ -232,7 +233,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _err = e.message;
+        _err = errorText(context, e);
       });
     }
   }

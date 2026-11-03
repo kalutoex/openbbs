@@ -14,6 +14,7 @@ import 'edit_profile_page.dart';
 import 'thread_page.dart';
 import 'gallery_picker_page.dart';
 
+import '../l10n/error_text.dart';
 /// 用户主页：封面 + 资料区 + 帖子列表，结构照着 X 来。
 class UserPage extends StatefulWidget {
   final String name;
@@ -77,7 +78,7 @@ class _UserPageState extends State<UserPage> {
       if (!mounted) return;
       setState(() {
         _first = false;
-        _err = e.message;
+        _err = errorText(context, e);
       });
     } finally {
       _busy = false;
@@ -153,7 +154,7 @@ class _UserPageState extends State<UserPage> {
         };
       });
     } on ApiException catch (e) {
-      _snack(e.message);
+      _snack(errorText(context, e));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -189,7 +190,7 @@ class _UserPageState extends State<UserPage> {
       setState(() => _info = {...?_info, 'cover': url});
       _snack('封面已换');
     } on ApiException catch (e) {
-      _snack(e.message);
+      _snack(errorText(context, e));
     } catch (e) {
       _snack('换封面失败：$e');
     } finally {

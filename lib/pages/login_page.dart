@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../store.dart';
 
+import '../l10n/error_text.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -112,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
       _startCooldown(wait);
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _err = e.message);
+      setState(() => _err = errorText(context, e));
     } catch (e) {
       if (!mounted) return;
       setState(() => _err = '验证码没发出去：$e');
@@ -145,7 +146,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.of(context).pop(true);
       } on ApiException catch (e) {
         if (!mounted) return;
-        setState(() => _err = e.message);
+        setState(() => _err = errorText(context, e));
       } catch (e) {
         if (!mounted) return;
         setState(() => _err = '没改成：$e');
@@ -176,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _err = e.message);
+      setState(() => _err = errorText(context, e));
     } catch (e) {
       // 不是 ApiException 的意外（解析、存储写入失败之类）以前会漏出去，
       // _busy 停在 true，看着就是登录页一直转圈。

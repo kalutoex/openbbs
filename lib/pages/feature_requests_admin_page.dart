@@ -4,6 +4,7 @@ import '../api.dart';
 import '../store.dart';
 import '../utils.dart';
 
+import '../l10n/error_text.dart';
 /// 管理员看需求单。采纳或者不做，顺手回一句话给提交人。
 class FeatureRequestsAdminPage extends StatefulWidget {
   const FeatureRequestsAdminPage({super.key});
@@ -53,7 +54,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
       });
     } on ApiException catch (e) {
       setState(() {
-        _err = e.message;
+        _err = errorText(context, e);
         _first = false;
       });
     } finally {
@@ -138,7 +139,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
     }
   }
 

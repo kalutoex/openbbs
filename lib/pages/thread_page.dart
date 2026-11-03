@@ -17,6 +17,7 @@ import '../widgets/post_images.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/user_link.dart';
 
+import '../l10n/error_text.dart';
 /// 帖子详情：楼层 + 楼中楼。
 class ThreadPage extends StatefulWidget {
   final int threadId;
@@ -250,7 +251,7 @@ class _ThreadPageState extends State<ThreadPage> {
       if (!mounted) return;
       setState(() {
         _first = false;
-        _err = e.message;
+        _err = errorText(context, e);
       });
     } finally {
       _busy = false;
@@ -344,13 +345,16 @@ class _ThreadPageState extends State<ThreadPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
-      _toast(e.message);
+      _toast(e);
     }
   }
 
-  void _toast(String s) {
+  /// 传 String 直接显示，传异常就按当前语言翻译。
+  /// context 留在方法里用，别让调用点在 await 之后碰它。
+  void _toast(Object s) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s)));
+    final t = s is String ? s : errorText(context, s);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
   }
 
   void _beginReply(Map<String, dynamic> post) {
@@ -374,7 +378,7 @@ class _ThreadPageState extends State<ThreadPage> {
       });
       _toast(kind == 'top' ? (on ? '已置顶' : '已取消置顶') : (on ? '已加精' : '已取消加精'));
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
@@ -409,7 +413,7 @@ class _ThreadPageState extends State<ThreadPage> {
       final r = await Api.post('/report', body);
       _toast(r['duplicate'] == true ? '已经报过一次了' : '收到了，会看');
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
@@ -541,7 +545,7 @@ class _ThreadPageState extends State<ThreadPage> {
       _toast('改好了');
       await _reload();
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
@@ -558,7 +562,7 @@ class _ThreadPageState extends State<ThreadPage> {
       _toast('已换掉 ${d['changed'] ?? 0} 张图');
       _reload();
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
@@ -575,7 +579,7 @@ class _ThreadPageState extends State<ThreadPage> {
       _toast('帖子已删');
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
@@ -602,7 +606,7 @@ class _ThreadPageState extends State<ThreadPage> {
         await _reload();
       }
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
@@ -617,7 +621,7 @@ class _ThreadPageState extends State<ThreadPage> {
       await Api.delete('/c/${sub['id']}');
       await _reload();
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
@@ -637,7 +641,7 @@ class _ThreadPageState extends State<ThreadPage> {
         post['agreed'] = d['agreed'];
       });
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
@@ -1065,7 +1069,7 @@ class _ThreadPageState extends State<ThreadPage> {
       setState(() => t['faved'] = d['faved'] == true);
       _toast(d['faved'] == true ? '已收藏' : '取消收藏');
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
@@ -1084,7 +1088,7 @@ class _ThreadPageState extends State<ThreadPage> {
         t['agreed'] = d['agreed'];
       });
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 

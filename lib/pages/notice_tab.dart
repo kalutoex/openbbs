@@ -5,6 +5,7 @@ import '../store.dart';
 import '../utils.dart';
 import 'thread_page.dart';
 
+import '../l10n/error_text.dart';
 /// 通知：回复、楼中楼、赞。
 class NoticeTab extends StatefulWidget {
   final VoidCallback onMenu;
@@ -58,7 +59,7 @@ class _NoticeTabState extends State<NoticeTab> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _err = e.message;
+        _err = errorText(context, e);
         _loading = false;
       });
     }

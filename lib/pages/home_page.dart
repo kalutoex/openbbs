@@ -14,6 +14,7 @@ import 'login_page.dart';
 import 'me_tab.dart';
 import 'notice_tab.dart';
 
+import '../l10n/error_text.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -86,7 +87,7 @@ class _HomePageState extends State<HomePage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
       return;
     }
     if (!mounted) return;

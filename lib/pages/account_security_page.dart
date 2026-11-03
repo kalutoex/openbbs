@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../store.dart';
 
+import '../l10n/error_text.dart';
 /// 账号安全：绑定或换绑邮箱。
 ///
 /// 早一批账号注册时还没有邮箱这回事，忘了密码就只能找管理员。
@@ -65,7 +66,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
         const SnackBar(content: Text('验证码发出去了，去邮箱里看看')),
       );
     } on ApiException catch (e2) {
-      if (mounted) setState(() => _err = e2.message);
+      if (mounted) setState(() => _err = errorText(context, e2));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -92,7 +93,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text('绑好了')));
     } on ApiException catch (e2) {
-      if (mounted) setState(() => _err = e2.message);
+      if (mounted) setState(() => _err = errorText(context, e2));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

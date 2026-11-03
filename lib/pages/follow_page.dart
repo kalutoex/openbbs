@@ -5,6 +5,7 @@ import '../widgets/avatar.dart';
 import '../widgets/name_tag.dart';
 import '../widgets/user_link.dart';
 
+import '../l10n/error_text.dart';
 /// 关注 / 粉丝。
 ///
 /// 一个页面两个列表，顶上是自己画的分段控件（原来用 TabBar 塞进 AppBar，
@@ -67,7 +68,7 @@ class _FollowPageState extends State<FollowPage> {
       if (!mounted) return;
       setState(() {
         b.loading = false;
-        b.error = e.message;
+        b.error = errorText(context, e);
       });
     }
   }
@@ -112,7 +113,7 @@ class _FollowPageState extends State<FollowPage> {
         }
         _syncHandles();
       });
-      _say(e.message);
+      _say(errorText(context, e));
     }
   }
 
@@ -130,7 +131,7 @@ class _FollowPageState extends State<FollowPage> {
       });
       _say('已回关 ${_nameOf(u)}');
     } on ApiException catch (e) {
-      _say(e.message);
+      _say(errorText(context, e));
     }
   }
 

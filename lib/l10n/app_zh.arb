@@ -1,0 +1,93 @@
+{
+  "@@locale": "zh",
+  "ok": "好",
+  "cancel": "取消",
+  "save": "保存",
+  "delete": "删除",
+  "edit": "编辑",
+  "retry": "重试",
+  "copy": "复制",
+  "close": "关闭",
+  "done": "完成",
+  "confirm": "确认",
+  "send": "发送",
+  "submit": "提交",
+  "back": "返回",
+  "search": "搜索",
+  "refresh": "刷新",
+  "share": "分享",
+  "report": "举报",
+  "more": "更多",
+  "loading": "加载中…",
+  "emptyList": "这里还没有东西",
+  "noMore": "没有更多了",
+  "networkError": "网络不太行，等会儿再试",
+  "unknownError": "出了点问题",
+  "retryLater": "稍后再试",
+  "login": "登录",
+  "logout": "退出登录",
+  "register": "注册",
+  "username": "用户名",
+  "password": "密码",
+  "email": "邮箱",
+  "forgotPassword": "忘记密码",
+  "settings": "设置",
+  "about": "关于",
+  "accounts": "账号",
+  "friends": "朋友",
+  "appearance": "外观",
+  "theme": "主题",
+  "themeLight": "浅色",
+  "themeDark": "深色",
+  "themeSystem": "跟随系统",
+  "accentColor": "主题色",
+  "language": "语言",
+  "languageSystem": "跟随系统",
+  "home": "首页",
+  "forums": "板块",
+  "notice": "通知",
+  "me": "我",
+  "newThread": "发帖",
+  "title": "标题",
+  "body": "正文",
+  "publish": "发布",
+  "reply": "回复",
+  "addImage": "添加图片",
+  "confirmDelete": "删了就找不回来，确定？",
+  "confirmLogout": "确定要退出登录？",
+  "unsavedChanges": "有没保存的内容，确定离开？",
+  "errNotConfigured": "还没设置服务器地址",
+  "errUploadNoUrl": "上传没返回地址",
+  "errUploadFailed": "上传失败：{reason}",
+  "@errUploadFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "errBadResponse": "服务器返回了看不懂的东西（{status}）",
+  "@errBadResponse": {
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "errRequestFailed": "请求失败（{status}）",
+  "@errRequestFailed": {
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "errDownloadFailed": "下载失败（{status}）",
+  "@errDownloadFailed": {
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  }
+}

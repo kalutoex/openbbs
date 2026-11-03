@@ -5,6 +5,7 @@ import '../store.dart';
 import '../utils.dart';
 import 'thread_page.dart';
 
+import '../l10n/error_text.dart';
 /// 管理员看举报。删掉或者认定没问题，二选一。
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({super.key});
@@ -49,7 +50,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       });
     } on ApiException catch (e) {
       setState(() {
-        _err = e.message;
+        _err = errorText(context, e);
         _first = false;
       });
     } finally {
@@ -105,7 +106,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
     }
   }
 

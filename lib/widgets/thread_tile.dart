@@ -9,6 +9,7 @@ import '../utils.dart';
 import 'name_tag.dart';
 import 'user_link.dart';
 
+import '../l10n/error_text.dart';
 /// 时间线里的一条帖子。
 class ThreadTile extends StatelessWidget {
   final Map<String, dynamic> item;
@@ -50,7 +51,7 @@ class ThreadTile extends StatelessWidget {
     } on ApiException catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
     }
   }
 

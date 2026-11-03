@@ -4,6 +4,7 @@ import '../api.dart';
 import '../widgets/thread_tile.dart';
 import 'thread_page.dart';
 
+import '../l10n/error_text.dart';
 /// 一条只有帖子列表的页：收藏、浏览历史共用。
 class ThreadListPage extends StatefulWidget {
   final String title;
@@ -82,7 +83,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
       if (!mounted || seq != _seq) return;
       setState(() {
         _first = false;
-        _err = e.message;
+        _err = errorText(context, e);
       });
     } finally {
       if (seq == _seq) _busy = false;
@@ -108,7 +109,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
       if (!mounted || seq != _seq) return;
       setState(() {
         _first = false;
-        _err = e.message;
+        _err = errorText(context, e);
       });
     } finally {
       if (seq == _seq) _busy = false;

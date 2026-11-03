@@ -7,6 +7,7 @@ import '../store.dart';
 import 'forum_page.dart';
 import 'login_page.dart';
 
+import '../l10n/error_text.dart';
 /// 板块页：一页滚到底。
 ///
 /// 原来的两栏卡片网格太挤，改成单列行式列表——搜索常驻顶部，
@@ -55,7 +56,7 @@ class _ForumsTabState extends State<ForumsTab> {
       });
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _err = e.message);
+      setState(() => _err = errorText(context, e));
     }
   }
 

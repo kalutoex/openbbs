@@ -13,6 +13,7 @@ import '../cache_clear.dart';
 import '../open_path.dart';
 import '../plat.dart';
 import '../store.dart';
+import '../l10n/app_localizations.dart';
 import 'account_security_page.dart';
 import '../update.dart';
 import 'about_page.dart';
@@ -21,6 +22,7 @@ import 'permissions_page.dart';
 import 'server_page.dart';
 import 'theme_color_page.dart';
 
+import '../l10n/error_text.dart';
 /// 设置：外观、浏览、内容、账号、关于。
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -82,6 +84,16 @@ class SettingsPage extends StatelessWidget {
                   subtitle: '帖子之间的间距',
                   value: _densityName(v),
                   onTap: () => _pickDensity(context),
+                ),
+              ),
+              ValueListenableBuilder<String>(
+                valueListenable: st.localeCode,
+                builder: (_, v, _) => _row(
+                  context,
+                  icon: Icons.translate,
+                  title: L.of(context).language,
+                  value: _localeName(context, v),
+                  onTap: () => _pickLocale(context),
                 ),
               ),
               const Divider(height: 24),
@@ -313,6 +325,30 @@ class SettingsPage extends StatelessWidget {
     _ => '时间线',
   };
 
+  String _localeName(BuildContext c, String code) => switch (code) {
+    'zh' => '中文',
+    'en' => 'English',
+    _ => L.of(c).languageSystem,
+  };
+
+  Future<void> _pickLocale(BuildContext ctx) async {
+    final st = AppState.instance;
+    final cur = st.localeCode.value;
+    final v = await showDialog<String>(
+      context: ctx,
+      builder: (c) => _pickDialog<String>(
+        title: L.of(c).language,
+        current: cur,
+        options: [
+          ('', L.of(c).languageSystem),
+          ('zh', '中文'),
+          ('en', 'English'),
+        ],
+      ),
+    );
+    if (v != null) await st.setLocale(v);
+  }
+
   Future<void> _pickTheme(BuildContext ctx) async {
     final st = AppState.instance;
     final cur = st.themeMode.value;
@@ -523,18 +559,22 @@ class _VersionRowState extends State<_VersionRow> {
 
   Future<void> _check() async {
     AppRelease? rel;
-    String? err;
+    // 先把异常存下来，等确认还活着再用 context 翻译。
+    Object? err;
     try {
       rel = await fetchLatest(beta: _useBeta);
     } on ApiException catch (e) {
-      err = e.message;
+      err = e;
     } catch (_) {
       err = '连不上服务器';
     }
     if (!mounted) return;
 
     if (err != null) {
-      await _tell('检查更新', err);
+      await _tell(
+        '检查更新',
+        err is String ? err : errorText(context, err),
+      );
       return;
     }
     final r = rel!;

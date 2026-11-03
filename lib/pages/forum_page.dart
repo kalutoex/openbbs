@@ -5,6 +5,7 @@ import '../store.dart';
 import '../widgets/thread_tile.dart';
 import 'thread_page.dart';
 
+import '../l10n/error_text.dart';
 /// 单个吧。
 class ForumPage extends StatefulWidget {
   final String name;
@@ -77,7 +78,7 @@ class _ForumPageState extends State<ForumPage> {
       if (!mounted) return;
       setState(() {
         _first = false;
-        _err = e.message;
+        _err = errorText(context, e);
       });
     } finally {
       _busy = false;
@@ -102,13 +103,14 @@ class _ForumPageState extends State<ForumPage> {
             : (n > 0 ? n - 1 : 0);
       });
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     }
   }
 
-  void _toast(String s) {
+  void _toast(Object s) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s)));
+    final t = s is String ? s : errorText(context, s);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
   }
 
   @override

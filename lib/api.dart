@@ -9,10 +9,19 @@ import 'disk_cache.dart';
 import 'site_config.dart';
 
 /// 服务端返回的错误，直接拿去显示。
+///
+/// [code] 只在「客户端自己造的错误」上有值：那种 message 是写死的中文，
+/// 得让界面按当前语言翻译，所以走 ARB（见 l10n/error_text.dart）。
+/// 服务端下发的错误 message 是原文，code 为 null，照旧直接显示。
 class ApiException implements Exception {
   final String message;
   final int? status;
-  ApiException(this.message, {this.status});
+  final String? code;
+
+  /// 给占位符用的附加内容，比如上传失败时的底层异常原文。
+  final String? detail;
+
+  ApiException(this.message, {this.status, this.code, this.detail});
   @override
   String toString() => message;
 }
@@ -132,7 +141,7 @@ class Api {
     Uint8List bytes, {
     String name = 'a.jpg',
   }) async {
-    if (!configured) throw ApiException('还没设置服务器地址');
+    if (!configured) throw ApiException('还没设置服务器地址', code: 'notConfigured');
     final body = jsonEncode({'name': name, 'data': base64Encode(bytes)});
     try {
       final r = await _withFailover(() => http
@@ -140,12 +149,12 @@ class Api {
           .timeout(const Duration(seconds: 60)));
       final d = _decode(r);
       final url = (d is Map ? d['url'] : null) as String?;
-      if (url == null || url.isEmpty) throw ApiException('上传没返回地址');
+      if (url == null || url.isEmpty) throw ApiException('上传没返回地址', code: 'uploadNoUrl');
       return url;
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException('上传失败：$e');
+      throw ApiException('上传失败：$e', code: 'uploadFailed', detail: '$e');
     }
   }
 
@@ -167,13 +176,23 @@ class Api {
     try {
       body = r.body.isEmpty ? null : jsonDecode(utf8.decode(r.bodyBytes));
     } catch (_) {
-      throw ApiException('服务器返回了看不懂的东西（${r.statusCode}）');
+      throw ApiException(
+        '服务器返回了看不懂的东西（${r.statusCode}）',
+        code: 'badResponse',
+        status: r.statusCode,
+      );
     }
     if (r.statusCode >= 400) {
       final d = body is Map ? body['detail'] : null;
+      // 服务端给了 detail 就用它（原文，服务端说了算）；
+      // 没给才是客户端自己兜的这句，得能翻译。
+      if (d is String && d.isNotEmpty) {
+        throw ApiException(d, status: r.statusCode);
+      }
       throw ApiException(
-        d is String ? d : '请求失败（${r.statusCode}）',
+        '请求失败（${r.statusCode}）',
         status: r.statusCode,
+        code: 'requestFailed',
       );
     }
     return body;

@@ -65,7 +65,11 @@ Future<File> downloadApk(
       http.Request('GET', Uri.parse('${Api.base}${r.url}')),
     );
     if (res.statusCode != 200) {
-      throw ApiException('下载失败（${res.statusCode}）');
+      throw ApiException(
+        '下载失败（${res.statusCode}）',
+        code: 'downloadFailed',
+        status: res.statusCode,
+      );
     }
     final total = res.contentLength ?? r.size;
     final sink = file.openWrite();

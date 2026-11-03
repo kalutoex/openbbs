@@ -8,6 +8,7 @@ import '../widgets/thread_tile.dart';
 import 'search_page.dart';
 import 'thread_page.dart';
 
+import '../l10n/error_text.dart';
 /// 时间线：全站最新的帖子。
 class FeedTab extends StatefulWidget {
   final VoidCallback onMenu;
@@ -123,7 +124,7 @@ class _FeedTabState extends State<FeedTab> {
       if (!mounted || seq != _seq) return;
       setState(() {
         _first = false;
-        _err = e.message;
+        _err = errorText(context, e);
         _offline = false;
       });
     } finally {
@@ -153,7 +154,7 @@ class _FeedTabState extends State<FeedTab> {
       if (!mounted || seq != _seq) return;
       setState(() {
         _first = false;
-        _err = e.message;
+        _err = errorText(context, e);
       });
     } finally {
       if (seq == _seq) _busy = false;

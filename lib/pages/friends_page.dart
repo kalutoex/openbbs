@@ -5,6 +5,7 @@ import '../store.dart';
 import '../widgets/avatar.dart';
 import 'user_page.dart';
 
+import '../l10n/error_text.dart';
 /// 致谢：把成员挂出来。管理员可以直接增删。
 class FriendsPage extends StatefulWidget {
   const FriendsPage({super.key});
@@ -37,7 +38,7 @@ class _FriendsPageState extends State<FriendsPage> {
         _canManage = d['can_manage'] == true;
       });
     } on ApiException catch (e) {
-      if (mounted) setState(() => _err = e.message);
+      if (mounted) setState(() => _err = errorText(context, e));
     } catch (_) {
       if (mounted) setState(() => _err = '连不上服务器');
     }
@@ -101,7 +102,7 @@ class _FriendsPageState extends State<FriendsPage> {
                       } on ApiException catch (e) {
                         setD(() {
                           busy = false;
-                          err = e.message;
+                          err = errorText(context, e);
                         });
                       } catch (_) {
                         setD(() {
@@ -152,7 +153,7 @@ class _FriendsPageState extends State<FriendsPage> {
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
+          SnackBar(content: Text(errorText(context, e))),
         );
       }
     }

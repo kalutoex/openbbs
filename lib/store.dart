@@ -23,6 +23,7 @@ class AppState extends ChangeNotifier {
   static const _kFeedSort = 'feed_sort';
   static const _kAutoUnread = 'auto_unread';
   static const _kStartTab = 'start_tab';
+  static const _kLocale = 'locale';
 
   Map<String, dynamic>? user;
   bool ready = false;
@@ -88,6 +89,9 @@ class AppState extends ChangeNotifier {
   /// 启动落在哪个 tab：0 时间线 / 1 板块 / 2 通知 / 3 我的。
   final ValueNotifier<int> startTab = ValueNotifier(0);
 
+  /// 界面语言：'' 跟随系统，'zh' / 'en' 强制。
+  final ValueNotifier<String> localeCode = ValueNotifier('');
+
   /// 主题色色相，0-350。默认 175，就是原来的青绿。
   /// 范围收在 350 而不是 360：色环首尾是同一个颜色。
   static const double minHue = 0;
@@ -150,6 +154,13 @@ class AppState extends ChangeNotifier {
     accentHue.value = normalizeHue(h);
     final p = await SharedPreferences.getInstance();
     await p.setDouble(_kHue, accentHue.value);
+  }
+
+  Future<void> setLocale(String code) async {
+    if (code != 'zh' && code != 'en') code = '';
+    localeCode.value = code;
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_kLocale, code);
   }
 
   Future<void> setDensity(int v) async {
@@ -229,6 +240,8 @@ class AppState extends ChangeNotifier {
     if (fs == 'updated' || fs == 'created') feedSort.value = fs!;
     autoUnread.value = p.getBool(_kAutoUnread) ?? true;
     startTab.value = (p.getInt(_kStartTab) ?? 0).clamp(0, 3);
+    final lc = p.getString(_kLocale) ?? '';
+    localeCode.value = (lc == 'zh' || lc == 'en') ? lc : '';
     final ti = p.getInt(_kTheme);
     if (ti != null && ti >= 0 && ti < ThemeMode.values.length) {
       themeMode.value = ThemeMode.values[ti];

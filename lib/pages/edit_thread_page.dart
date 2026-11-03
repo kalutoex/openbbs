@@ -10,6 +10,7 @@ import '../plat.dart';
 import '../img_compress.dart';
 import 'gallery_picker_page.dart';
 
+import '../l10n/error_text.dart';
 /// 改自己的帖子：标题、正文、配图。
 ///
 /// 图片分两种：已经传上去的（服务端给的 /img/ 路径，可以摘掉）和这次新选的
@@ -130,7 +131,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
-      _fail(e.message);
+      _fail(errorText(context, e));
     } catch (e) {
       _fail('保存失败：$e');
     }

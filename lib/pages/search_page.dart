@@ -6,6 +6,7 @@ import '../widgets/thread_tile.dart';
 import 'thread_page.dart';
 import 'user_page.dart';
 
+import '../l10n/error_text.dart';
 /// 全站搜索：按标题和正文匹配。
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -147,7 +148,7 @@ class _SearchPageState extends State<SearchPage> {
       });
     } on ApiException catch (e) {
       if (!mounted || seq != _seq) return;
-      setState(() => _err = e.message);
+      setState(() => _err = errorText(context, e));
     } finally {
       if (seq == _seq) _busy = false;
     }

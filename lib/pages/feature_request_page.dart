@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../utils.dart';
 
+import '../l10n/error_text.dart';
 /// 普通用户提需求：想要什么功能写清楚，提交给管理员。
 /// 下面顺带列出自己提过的，状态和回复都能看见。
 class FeatureRequestPage extends StatefulWidget {
@@ -32,9 +33,10 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
     super.dispose();
   }
 
-  void _toast(String msg) {
+  void _toast(Object msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    final t = msg is String ? msg : errorText(context, msg);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
   }
 
   Future<void> _loadMine() async {
@@ -71,7 +73,7 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
       _toast(r['duplicate'] == true ? '这条已经提过了' : '提交好了');
       await _loadMine();
     } on ApiException catch (e) {
-      _toast(e.message);
+      _toast(e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

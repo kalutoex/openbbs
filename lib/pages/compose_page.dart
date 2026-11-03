@@ -12,6 +12,7 @@ import '../img_compress.dart';
 import '../widgets/mention.dart';
 import 'gallery_picker_page.dart';
 
+import '../l10n/error_text.dart';
 /// 发主题帖。
 class ComposePage extends StatefulWidget {
   final String forumName;
@@ -387,20 +388,21 @@ class _ComposePageState extends State<ComposePage> {
       setState(() => _progress = 1);
       await _leaveAfter(true);
     } on ApiException catch (e) {
-      _fail(e.message);
+      _fail(e);
     } catch (e) {
       _fail('发不出去：$e');
     }
   }
 
-  void _fail(String msg) {
+  void _fail(Object msg) {
     if (!mounted) return;
+    final text = msg is String ? msg : errorText(context, msg);
     setState(() {
       _busy = false;
       _progress = 0;
       _status = '';
     });
-    _snack(msg);
+    _snack(text);
   }
 
   /// PopScope 拦住之后，要先把 canPop 放开、等一帧再 pop，不然又被拦回来。
