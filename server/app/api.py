@@ -423,6 +423,8 @@ SEND_PER_HOUR_IP = config.get("auth", "send_per_hour_ip", 5)
 REG_PER_HOUR_IP = config.get("auth", "reg_per_hour_ip", 5)
 LOGIN_FAIL_MAX = config.get("auth", "login_fail_max", 5)          # 同一 IP 每分钟密码错几次就拦
 LOGIN_FAIL_WINDOW = config.get("auth", "login_fail_window", 60)
+REGISTER_OPEN = bool(config.get("auth", "register_open", True))
+REQUIRE_EMAIL = bool(config.get("auth", "require_email", True))
 _LOGIN_FAIL = {}
 
 
@@ -446,6 +448,8 @@ def _norm_email(raw: str) -> str:
 
 @router.post("/register/code")
 def register_code(p: EmailAsk, request: Request, c=Depends(get_conn)):
+    if not REGISTER_OPEN:
+        raise HTTPException(403, "本站暂不开放注册")
     email = _norm_email(p.email)
     ip = _ip(request)
     now = int(time.time())
@@ -488,6 +492,8 @@ def register_code(p: EmailAsk, request: Request, c=Depends(get_conn)):
 
 @router.post("/register")
 def register(p: RegisterIn, request: Request, c=Depends(get_conn)):
+    if not REGISTER_OPEN:
+        raise HTTPException(403, "本站暂不开放注册")
     name = p.name.strip()
     if not (NAME_MIN <= len(name) <= NAME_MAX):
         raise HTTPException(400, "用户名 %d–%d 个字符" % (NAME_MIN, NAME_MAX))
