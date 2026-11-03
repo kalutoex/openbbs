@@ -324,9 +324,8 @@ class SettingsPage extends StatelessWidget {
   };
 
   static String _tabName(int v) => switch (v) {
-    1 => Lc.current.forums,
-    2 => Lc.current.notice,
-    3 => Lc.current.me,
+    1 => Lc.current.notice,
+    2 => Lc.current.me,
     _ => Lc.current.timeline,
   };
 
@@ -418,7 +417,7 @@ class SettingsPage extends StatelessWidget {
       builder: (c) => _pickDialog<int>(
         title: Lc.current.startTab,
         current: cur,
-        options: [(0, Lc.current.timeline), (1, Lc.current.forums), (2, Lc.current.notice), (3, Lc.current.me)],
+        options: [(0, Lc.current.timeline), (1, Lc.current.notice), (2, Lc.current.me)],
       ),
     );
     if (v != null) await st.setStartTab(v);

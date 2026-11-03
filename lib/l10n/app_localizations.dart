@@ -361,12 +361,6 @@ abstract class L {
   /// **'首页'**
   String get home;
 
-  /// No description provided for @forums.
-  ///
-  /// In zh, this message translates to:
-  /// **'板块'**
-  String get forums;
-
   /// No description provided for @notice.
   ///
   /// In zh, this message translates to:
@@ -1820,12 +1814,6 @@ abstract class L {
   /// **'发新帖'**
   String get composeTitle;
 
-  /// No description provided for @forumSuffix.
-  ///
-  /// In zh, this message translates to:
-  /// **'吧'**
-  String get forumSuffix;
-
   /// No description provided for @composeHint.
   ///
   /// In zh, this message translates to:
@@ -2666,12 +2654,6 @@ abstract class L {
   /// **'还没有图'**
   String get noImagesYet;
 
-  /// No description provided for @searchForumsHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'搜吧'**
-  String get searchForumsHint;
-
   /// No description provided for @noSearchResult.
   ///
   /// In zh, this message translates to:
@@ -2684,53 +2666,17 @@ abstract class L {
   /// **'搜到 {v1} 个'**
   String searchResultCount(String v1);
 
-  /// No description provided for @myFollowedForums.
-  ///
-  /// In zh, this message translates to:
-  /// **'我关注的 {v1}'**
-  String myFollowedForums(String v1);
-
-  /// No description provided for @allForums.
-  ///
-  /// In zh, this message translates to:
-  /// **'全部 {v1}'**
-  String allForums(String v1);
-
-  /// No description provided for @noForums.
-  ///
-  /// In zh, this message translates to:
-  /// **'还没建板块'**
-  String get noForums;
-
-  /// No description provided for @loginToSeeFollowed.
-  ///
-  /// In zh, this message translates to:
-  /// **'登录后能看到关注过的吧'**
-  String get loginToSeeFollowed;
-
   /// No description provided for @goLogin.
   ///
   /// In zh, this message translates to:
   /// **'去登录'**
   String get goLogin;
 
-  /// No description provided for @noFollowedForums.
-  ///
-  /// In zh, this message translates to:
-  /// **'还没关注吧，进一个点关注'**
-  String get noFollowedForums;
-
   /// No description provided for @noIntro.
   ///
   /// In zh, this message translates to:
   /// **'还没有简介'**
   String get noIntro;
-
-  /// No description provided for @forumStats.
-  ///
-  /// In zh, this message translates to:
-  /// **'{v1} 帖 · {v2} 关注'**
-  String forumStats(String v1, String v2);
 
   /// No description provided for @nRepliedPost.
   ///
@@ -3131,7 +3077,7 @@ abstract class L {
   /// No description provided for @loginBenefits.
   ///
   /// In zh, this message translates to:
-  /// **'登录后可以发帖、回复、关注吧'**
+  /// **'登录后可以发帖、回复'**
   String get loginBenefits;
 
   /// No description provided for @hot.
@@ -3139,12 +3085,6 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'热门'**
   String get hot;
-
-  /// No description provided for @forumEmpty.
-  ///
-  /// In zh, this message translates to:
-  /// **'这个吧还没有帖'**
-  String get forumEmpty;
 
   /// No description provided for @permIntro.
   ///
@@ -3187,12 +3127,6 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'连不上服务器，这是上次的缓存'**
   String get offlineCacheFeed;
-
-  /// No description provided for @chooseForum.
-  ///
-  /// In zh, this message translates to:
-  /// **'发到哪个板块'**
-  String get chooseForum;
 
   /// No description provided for @fillAddress.
   ///

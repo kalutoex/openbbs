@@ -16,21 +16,17 @@ import 'avatar.dart';
 import 'name_tag.dart';
 
 import '../l10n/l10n.dart';
-/// 左侧抽屉：身份、导航、板块、我的入口。
+/// 左侧抽屉：身份、导航、我的入口。
 class AppDrawer extends StatefulWidget {
   /// 当前底部 tab，用来标出选中项。
   final int currentTab;
-  final void Function(String name, String title) onForum;
   final VoidCallback onTimeline;
-  final VoidCallback? onForums;
   final VoidCallback? onMe;
 
   const AppDrawer({
     super.key,
     this.currentTab = 0,
-    required this.onForum,
     required this.onTimeline,
-    this.onForums,
     this.onMe,
   });
 
@@ -39,9 +35,6 @@ class AppDrawer extends StatefulWidget {
 }
 
 class _AppDrawerState extends State<AppDrawer> {
-  List<Map<String, dynamic>> _items = const [];
-  bool _loaded = false;
-
   @override
   void initState() {
     super.initState();
@@ -51,17 +44,6 @@ class _AppDrawerState extends State<AppDrawer> {
   Future<void> _load() async {
     _loadReports();
     _loadFeatures();
-    try {
-      final d = await Api.get('/forums');
-      if (!mounted) return;
-      setState(() {
-        _items = (d['items'] as List).cast<Map<String, dynamic>>();
-        _loaded = true;
-      });
-    } on ApiException {
-      if (!mounted) return;
-      setState(() => _loaded = true);
-    }
   }
 
   /// 管理员才有，未处理举报数，拿不到就当 0。
@@ -145,47 +127,6 @@ class _AppDrawerState extends State<AppDrawer> {
                           widget.onTimeline();
                         },
                       ),
-                      _item(
-                        context,
-                        icon: Icons.grid_view_outlined,
-                        activeIcon: Icons.grid_view_rounded,
-                        label: Lc.current.forums,
-                        active: widget.currentTab == 1,
-                        onTap: () {
-                          _close();
-                          widget.onForums?.call();
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      _label(context, Lc.current.forums),
-                      if (!_loaded)
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(14, 8, 14, 8),
-                          child: LinearProgressIndicator(minHeight: 2),
-                        )
-                      else if (_items.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-                          child: Text(
-                            Lc.current.noForums,
-                            style: TextStyle(fontSize: 12, color: cs.outline),
-                          ),
-                        )
-                      else
-                        for (final f in _items)
-                          _item(
-                            context,
-                            icon: Icons.tag,
-                            label: (f['title'] ?? f['name'] ?? '') as String,
-                            trailing: '${f['thread_count'] ?? 0}',
-                            onTap: () {
-                              _close();
-                              widget.onForum(
-                                (f['name'] ?? '') as String,
-                                (f['title'] ?? f['name'] ?? '') as String,
-                              );
-                            },
-                          ),
                       if (st.loggedIn) ...[
                         const SizedBox(height: 10),
                         _label(context, Lc.current.me),

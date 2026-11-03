@@ -5,13 +5,13 @@ import 'package:path_provider/path_provider.dart';
 
 /// 草稿里的图存成文件，不进 prefs——几张压缩图就能把 XML 撑死。
 /// 目录：appSupport/drafts/论坛名/0.bin、1.bin ……
-Future<Directory> _dir(String forum) async {
+Future<Directory> _dir(String slot) async {
   final base = await getApplicationSupportDirectory();
-  return Directory('${base.path}/drafts/${Uri.encodeComponent(forum)}');
+  return Directory('${base.path}/drafts/${Uri.encodeComponent(slot)}');
 }
 
-Future<List<String>> saveDraftImages(String forum, List<Uint8List> imgs) async {
-  final d = await _dir(forum);
+Future<List<String>> saveDraftImages(String slot, List<Uint8List> imgs) async {
+  final d = await _dir(slot);
   if (await d.exists()) await d.delete(recursive: true);
   if (imgs.isEmpty) return const [];
   await d.create(recursive: true);
@@ -24,9 +24,9 @@ Future<List<String>> saveDraftImages(String forum, List<Uint8List> imgs) async {
   return out;
 }
 
-Future<List<Uint8List>> loadDraftImages(String forum) async {
+Future<List<Uint8List>> loadDraftImages(String slot) async {
   try {
-    final d = await _dir(forum);
+    final d = await _dir(slot);
     if (!await d.exists()) return const [];
     final files = await d
         .list()
@@ -49,9 +49,9 @@ Future<List<Uint8List>> loadDraftImages(String forum) async {
   }
 }
 
-Future<void> clearDraftImages(String forum) async {
+Future<void> clearDraftImages(String slot) async {
   try {
-    final d = await _dir(forum);
+    final d = await _dir(slot);
     if (await d.exists()) await d.delete(recursive: true);
   } catch (_) {
     // 清不掉就算了，下次写会整个覆盖

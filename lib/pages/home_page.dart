@@ -2,19 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../api.dart';
 import '../permissions.dart';
 import '../store.dart';
 import '../widgets/app_drawer.dart';
 import 'compose_page.dart';
 import 'feed_tab.dart';
-import 'forum_page.dart';
-import 'forums_tab.dart';
 import 'login_page.dart';
 import 'me_tab.dart';
 import 'notice_tab.dart';
 
-import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,13 +22,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _sk = GlobalKey<ScaffoldState>();
 
-  /// 0 = 时间线，1 = 板块，2 = 通知，3 = 用户
-  late int _index = AppState.instance.startTab.value;
+  /// 0 = 时间线，1 = 通知，2 = 我的
+  late int _index = _tabOf(AppState.instance.startTab.value);
 
   /// IndexedStack 会把四个 tab 全部建出来、initState 一起发请求，
   /// 启动瞬间四路网络 + 四份骨架一起刷，看着就是一阵乱闪。
   /// 这里只建访问过的那个。
   late final Set<int> _started = {_index};
+
+  /// 老版本存过 0..3（1 是板块），读出来按新表重排。
+  static int _tabOf(int v) => switch (v) {
+        2 => 1,
+        3 => 2,
+        _ => 0,
+      };
 
   void _go(int i) {
     if (i == _index) return;
@@ -81,56 +84,8 @@ class _HomePageState extends State<HomePage> {
       if (!mounted || AppState.instance.user == null) return;
     }
 
-    List<Map<String, dynamic>> forums;
-    try {
-      final d = await Api.get('/forums');
-      forums = (d['items'] as List).cast<Map<String, dynamic>>();
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
-      return;
-    }
-    if (!mounted) return;
-
-    final picked = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      showDragHandle: true,
-      builder: (c) {
-        final tt = Theme.of(c).textTheme;
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Text(
-                  Lc.current.chooseForum,
-                  style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ),
-              for (final f in forums)
-                ListTile(
-                  title: Text((f['title'] ?? f['name'] ?? '') as String),
-                  subtitle: ((f['intro'] ?? '') as String).isEmpty
-                      ? null
-                      : Text((f['intro'] ?? '') as String),
-                  onTap: () => Navigator.pop(c, f),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-    if (picked == null || !mounted) return;
-
     final ok = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => ComposePage(
-          forumName: (picked['name'] ?? '') as String,
-          forumTitle: (picked['title'] ?? picked['name'] ?? '') as String,
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => const ComposePage()),
     );
     if (ok == true) AppState.instance.bumpFeed();
   }
@@ -142,27 +97,17 @@ class _HomePageState extends State<HomePage> {
       drawer: AppDrawer(
         currentTab: _index,
         onTimeline: () => _go(0),
-        onForums: () => _go(1),
-        onMe: () => _go(3),
-        onForum: (name, title) => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ForumPage(name: name, title: title),
-          ),
-        ),
+        onMe: () => _go(2),
       ),
       body: IndexedStack(
         index: _index,
         children: [
           FeedTab(onMenu: _menu),
           if (_started.contains(1))
-            ForumsTab(onMenu: _menu)
-          else
-            const SizedBox.shrink(),
-          if (_started.contains(2))
             NoticeTab(onMenu: _menu)
           else
             const SizedBox.shrink(),
-          if (_started.contains(3))
+          if (_started.contains(2))
             MeTab(onMenu: _menu)
           else
             const SizedBox.shrink(),
@@ -203,11 +148,6 @@ class _HomePageState extends State<HomePage> {
                   icon: Icon(Icons.home_outlined),
                   selectedIcon: Icon(Icons.home_rounded),
                   label: Lc.current.home,
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.grid_view_outlined),
-                  selectedIcon: Icon(Icons.grid_view_rounded),
-                  label: Lc.current.forums,
                 ),
                 NavigationDestination(
                   icon: Badge(

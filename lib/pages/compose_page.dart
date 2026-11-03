@@ -15,15 +15,11 @@ import 'gallery_picker_page.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 /// 发主题帖。
-class ComposePage extends StatefulWidget {
-  final String forumName;
-  final String forumTitle;
+/// 站内已经不分层，草稿只留一份。
+const String _draftKey = 'site';
 
-  const ComposePage({
-    super.key,
-    required this.forumName,
-    required this.forumTitle,
-  });
+class ComposePage extends StatefulWidget {
+  const ComposePage({super.key});
 
   @override
   State<ComposePage> createState() => _ComposePageState();
@@ -92,7 +88,7 @@ class _ComposePageState extends State<ComposePage> {
     final needImgs = sig != _savedImgSig;
     _savedImgSig = sig;
     return Draft.write(
-      widget.forumName,
+      _draftKey,
       _title.text,
       _body.text,
       imgs: needImgs ? _imgs.map((e) => e.bytes).toList() : null,
@@ -100,7 +96,7 @@ class _ComposePageState extends State<ComposePage> {
   }
 
   Future<void> _loadDraft() async {
-    final d = await Draft.read(widget.forumName);
+    final d = await Draft.read(_draftKey);
     if (d == null || !mounted) return;
     if (_title.text.isNotEmpty || _body.text.isNotEmpty) return;
     if (_imgs.isNotEmpty) return;
@@ -120,7 +116,7 @@ class _ComposePageState extends State<ComposePage> {
         onPressed: () {
           _draftTimer?.cancel();
           _savedImgSig = '';
-          Draft.clear(widget.forumName);
+          Draft.clear(_draftKey);
           setState(() {
             _title.clear();
             _body.clear();
@@ -377,13 +373,13 @@ class _ComposePageState extends State<ComposePage> {
           _progress = _imgs.length / total;
         });
       }
-      await Api.post('/f/${Uri.encodeComponent(widget.forumName)}/threads', {
+      await Api.post('/threads', {
         'title': t,
         'body': b,
         'images': urls,
       });
       _draftTimer?.cancel();
-      await Draft.clear(widget.forumName);
+      await Draft.clear(_draftKey);
       if (!mounted) return;
       _posted = true;
       setState(() => _progress = 1);
@@ -460,7 +456,7 @@ class _ComposePageState extends State<ComposePage> {
         await _leaveAfter();
       case 'discard':
         _draftTimer?.cancel();
-        await Draft.clear(widget.forumName);
+        await Draft.clear(_draftKey);
         _imgs.clear();
         _title.clear();
         _body.clear();
@@ -490,8 +486,6 @@ class _ComposePageState extends State<ComposePage> {
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             children: [
-              _forumLine(cs),
-              const SizedBox(height: 14),
               _titleBox(cs),
               const SizedBox(height: 12),
               _bodyBox(cs),
@@ -506,29 +500,6 @@ class _ComposePageState extends State<ComposePage> {
         ),
         bottomNavigationBar: _bottomBar(cs),
       ),
-    );
-  }
-
-  Widget _forumLine(ColorScheme cs) {
-    return Row(
-      children: [
-        Icon(Icons.tag, size: 14, color: cs.primary),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            widget.forumTitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12.5,
-              color: cs.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(Lc.current.forumSuffix, style: TextStyle(fontSize: 12.5, color: cs.outline)),
-      ],
     );
   }
 
@@ -814,15 +785,15 @@ class _ComposePageState extends State<ComposePage> {
   }
 }
 
-/// 发帖草稿，按吧分开存。
+/// 发帖草稿，只有一份。
 class Draft {
   static const _k = 'draft_v1';
 
   /// 文字在 prefs，图片在文件目录；返回 null 表示没有草稿。
-  static Future<Map<String, dynamic>?> read(String forum) async {
+  static Future<Map<String, dynamic>?> read(String slot) async {
     final prefs = await SharedPreferencesHolder.prefs;
-    final raw = prefs.getString('$_k::$forum');
-    final imgs = await loadDraftImages(forum);
+    final raw = prefs.getString('$_k::$slot');
+    final imgs = await loadDraftImages(slot);
     if (raw == null || raw.isEmpty) {
       if (imgs.isEmpty) return null;
       return {'title': '', 'body': '', 'images': imgs};
@@ -836,25 +807,25 @@ class Draft {
   }
 
   static Future<void> write(
-    String forum,
+    String slot,
     String title,
     String body, {
     List<Uint8List>? imgs,
   }) async {
     final prefs = await SharedPreferencesHolder.prefs;
     if (title.isEmpty && body.isEmpty && (imgs == null || imgs.isEmpty)) {
-      await prefs.remove('$_k::$forum');
-      await clearDraftImages(forum);
+      await prefs.remove('$_k::$slot');
+      await clearDraftImages(slot);
       return;
     }
-    await prefs.setString('$_k::$forum', '$title\u0001$body');
-    if (imgs != null) await saveDraftImages(forum, imgs);
+    await prefs.setString('$_k::$slot', '$title\u0001$body');
+    if (imgs != null) await saveDraftImages(slot, imgs);
   }
 
-  static Future<void> clear(String forum) async {
+  static Future<void> clear(String slot) async {
     final prefs = await SharedPreferencesHolder.prefs;
-    await prefs.remove('$_k::$forum');
-    await clearDraftImages(forum);
+    await prefs.remove('$_k::$slot');
+    await clearDraftImages(slot);
   }
 }
 

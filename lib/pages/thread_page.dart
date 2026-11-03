@@ -654,7 +654,6 @@ class _ThreadPageState extends State<ThreadPage> {
     final op = opIdx >= 0 ? _posts[opIdx] : null;
     final rest = _shownList();
     _shownLen = rest.length;
-    final forumLabel = ((_thread?['forum_title'] ?? '') as String).trim();
 
     return Scaffold(
       appBar: AppBar(
@@ -668,13 +667,6 @@ class _ThreadPageState extends State<ThreadPage> {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            if (forumLabel.isNotEmpty)
-              Text(
-                forumLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-              ),
           ],
         ),
         actions: [
@@ -872,7 +864,6 @@ class _ThreadPageState extends State<ThreadPage> {
     final author = (t['author'] ?? '') as String;
     final handle = (t['handle'] ?? '') as String;
     final avatar = (t['author_avatar'] ?? '') as String;
-    final forum = (t['forum'] ?? '') as String;
     final body = (op['body'] ?? '') as String;
     final title = ((t['title'] ?? widget.title) as String).trim();
     final imgs = ((op['images'] as List?) ?? const []).cast<String>();
@@ -918,14 +909,6 @@ class _ThreadPageState extends State<ThreadPage> {
                       ],
                     ),
                   ),
-                  if (forum.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text(
-                        forum,
-                        style: TextStyle(fontSize: 12, color: cs.outline),
-                      ),
-                    ),
                 ],
               ),
               if (title.isNotEmpty) ...[

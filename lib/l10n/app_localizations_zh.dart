@@ -142,9 +142,6 @@ class LZh extends L {
   String get home => '首页';
 
   @override
-  String get forums => '板块';
-
-  @override
   String get notice => '通知';
 
   @override
@@ -953,9 +950,6 @@ class LZh extends L {
   String get composeTitle => '发新帖';
 
   @override
-  String get forumSuffix => '吧';
-
-  @override
   String get composeHint => '说点什么…（@ 找人）';
 
   @override
@@ -1428,9 +1422,6 @@ class LZh extends L {
   String get noImagesYet => '还没有图';
 
   @override
-  String get searchForumsHint => '搜吧';
-
-  @override
   String noSearchResult(String v1) {
     return '没搜到「$v1」';
   }
@@ -1441,34 +1432,10 @@ class LZh extends L {
   }
 
   @override
-  String myFollowedForums(String v1) {
-    return '我关注的 $v1';
-  }
-
-  @override
-  String allForums(String v1) {
-    return '全部 $v1';
-  }
-
-  @override
-  String get noForums => '还没建板块';
-
-  @override
-  String get loginToSeeFollowed => '登录后能看到关注过的吧';
-
-  @override
   String get goLogin => '去登录';
 
   @override
-  String get noFollowedForums => '还没关注吧，进一个点关注';
-
-  @override
   String get noIntro => '还没有简介';
-
-  @override
-  String forumStats(String v1, String v2) {
-    return '$v1 帖 · $v2 关注';
-  }
 
   @override
   String get nRepliedPost => '回复了你的帖';
@@ -1697,13 +1664,10 @@ class LZh extends L {
   String get comments => '评论';
 
   @override
-  String get loginBenefits => '登录后可以发帖、回复、关注吧';
+  String get loginBenefits => '登录后可以发帖、回复';
 
   @override
   String get hot => '热门';
-
-  @override
-  String get forumEmpty => '这个吧还没有帖';
 
   @override
   String get permIntro => '联网权限安装时已经给了，这里只剩通知和相册需要你点头。';
@@ -1725,9 +1689,6 @@ class LZh extends L {
 
   @override
   String get offlineCacheFeed => '连不上服务器，这是上次的缓存';
-
-  @override
-  String get chooseForum => '发到哪个板块';
 
   @override
   String get fillAddress => '填一下地址';

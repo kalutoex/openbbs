@@ -60,10 +60,6 @@ DEFAULTS = {
         "cors_origins": [],
         "cors_origin_regex": r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     },
-    "forums": [
-        {"name": "chitchat", "title": "闲聊", "desc": "什么都聊，别吵架"},
-        {"name": "tech", "title": "技术", "desc": "写代码、折腾机器、修电脑"},
-    ],
     "admin": {
         "name": "admin",
         # 空 = 首次启动生成随机密码，写进 data/admin_initial.txt，只给部署的人看。

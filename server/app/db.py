@@ -41,23 +41,6 @@ CREATE TABLE IF NOT EXISTS replies (
 CREATE INDEX IF NOT EXISTS idx_replies_thread ON replies(thread_id, id);
 CREATE INDEX IF NOT EXISTS idx_threads_updated ON threads(updated_at DESC);
 
-CREATE TABLE IF NOT EXISTS forums (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  name         TEXT NOT NULL UNIQUE,
-  title        TEXT NOT NULL DEFAULT '',
-  intro        TEXT NOT NULL DEFAULT '',
-  avatar       TEXT NOT NULL DEFAULT '',
-  owner_id     INTEGER,
-  created_at   INTEGER NOT NULL,
-  thread_count INTEGER NOT NULL DEFAULT 0,
-  follow_count INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS forum_follows (
-  user_id    INTEGER NOT NULL,
-  forum_id   INTEGER NOT NULL,
-  created_at INTEGER NOT NULL,
-  PRIMARY KEY (user_id, forum_id)
-);
 CREATE TABLE IF NOT EXISTS likes (
   user_id     INTEGER NOT NULL,
   target_kind TEXT NOT NULL,
@@ -156,7 +139,6 @@ CREATE TABLE IF NOT EXISTS email_sends (
 # 依赖 ALTER 加出来的列，必须在补列之后才能建。
 LATE_SCHEMA = """
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_handle ON users(handle);
-CREATE INDEX IF NOT EXISTS idx_threads_forum ON threads(forum_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_fr_status ON feature_requests(status, id DESC);
 CREATE INDEX IF NOT EXISTS idx_fr_user ON feature_requests(user_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_replies_parent ON replies(parent_id);
@@ -171,7 +153,6 @@ EXTRA_COLUMNS = [
     ("users", "level", "INTEGER NOT NULL DEFAULT 1"),
     ("users", "is_admin", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "uid", "INTEGER"),
-    ("threads", "forum_id", "INTEGER"),
     ("threads", "view_count", "INTEGER NOT NULL DEFAULT 0"),
     ("threads", "is_good", "INTEGER NOT NULL DEFAULT 0"),
     ("replies", "parent_id", "INTEGER"),
@@ -241,6 +222,15 @@ def init():
             # 关于页的致谢名单第一次建立：先把现有的人都挂上，之后由管理员增删。
             c.execute("INSERT OR IGNORE INTO friends (user_id, note, created_at) "
                       "SELECT id, '', CAST(strftime('%s','now') AS INTEGER) FROM users")
+        # 板块这一层已经取消：老库把表和列一起拆掉，留着的只有站。
+        for _t in ("forums", "forum_follows"):
+            c.execute("DROP TABLE IF EXISTS %s" % _t)
+        c.execute("DROP INDEX IF EXISTS idx_threads_forum")
+        if "forum_id" in _columns(c, "threads"):
+            try:
+                c.execute("ALTER TABLE threads DROP COLUMN forum_id")
+            except sqlite3.OperationalError:
+                pass
         for table, col, decl in EXTRA_COLUMNS:
             if col not in _columns(c, table):
                 try:

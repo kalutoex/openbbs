@@ -2,7 +2,6 @@
 """App 用的 JSON 接口。
 
 数据模型（贴吧式）：
-  forum  吧          —— forums 表
   thread 主题帖      —— threads 表，正文就是「1 楼」
   reply  楼层        —— replies 表，第 1 条 reply 是 2 楼
   楼中楼             —— replies.parent_id 指向被回复的那一层；parent_id=0 表示回复楼主
@@ -22,11 +21,6 @@ router = APIRouter(prefix="/api")
 PER_PAGE = config.get("limits", "per_page", 20)
 PER_FLOOR_PAGE = config.get("limits", "floor_per_page", 20)
 
-# 首次启动初始化哪些板块，写在配置里，部署的人自己加。
-DEFAULT_FORUMS = [
-    (f["name"], f.get("title") or f["name"], f.get("desc") or "")
-    for f in (config.get("forums") or [])
-]
 
 
 # ---------------------------------------------------------------- 基础
@@ -72,7 +66,7 @@ HANDLE_RE = re.compile(r"[a-z0-9_]{3,16}")
 HANDLE_RESERVED = {
     "admin", "root", "system", "support", "help", "api", "me", "u", "user",
     "settings", "setting", "login", "register", "logout", "search", "img",
-    "static", "about", "forum", "forums", "thread", "threads", "notice",
+    "static", "about", "thread", "threads", "notice",
     "notifications", "null", "undefined", "official",
 }
 
@@ -777,129 +771,20 @@ def me(user=Depends(optional_user)):
     return {"user": user_json(user)}
 
 
-# ---------------------------------------------------------------- 吧
+# ---------------------------------------------------------------- 发帖
 
 
-def forum_json(row, followed=False):
-    return {
-        "id": row["id"],
-        "name": row["name"],
-        "title": row["title"] or row["name"],
-        "intro": row["intro"] or "",
-        "avatar": row["avatar"] or "",
-        "thread_count": row["thread_count"],
-        "follow_count": row["follow_count"],
-        "followed": bool(followed),
-    }
-
-
-def _followed_ids(c, user):
-    if not user:
-        return set()
-    return {r["forum_id"] for r in
-            c.execute("SELECT forum_id FROM forum_follows WHERE user_id=?", (user["id"],))}
-
-
-@router.get("/forums")
-def forums(q: str = "", page: int = 1, c=Depends(get_conn), user=Depends(optional_user)):
-    page = max(1, page)
-    where, args = "", []
-    if q.strip():
-        where = "WHERE name LIKE ? OR intro LIKE ?"
-        args = ["%%%s%%" % q.strip(), "%%%s%%" % q.strip()]
-    rows = c.execute(
-        "SELECT * FROM forums %s ORDER BY follow_count DESC, thread_count DESC, id "
-        "LIMIT ? OFFSET ?" % where, args + [PER_PAGE, (page - 1) * PER_PAGE]).fetchall()
-    fw = _followed_ids(c, user)
-    return {"items": [forum_json(r, r["id"] in fw) for r in rows], "page": page}
-
-
-@router.get("/forums/mine")
-def my_forums(c=Depends(get_conn), user=Depends(require_user)):
-    rows = c.execute(
-        "SELECT f.* FROM forums f JOIN forum_follows ff ON ff.forum_id = f.id "
-        "WHERE ff.user_id=? ORDER BY ff.created_at DESC", (user["id"],)).fetchall()
-    return {"items": [forum_json(r, True) for r in rows]}
-
-
-def _forum(c, name):
-    row = c.execute("SELECT * FROM forums WHERE name=?", (name,)).fetchone()
-    if not row:
-        raise HTTPException(404, "吧不存在")
-    return row
-
-
-@router.get("/f/{name}")
-def forum_detail(name: str, sort: str = "last", page: int = 1,
-                 c=Depends(get_conn), user=Depends(optional_user)):
-    f = _forum(c, name)
-    page = max(1, page)
-    order = {
-        "last": "t.updated_at DESC",
-        "new": "t.created_at DESC",
-        "hot": "t.reply_count DESC",
-    }.get(sort, "t.updated_at DESC")
-    rows = c.execute(
-        "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
-        "FROM threads t JOIN users u ON u.id = t.user_id "
-        "WHERE t.forum_id=? ORDER BY t.is_top DESC, "
-        "(CASE WHEN t.is_top=1 THEN t.created_at ELSE 0 END) ASC, " + order + " LIMIT ? OFFSET ?",
-        (f["id"], PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
-    return {
-        "forum": forum_json(f, f["id"] in _followed_ids(c, user)),
-        "items": [{
-            "id": r["id"],
-            "title": r["title"],
-            "excerpt": _excerpt(r["body"] if "body" in r.keys() else ""),
-            "author": r["author_nick"] or r["author"],
-            "handle": r["author_handle"] or "",
-            "reply_count": r["reply_count"],
-            "view_count": r["view_count"],
-            "is_good": bool(r["is_good"]),
-            **_imgs_payload(r["images"] if "images" in r.keys() else None),
-            "can_delete": _may_delete(user, r["user_id"]),
-            "created_at": r["created_at"],
-            "updated_at": r["updated_at"],
-            "edited_at": r["edited_at"] or 0,
-        } for r in rows],
-        "page": page,
-    }
-
-
-@router.post("/f/{name}/follow")
-def follow(name: str, c=Depends(get_conn), user=Depends(require_user)):
-    f = _forum(c, name)
-    now = int(time.time())
-    hit = c.execute("SELECT 1 FROM forum_follows WHERE user_id=? AND forum_id=?",
-                    (user["id"], f["id"])).fetchone()
-    if hit:
-        c.execute("DELETE FROM forum_follows WHERE user_id=? AND forum_id=?",
-                  (user["id"], f["id"]))
-        c.execute("UPDATE forums SET follow_count=MAX(0, follow_count-1) WHERE id=?", (f["id"],))
-        on = False
-    else:
-        c.execute("INSERT INTO forum_follows(user_id, forum_id, created_at) VALUES(?,?,?)",
-                  (user["id"], f["id"], now))
-        c.execute("UPDATE forums SET follow_count=follow_count+1 WHERE id=?", (f["id"],))
-        on = True
-    c.commit()
-    return {"followed": on}
-
-
-@router.post("/f/{name}/threads")
-def create_thread(name: str, p: NewThread, c=Depends(get_conn), user=Depends(require_user)):
-    f = _forum(c, name)
+@router.post("/threads")
+def create_thread(p: NewThread, c=Depends(get_conn), user=Depends(require_user)):
     title, body = p.title.strip()[:TITLE_MAX], p.body.strip()[:BODY_MAX]
     if not title or (not body and not p.images):
         raise HTTPException(400, "标题要填，正文或图片至少一样")
     now = int(time.time())
     cur = c.execute(
-        "INSERT INTO threads(title, body, user_id, created_at, updated_at, forum_id, reply_count, images) "
-        "VALUES(?,?,?,?,?,?,0,?)",
-        (title, body, user["id"], now, now, f["id"], _save_imgs(p.images)))
+        "INSERT INTO threads(title, body, user_id, created_at, updated_at, reply_count, images) "
+        "VALUES(?,?,?,?,?,0,?)",
+        (title, body, user["id"], now, now, _save_imgs(p.images)))
     tid = cur.lastrowid
-    c.execute("UPDATE forums SET thread_count=thread_count+1 WHERE id=?", (f["id"],))
     _notify_mentions(c, body, user["id"], tid, None, now)
     _refresh_level(c, user["id"])
     c.commit()
@@ -981,9 +866,8 @@ def feed(page: int = 1, sort: str = "created", c=Depends(get_conn), user=Depends
     order = "t.created_at DESC" if sort == "created" else "t.updated_at DESC"
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.is_top, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, f.name AS forum_name, "
-        "f.title AS forum_title "
-        "FROM threads t JOIN users u ON u.id=t.user_id LEFT JOIN forums f ON f.id=t.forum_id "
+        "t.is_good, t.is_top, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "FROM threads t JOIN users u ON u.id=t.user_id "
         "ORDER BY t.is_top DESC, "
         "(CASE WHEN t.is_top=1 THEN t.created_at ELSE 0 END) ASC, " + order + " LIMIT ? OFFSET ?",
         (PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
@@ -993,8 +877,6 @@ def feed(page: int = 1, sort: str = "created", c=Depends(get_conn), user=Depends
         "excerpt": _excerpt(r["body"] if "body" in r.keys() else ""),
         "author": r["author_nick"] or r["author"],
         "handle": r["author_handle"] or "",
-        "forum": r["forum_name"] or "",
-        "forum_title": r["forum_title"] or "",
         "reply_count": r["reply_count"],
         "view_count": r["view_count"],
         "is_good": bool(r["is_good"]),
@@ -1029,9 +911,9 @@ def _reply_json(row):
 def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depends(get_conn), user=Depends(optional_user)):
     t = c.execute(
         "SELECT t.*, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, u.signature, u.level, "
-        "u.name AS author_name, u.avatar AS author_avatar, "
-        "f.name AS forum_name, f.title AS forum_title FROM threads t JOIN users u ON u.id=t.user_id "
-        "LEFT JOIN forums f ON f.id=t.forum_id WHERE t.id=?", (tid,)).fetchone()
+        "u.name AS author_name, u.avatar AS author_avatar "
+        "FROM threads t JOIN users u ON u.id=t.user_id "
+        " WHERE t.id=?", (tid,)).fetchone()
     if not t:
         raise HTTPException(404, "帖子不存在")
     c.execute("UPDATE threads SET view_count=view_count+1 WHERE id=?", (tid,))
@@ -1164,8 +1046,6 @@ def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depe
         "thread": {
             "id": t["id"],
             "title": t["title"],
-            "forum": t["forum_name"] or "",
-            "forum_title": (t["forum_title"] if "forum_title" in t.keys() else "") or "",
             "author": t["author_nick"] or t["author"],
             "handle": t["author_handle"] or "",
             "author_name": t["author_name"] or "",
@@ -1285,7 +1165,7 @@ def edit_reply(cid: int, p: PatchReply, c=Depends(get_conn), user=Depends(requir
 
 @router.delete("/t/{tid}")
 def delete_thread(tid: int, c=Depends(get_conn), user=Depends(require_user)):
-    t = c.execute("SELECT id, user_id, forum_id, title FROM threads WHERE id=?",
+    t = c.execute("SELECT id, user_id, title FROM threads WHERE id=?",
                   (tid,)).fetchone()
     if not t:
         raise HTTPException(404, "帖子不存在")
@@ -1304,9 +1184,6 @@ def delete_thread(tid: int, c=Depends(get_conn), user=Depends(require_user)):
     c.execute("DELETE FROM history WHERE thread_id=?", (tid,))
     c.execute("DELETE FROM replies WHERE thread_id=?", (tid,))
     c.execute("DELETE FROM threads WHERE id=?", (tid,))
-    if t["forum_id"]:
-        c.execute("UPDATE forums SET thread_count=MAX(thread_count-1, 0) WHERE id=?",
-                  (t["forum_id"],))
     if victim != user["id"]:
         # 帖子已经没了，thread_id 留空，点通知不会跳去 404
         _notify(c, victim, user["id"], "del", None, None, title,
@@ -1493,8 +1370,6 @@ def _brief(r, user=None):
         "excerpt": _excerpt(r["body"] if "body" in r.keys() else ""),
         "author": r["author_nick"] or r["author"],
         "handle": r["author_handle"] or "",
-        "forum": r["forum_name"] or "",
-        "forum_title": r["forum_title"] or "",
         "reply_count": r["reply_count"],
         "view_count": r["view_count"],
         "is_good": bool(r["is_good"]),
@@ -1519,9 +1394,8 @@ def search(q: str = "", page: int = 1, c=Depends(get_conn), user=Depends(optiona
         (like, like)).fetchone()["n"]
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, "
-        "f.name AS forum_name, f.title AS forum_title "
-        "FROM threads t JOIN users u ON u.id=t.user_id LEFT JOIN forums f ON f.id=t.forum_id "
+        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "FROM threads t JOIN users u ON u.id=t.user_id "
         "WHERE " + where + " ORDER BY t.updated_at DESC LIMIT ? OFFSET ?",
         (like, like, PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
     return {"items": [_brief(r, user) for r in rows], "page": page, "total": total}
@@ -1842,10 +1716,9 @@ def favorites(page: int = 1, c=Depends(get_conn), user=Depends(require_user)):
     page = max(1, page)
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, "
-        "f.name AS forum_name, f.title AS forum_title "
+        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
         "FROM favorites fa JOIN threads t ON t.id=fa.thread_id "
-        "JOIN users u ON u.id=t.user_id LEFT JOIN forums f ON f.id=t.forum_id "
+        "JOIN users u ON u.id=t.user_id "
         "WHERE fa.user_id=? ORDER BY fa.created_at DESC LIMIT ? OFFSET ?",
         (user["id"], PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
     return {"items": [_brief(r, user) for r in rows], "page": page}
@@ -1856,10 +1729,9 @@ def history(page: int = 1, c=Depends(get_conn), user=Depends(require_user)):
     page = max(1, page)
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, "
-        "f.name AS forum_name, f.title AS forum_title "
+        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
         "FROM history h JOIN threads t ON t.id=h.thread_id "
-        "JOIN users u ON u.id=t.user_id LEFT JOIN forums f ON f.id=t.forum_id "
+        "JOIN users u ON u.id=t.user_id "
         "WHERE h.user_id=? ORDER BY h.viewed_at DESC LIMIT ? OFFSET ?",
         (user["id"], PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
     return {"items": [_brief(r, user) for r in rows], "page": page}
@@ -1895,9 +1767,8 @@ def user_page(name: str, page: int = 1, c=Depends(get_conn), user=Depends(option
         (user["id"], u["id"])).fetchone())
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, "
-        "f.name AS forum_name, f.title AS forum_title "
-        "FROM threads t JOIN users u ON u.id=t.user_id LEFT JOIN forums f ON f.id=t.forum_id "
+        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "FROM threads t JOIN users u ON u.id=t.user_id "
         "WHERE t.user_id=? ORDER BY t.updated_at DESC LIMIT ? OFFSET ?",
         (u["id"], PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
     return {"user": info, "items": [_brief(r, user) for r in rows], "page": page}
@@ -1998,19 +1869,8 @@ def update_me(p: ProfilePatch, c=Depends(get_conn), user=Depends(require_user)):
 
 
 def seed():
-    """空库时塞几个吧，免得 App 打开是白板。"""
+    """空库时只建管理员。站点本身就是唯一的一层，没有板块可塞。"""
     ensure_admin()
-    c = db.conn()
-    try:
-        if c.execute("SELECT COUNT(*) AS n FROM forums").fetchone()["n"]:
-            return
-        now = int(time.time())
-        for name, title, intro in DEFAULT_FORUMS:
-            c.execute("INSERT OR IGNORE INTO forums(name, title, intro, created_at) "
-                      "VALUES(?,?,?,?)", (name, title, intro, now))
-        c.commit()
-    finally:
-        c.close()
 
 @router.get("/about")
 def about(c=Depends(get_conn)):

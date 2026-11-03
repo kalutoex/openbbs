@@ -32,7 +32,7 @@ class _SetupPageState extends State<SetupPage> {
     });
     await AppState.instance.setBase(v);
     try {
-      await Api.get('/forums');
+      await Api.get('/feed');
       if (!mounted) return;
       Navigator.of(context)
           .pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));

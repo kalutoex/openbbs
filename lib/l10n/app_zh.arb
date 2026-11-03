@@ -44,7 +44,6 @@
   "language": "语言",
   "languageSystem": "跟随系统",
   "home": "首页",
-  "forums": "板块",
   "notice": "通知",
   "me": "我的",
   "newThread": "发帖",
@@ -589,7 +588,6 @@
   "discardPost": "扔掉这篇",
   "keepEditing": "再改改",
   "composeTitle": "发新帖",
-  "forumSuffix": "吧",
   "composeHint": "说点什么…（@ 找人）",
   "imageCount": "图片 {v1}/{v2}",
   "@imageCount": {
@@ -933,7 +931,6 @@
     }
   },
   "noImagesYet": "还没有图",
-  "searchForumsHint": "搜吧",
   "noSearchResult": "没搜到「{v1}」",
   "@noSearchResult": {
     "placeholders": {
@@ -950,38 +947,8 @@
       }
     }
   },
-  "myFollowedForums": "我关注的 {v1}",
-  "@myFollowedForums": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      }
-    }
-  },
-  "allForums": "全部 {v1}",
-  "@allForums": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      }
-    }
-  },
-  "noForums": "还没建板块",
-  "loginToSeeFollowed": "登录后能看到关注过的吧",
   "goLogin": "去登录",
-  "noFollowedForums": "还没关注吧，进一个点关注",
   "noIntro": "还没有简介",
-  "forumStats": "{v1} 帖 · {v2} 关注",
-  "@forumStats": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      },
-      "v2": {
-        "type": "String"
-      }
-    }
-  },
   "nRepliedPost": "回复了你的帖",
   "nRepliedYou": "回复了你",
   "nLiked": "赞了你",
@@ -1146,9 +1113,8 @@
   "featured": "精华",
   "multiImage": "多图片",
   "comments": "评论",
-  "loginBenefits": "登录后可以发帖、回复、关注吧",
+  "loginBenefits": "登录后可以发帖、回复",
   "hot": "热门",
-  "forumEmpty": "这个吧还没有帖",
   "permIntro": "联网权限安装时已经给了，这里只剩通知和相册需要你点头。",
   "network": "联网",
   "networkGranted": "安装时自动授予，不用管",
@@ -1156,7 +1122,6 @@
   "downloadImage": "下载这张图",
   "backToTop": "回到顶部",
   "offlineCacheFeed": "连不上服务器，这是上次的缓存",
-  "chooseForum": "发到哪个板块",
   "fillAddress": "填一下地址",
   "fillServerAddress": "填一下服务器地址",
   "connect": "连上去",

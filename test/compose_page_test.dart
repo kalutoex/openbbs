@@ -10,7 +10,7 @@ Future<void> _pumpPage(WidgetTester tester, Size size) async {
   SharedPreferences.setMockInitialValues({});
   await tester.pumpWidget(
     const MaterialApp(
-      home: ComposePage(forumName: 'test', forumTitle: '这是一个名字比较长的测试吧'),
+      home: ComposePage(),
     ),
   );
   await tester.pumpAndSettle();

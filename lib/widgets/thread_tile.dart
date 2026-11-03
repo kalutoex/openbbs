@@ -74,8 +74,6 @@ class ThreadTile extends StatelessWidget {
     final good = item['is_good'] == true;
     final ts = (item['updated_at'] ?? item['created_at'] ?? 0) as int;
 
-    final label = ((item['forum_title'] ?? item['forum'] ?? '') as String)
-        .trim();
     final imgs = ((item['images'] as List?) ?? const []).cast<String>();
     final coverSizes = (item['img_sizes'] as List?) ?? const [];
     final cover = thumbs && imgs.isNotEmpty ? imgs.first : '';
@@ -107,8 +105,6 @@ class ThreadTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                _ForumChip(text: label.isEmpty ? Lc.current.general : label),
-                const SizedBox(width: 8),
                 if (item['is_top'] == true) ...[
                   Text(
                     Lc.current.pinned,
@@ -298,31 +294,6 @@ class ThreadTile extends StatelessWidget {
       maxLines: 4,
       overflow: TextOverflow.ellipsis,
       style: style,
-    );
-  }
-}
-
-class _ForumChip extends StatelessWidget {
-  final String text;
-  const _ForumChip({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(
-        color: cs.secondaryContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: cs.onSecondaryContainer,
-        ),
-      ),
     );
   }
 }

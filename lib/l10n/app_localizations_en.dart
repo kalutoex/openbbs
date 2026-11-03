@@ -142,9 +142,6 @@ class LEn extends L {
   String get home => 'Home';
 
   @override
-  String get forums => 'Forums';
-
-  @override
   String get notice => 'Notifications';
 
   @override
@@ -966,9 +963,6 @@ class LEn extends L {
   String get composeTitle => 'New post';
 
   @override
-  String get forumSuffix => ' ';
-
-  @override
   String get composeHint => 'Say something… (@ to mention)';
 
   @override
@@ -1455,9 +1449,6 @@ class LEn extends L {
   String get noImagesYet => 'No images yet';
 
   @override
-  String get searchForumsHint => 'Search forums';
-
-  @override
   String noSearchResult(String v1) {
     return 'Nothing for “$v1”';
   }
@@ -1468,35 +1459,10 @@ class LEn extends L {
   }
 
   @override
-  String myFollowedForums(String v1) {
-    return 'Following ($v1)';
-  }
-
-  @override
-  String allForums(String v1) {
-    return 'All ($v1)';
-  }
-
-  @override
-  String get noForums => 'No forums yet';
-
-  @override
-  String get loginToSeeFollowed => 'Log in to see the forums you follow';
-
-  @override
   String get goLogin => 'Log in';
 
   @override
-  String get noFollowedForums =>
-      'No forums followed yet — open one and tap follow';
-
-  @override
   String get noIntro => 'No description';
-
-  @override
-  String forumStats(String v1, String v2) {
-    return '$v1 posts · $v2 followers';
-  }
 
   @override
   String get nRepliedPost => 'replied to your post';
@@ -1726,13 +1692,10 @@ class LEn extends L {
   String get comments => 'Comments';
 
   @override
-  String get loginBenefits => 'Log in to post, reply and follow forums';
+  String get loginBenefits => 'Log in to post and reply';
 
   @override
   String get hot => 'Hot';
-
-  @override
-  String get forumEmpty => 'Nothing posted in this forum yet';
 
   @override
   String get permIntro =>
@@ -1757,9 +1720,6 @@ class LEn extends L {
   @override
   String get offlineCacheFeed =>
       'Can\'t reach the server — this is the last cached copy';
-
-  @override
-  String get chooseForum => 'Post to which forum?';
 
   @override
   String get fillAddress => 'Enter an address';

@@ -87,7 +87,7 @@ class AppState extends ChangeNotifier {
   /// 每分钟去问一次未读数。
   final ValueNotifier<bool> autoUnread = ValueNotifier(true);
 
-  /// 启动落在哪个 tab：0 时间线 / 1 板块 / 2 通知 / 3 我的。
+  /// 启动落在哪个 tab：0 时间线 / 1 通知 / 2 我的。
   final ValueNotifier<int> startTab = ValueNotifier(0);
 
   /// 界面语言：'' 跟随系统，'zh' / 'en' 强制。
