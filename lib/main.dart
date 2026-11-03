@@ -48,6 +48,13 @@ Future<void> _boot() async {
       debugPrint('route selection failed, using last: ${Api.base} $e');
     }
   }
+  // 站点自述：协议版本、站点名、可用入口。读不到就静默——
+  // 老站没有 /.well-known，这不该挡住任何东西。
+  try {
+    AppState.instance.setSiteMeta(await Api.loadMeta());
+  } catch (e) {
+    debugPrint('failed to read site meta: $e');
+  }
   // 设置读完才有 Api.token。冷启动必须在这里补一次 /me，
   // 否则杀掉后台再进来，token 还在、user 却是空的，看着就是掉登录。
   unawaited(AppState.instance.init());

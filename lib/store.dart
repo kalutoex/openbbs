@@ -5,6 +5,7 @@ import 'accounts.dart';
 import 'api.dart';
 import 'disk_cache.dart';
 import 'img_cache.dart';
+import 'site_meta.dart';
 import 'token_store.dart';
 
 import '../l10n/l10n.dart';
@@ -28,6 +29,14 @@ class AppState extends ChangeNotifier {
 
   Map<String, dynamic>? user;
   bool ready = false;
+
+  /// 站点自述。null = 还没读到或对方不支持，界面别据此报错。
+  SiteMeta? siteMeta;
+
+  void setSiteMeta(SiteMeta? m) {
+    siteMeta = m;
+    notifyListeners();
+  }
 
   /// 服务器选路：自动 / 仅 IPv6 / 仅 IPv4 / 手动。
   ServerMode serverMode = ServerMode.auto;

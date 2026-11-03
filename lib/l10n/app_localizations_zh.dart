@@ -639,6 +639,9 @@ class LZh extends L {
   String get downloadAndInstall => '下载并安装';
 
   @override
+  String get mustUpdate => '这一版太旧了，先更新才能继续用。';
+
+  @override
   String get downloading => '正在下载';
 
   @override
@@ -1711,5 +1714,10 @@ class LZh extends L {
   @override
   String resetPasswordConfirm(String v1) {
     return '把「$v1」的密码换成随机的一串？\n\n原密码会立刻失效。新密码只显示一次，记得发给本人。';
+  }
+
+  @override
+  String siteNeedsUpdate(String v1, String v2) {
+    return '这个站点的接口版本是 $v1，当前客户端只认到 $v2。请更新客户端后再用。';
   }
 }

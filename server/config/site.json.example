@@ -8,7 +8,28 @@
   "site": {
     "name": "OpenBBS",
     "description": "一个能自己部署的轻论坛",
-    "base_url": ""
+    "base_url": "",
+    "_说明_身份": [
+      "base_url 是这座站对外的地址，客户端和主站登记都认它。",
+      "site_id 由主站分配，留空 + 配了 master_url 就自动去拿。",
+      "master_url 留空 = 本机就是主站。"
+    ],
+    "site_id": "",
+    "master_url": "",
+
+    "_说明_自述": "下面几项是 /.well-known/bbs.json 和 /meta 里对外的自述。endpoints 写多个入口（v6/v4），留空则只报 base_url。",
+    "lang": "zh-Hans",
+    "icon": "",
+    "tags": [],
+    "contact": "",
+    "endpoints": [],
+    "open": true
+  },
+
+  "sites": {
+    "_说明": "站点登记接口。allow_private 只在测试时打开，线上开着会被拿来探内网。",
+    "allow_private": false,
+    "register_per_hour_ip": 10
   },
 
   "paths": {
@@ -54,10 +75,15 @@
     "cors_origin_regex": "http://(localhost|127\\.0\\.0\\.1)(:\\d+)?"
   },
 
-  "forums": [
-    { "name": "chitchat", "title": "闲聊", "desc": "什么都聊，别吵架" },
-    { "name": "tech", "title": "技术", "desc": "写代码、折腾机器、修电脑" }
-  ],
+  "update": {
+    "_说明": "客户端更新检查。enabled=false 时 /api/app/latest 返回 404，自动检查静默跳过。",
+    "enabled": true,
+    "check_hours": 24,
+    "remind_hours": 24,
+    "force_below": 0,
+    "title": "发现新版本 {version}",
+    "message": "当前版本 {current}，最新 {version}。\n\n{notes}"
+  },
 
   "admin": {
     "name": "admin",

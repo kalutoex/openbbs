@@ -151,6 +151,26 @@ CREATE TABLE IF NOT EXISTS sync_state (
   key        TEXT PRIMARY KEY,
   value      TEXT NOT NULL DEFAULT ''
 );
+
+-- 站点目录（第 3 段）。主站存全部登记过的站，小站这张表空着不用。
+-- 地址唯一：同一个地址换了 id 要报错，不然清单里会出现两座一样的站。
+CREATE TABLE IF NOT EXISTS sites (
+  site_id     TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  url         TEXT NOT NULL,
+  endpoints   TEXT NOT NULL DEFAULT '[]',
+  api         INTEGER NOT NULL DEFAULT 0,
+  lang        TEXT NOT NULL DEFAULT '',
+  icon        TEXT NOT NULL DEFAULT '',
+  tags        TEXT NOT NULL DEFAULT '[]',
+  open        INTEGER NOT NULL DEFAULT 1,
+  contact     TEXT NOT NULL DEFAULT '',
+  verified    INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sites_url ON sites(url);
 """
 
 # 依赖 ALTER 加出来的列，必须在补列之后才能建。

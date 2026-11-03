@@ -1280,6 +1280,12 @@ abstract class L {
   /// **'下载并安装'**
   String get downloadAndInstall;
 
+  /// No description provided for @mustUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一版太旧了，先更新才能继续用。'**
+  String get mustUpdate;
+
   /// No description provided for @downloading.
   ///
   /// In zh, this message translates to:
@@ -3169,6 +3175,12 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'把「{v1}」的密码换成随机的一串？\n\n原密码会立刻失效。新密码只显示一次，记得发给本人。'**
   String resetPasswordConfirm(String v1);
+
+  /// No description provided for @siteNeedsUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个站点的接口版本是 {v1}，当前客户端只认到 {v2}。请更新客户端后再用。'**
+  String siteNeedsUpdate(String v1, String v2);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../permissions.dart';
+import '../site_meta.dart';
 import '../store.dart';
 import '../widgets/app_drawer.dart';
 import 'compose_page.dart';
@@ -11,6 +12,7 @@ import 'login_page.dart';
 import 'me_tab.dart';
 import 'notice_tab.dart';
 
+import '../l10n/app_localizations.dart';
 import '../l10n/l10n.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -90,6 +92,36 @@ class _HomePageState extends State<HomePage> {
     if (ok == true) AppState.instance.bumpFeed();
   }
 
+  /// 协议版本提醒。用 errorContainer 而不是弹窗：这不该挡住看帖。
+  Widget _tooNewBanner(BuildContext context, int api) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.errorContainer,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: Row(
+            children: [
+              Icon(
+                Icons.system_update_alt_rounded,
+                size: 18,
+                color: cs.onErrorContainer,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  L.of(context).siteNeedsUpdate('$api', '${SiteMeta.supportedApi}'),
+                  style: TextStyle(fontSize: 12.5, color: cs.onErrorContainer),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,19 +131,34 @@ class _HomePageState extends State<HomePage> {
         onTimeline: () => _go(0),
         onMe: () => _go(2),
       ),
-      body: IndexedStack(
-        index: _index,
-        children: [
-          FeedTab(onMenu: _menu),
-          if (_started.contains(1))
-            NoticeTab(onMenu: _menu)
-          else
-            const SizedBox.shrink(),
-          if (_started.contains(2))
-            MeTab(onMenu: _menu)
-          else
-            const SizedBox.shrink(),
-        ],
+      // 站点比客户端新就顶一条提示。只提示，不拦着用——
+      // 拦了人也没别的客户端可选，不如让人自己看到原因。
+      body: AnimatedBuilder(
+        animation: AppState.instance,
+        builder: (context, _) {
+          final meta = AppState.instance.siteMeta;
+          return Column(
+            children: [
+              if (meta != null && meta.tooNew) _tooNewBanner(context, meta.api),
+              Expanded(
+                child: IndexedStack(
+                  index: _index,
+                  children: [
+                    FeedTab(onMenu: _menu),
+                    if (_started.contains(1))
+                      NoticeTab(onMenu: _menu)
+                    else
+                      const SizedBox.shrink(),
+                    if (_started.contains(2))
+                      MeTab(onMenu: _menu)
+                    else
+                      const SizedBox.shrink(),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
       // 加号只在时间线这一页出现，翻到别的 tab 就收起来
       floatingActionButton: _index == 0

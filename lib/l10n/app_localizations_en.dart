@@ -646,6 +646,10 @@ class LEn extends L {
   String get downloadAndInstall => 'Download and install';
 
   @override
+  String get mustUpdate =>
+      'This build is too old. Update first to keep using the app.';
+
+  @override
   String get downloading => 'Downloading';
 
   @override
@@ -1743,5 +1747,10 @@ class LEn extends L {
   @override
   String resetPasswordConfirm(String v1) {
     return 'Set “$v1”\'s password to a random string?\n\nThe old one stops working at once. The new one is shown only once — send it to them.';
+  }
+
+  @override
+  String siteNeedsUpdate(String v1, String v2) {
+    return 'This site speaks API $v1, but this client only supports up to $v2. Update the app to keep using it.';
   }
 }

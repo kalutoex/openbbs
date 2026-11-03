@@ -117,7 +117,7 @@ token 永不过期，就没法靠过期让封号生效，只能在接口层拦�
 |---|---|---|
 | 1 数据模型与命名 | 完成 | 提交 `1d9f1c6` 去掉板块这一层 |
 | 2 身份与鉴权 | 完成（资料拉取待补） | Ed25519 JWT、`/meta` 发公钥、黑名单签名增量；实测封禁 54 秒、解封 48 秒生效；断网仍可验签 |
-| 3 协议与站点清单 | 未开始 | `/meta` 已先落地一部分（api/site_id/name/capabilities/public_key） |
+| 3 协议与站点清单 | 完成 | `api` 升到 2；`/meta` 补全自述；`/.well-known/bbs.json`；主站目录 + 登记 + 查重；小站自动登记；三条校验在前后端各一份 |
 | 4 客户端 | 未开始 | |
 | 5 部署包与运维 | 未开始 | |
 
@@ -139,6 +139,25 @@ token 永不过期，就没法靠过期让封号生效，只能在接口层拦�
   `auth.blacklist_pull_seconds`（默认 60）。
 - **自检脚本**：`server/tool/`（`check_stage2.py` 纯离线、`check_e2e.py` 单站端到端、
   `check_slave.py` 主从同步、`check_unban.py` 解封传播、`check_offline.py` 断网验签）。
+
+### 第 3 段落地细节
+
+- **`api` 版本**：`sites.API_VERSION = 2`。1 = 只有帖子和用户，2 = 站点自述 / 清单 / 登记。
+  `/meta` 的 `capabilities` 现在有 `jwt-eddsa`、`blacklist`、`meta`、`manifest`、`sites`、`register`。
+- **自述形状**：`/meta` 和 `/.well-known/bbs.json` 的 `sites[i]` 是同一套字段：
+  `id / name / description / url / endpoints / api / lang / icon / tags / open / contact / updated`。
+  `/meta` 额外带 `site_id`、`base_url`（老名字，兼容）、`capabilities`、`public_key`、`blacklist`。
+- **配置**：`site.lang / icon / tags / contact / endpoints / open`，`sites.allow_private`、
+  `sites.register_per_hour_ip`。`endpoints` 空就只报 `base_url`。
+- **登记**：`POST /api/sites/register`，只 `url` 必填。主站回访对方 `/meta`（先 `/api/meta` 再 `/meta`），
+  按站名 slug 分配 id，中文名转不出 slug 就用 `site-<hash4>`；幂等、查重、内网默认拒绝。
+- **小站自动登记**：配了 `master_url` + `base_url` 且 `site_id` 为空，后台线程去登记，
+  拿到的 id 存 `sync_state.assigned_site_id`，`/meta` 立刻报出来。失败退避 5s→10s→…→5min。
+- **目录**：`GET /api/sites`，格式同 `bbs.json`，客户端可直接导入；`DELETE /api/sites/{id}` 管理员摘站。
+- **校验**：`server/app/sites.py: validate()` 与 `lib/site_meta.dart: parseManifest()` 同一套三条规则，
+  `server/tool/check_stage3.py`（离线）和 `test/site_meta_test.dart`（客户端）各跑一遍。
+- **客户端**：启动读一次自述，`api` 高于 `SiteMeta.supportedApi`（当前 2）就在首页顶部顶一条
+  「请更新客户端」，只提示不拦用。`Api.loadMeta()` 先 `.well-known` 后 `/api/meta`，两次都失败静默。
 
 ### 第 2 段未做
 

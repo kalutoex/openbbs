@@ -330,6 +330,7 @@
   },
   "later": "以后再说",
   "downloadAndInstall": "下载并安装",
+  "mustUpdate": "这一版太旧了，先更新才能继续用。",
   "downloading": "正在下载",
   "handedToSystem": "已交给系统打开",
   "handedToInstaller": "已交给系统安装，没反应就去设置里允许安装未知应用",
@@ -1132,6 +1133,17 @@
   "@resetPasswordConfirm": {
     "placeholders": {
       "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteNeedsUpdate": "这个站点的接口版本是 {v1}，当前客户端只认到 {v2}。请更新客户端后再用。",
+  "@siteNeedsUpdate": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
         "type": "String"
       }
     }

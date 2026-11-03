@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import 'disk_cache.dart';
 import 'site_config.dart';
+import 'site_meta.dart';
 
 import '../l10n/l10n.dart';
 /// 服务端返回的错误，直接拿去显示。
@@ -88,6 +89,27 @@ class Api {
           lastGood = c;
           return c;
         }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  /// 站点自述。启动时读一次，界面拿它判断协议版本和能力位。
+  ///
+  /// 先读 `/.well-known/bbs.json`（客户端认站的标准入口，一圈就能拿到），
+  /// 读不到再退回 `/api/meta`（老站只有这个）。两次都失败就静默返回 null，
+  /// 不能让「读不到元信息」把启动搞挂。
+  static Future<SiteMeta?> loadMeta({String? at}) async {
+    final b = (at ?? base).trim();
+    if (b.isEmpty) return null;
+    for (final path in const ['/.well-known/bbs.json', '/api/meta']) {
+      try {
+        final r = await http
+            .get(Uri.parse('$b$path'))
+            .timeout(const Duration(seconds: 6));
+        if (r.statusCode != 200) continue;
+        final m = SiteMeta.fromBody(utf8.decode(r.bodyBytes));
+        if (m != null) return m;
       } catch (_) {}
     }
     return null;

@@ -302,6 +302,7 @@
   "installOverwrite": "{v1}, installs over the current version. Login and settings stay.",
   "later": "Later",
   "downloadAndInstall": "Download and install",
+  "mustUpdate": "This build is too old. Update first to keep using the app.",
   "downloading": "Downloading",
   "handedToSystem": "Handed to the system",
   "handedToInstaller": "Handed to the system installer — if nothing happens, allow unknown installs in settings",
@@ -653,6 +654,17 @@
   "@resetPasswordConfirm": {
     "placeholders": {
       "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteNeedsUpdate": "This site speaks API {v1}, but this client only supports up to {v2}. Update the app to keep using it.",
+  "@siteNeedsUpdate": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
         "type": "String"
       }
     }

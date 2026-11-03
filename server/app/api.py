@@ -9,12 +9,12 @@
 楼层号不落库，按 id 顺序算，省一层状态。
 """
 import base64, hashlib, hmac, json, os, random, re, secrets, shutil, struct, time
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from . import auth, blacklist, config, db, mailer
+from . import auth, blacklist, config, db, mailer, sites
 
 router = APIRouter(prefix="/api")
 
@@ -1974,27 +1974,90 @@ def friend_add(req: FriendReq, c=Depends(get_conn), user=Depends(require_user)):
     return {"ok": True, "user": user_json(u)}
 
 
-# ---------------------------------------------------------------- 站点自述 / 黑名单
-# PLAN-5-STEPS 第 2 段：主站签 JWT + 发公钥，小站离线验签；
-# 黑名单由主站签名下发，小站定时拉，接口层拦。
-# token 不过期，所以封号只在这条链路上生效。
+# ---------------------------------------------------------------- 站点自述 / 清单 / 登记
+# PLAN-5-STEPS 第 3 段：每座站都能自述，主站存目录、分配 site_id，
+# 客户端拿到清单就能认站，不用人肉配。第 2 段的公钥、黑名单状态也在这里。
 
-API_VERSION = 1
-CAPABILITIES = ["jwt-eddsa", "blacklist", "meta"]
+API_VERSION = sites.API_VERSION
+CAPABILITIES = ["jwt-eddsa", "blacklist", "meta", "manifest", "sites", "register"]
 
 
 @router.get("/meta")
 def site_meta():
-    """小站靠这个认人：接口版本、site_id、能力位、验签公钥。"""
+    """小站靠这个认人：接口版本、site_id、能力位、验签公钥。
+
+    字段和 /.well-known/bbs.json 的一条对齐，客户端两处用同一套解析。
+    """
+    me = sites.self_site()
     return {
+        **me,
+        # 老客户端和 blacklist 拉取读的是 site_id / base_url，保留这两个名字。
+        "site_id": me["id"],
+        "base_url": me["url"],
+        "schema": sites.SCHEMA,
         "api": API_VERSION,
-        "site_id": config.get("site", "site_id", ""),
-        "name": config.get("site", "name", ""),
-        "base_url": config.get("site", "base_url", ""),
         "capabilities": CAPABILITIES,
         "public_key": auth.public_pem(),
         "blacklist": blacklist.status(),
     }
+
+
+@router.get("/sites")
+def sites_catalog(c=Depends(get_conn)):
+    """主站目录。格式与 /.well-known/bbs.json 相同，客户端可直接导入。"""
+    return sites.catalog(c)
+
+
+class SiteRegisterReq(BaseModel):
+    url: str = ""
+    site_id: str = ""
+    name: str = ""
+    description: str = ""
+    endpoints: List[Any] = []
+    lang: str = ""
+    icon: str = ""
+    tags: List[str] = []
+    open: bool = True
+    contact: str = ""
+
+
+@router.post("/sites/register")
+def sites_register(req: SiteRegisterReq, request: Request, c=Depends(get_conn)):
+    """登记一座小站。地址必填，其余从对方 /meta 补齐。
+
+    幂等：同一个地址重复登记只更新内容，不会分到新 id。
+    """
+    ip = (request.client.host if request.client else "") or ""
+    if not sites.allow_register(ip):
+        raise HTTPException(429, "登记太频繁了，过一会儿再试")
+    try:
+        it, created, need_config = sites.register(c, req.model_dump())
+    except sites.ConflictError as e:
+        raise HTTPException(409, str(e))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    # 对方 /meta 里的 id 跟主站分配的不一样：要么它没填，要么填错了。
+    # 自动登记的小站会把这个 id 写进自己的库，人手改配置也行。
+    return {
+        "ok": True,
+        "created": created,
+        "site_id": it["id"],
+        "site": it,
+        "need_config": need_config,
+        "hint": "把 site_id 写进对方 site.json 的 site.site_id，或在对方配 master_url 让它自己登记",
+    }
+
+
+@router.delete("/sites/{sid}")
+def sites_delete(sid: str, c=Depends(get_conn), user=Depends(require_user)):
+    """从目录里摘掉一座站。只动目录，不碰对方的库。"""
+    _need_admin(user)
+    row = c.execute("SELECT site_id FROM sites WHERE site_id=?", (sid,)).fetchone()
+    if not row:
+        raise HTTPException(404, "没这个站")
+    c.execute("DELETE FROM sites WHERE site_id=?", (sid,))
+    c.commit()
+    return {"ok": True}
 
 
 @router.get("/blacklist")

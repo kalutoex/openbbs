@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import api, auth, blacklist, config, db
+from . import api, auth, blacklist, config, db, sites
 
 ROOT = config.ROOT
 PER_PAGE = config.get("limits", "per_page", 20)
@@ -70,6 +70,9 @@ async def cache_headers(request: Request, call_next):
     path = request.url.path
     if path in _NOCACHE:
         resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+    elif path == "/.well-known/bbs.json":
+        # 站点自述变动不频繁，给客户端 5 分钟缓存，避免每次进站都问。
+        resp.headers["Cache-Control"] = "public, max-age=300"
     elif path in _IMMUTABLE_FILE or path.startswith(_IMMUTABLE_PREFIX):
         resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     elif path.startswith("/img/"):
@@ -88,12 +91,20 @@ app.include_router(api.router)
 
 # 小站才需要后台拉黑名单；主站直接读自己的表，这个函数会自己判断角色。
 blacklist.start_puller()
+# 小站没 site_id 就自己去主站登记，拿到后存库，/meta 立刻能报。
+sites.start_registrar()
 
 
 @app.get("/meta")
 def root_meta():
     """根级别名：小站只需要填个域名，不该得记 /api 前缀。"""
     return api.site_meta()
+
+
+@app.get("/.well-known/bbs.json")
+def well_known():
+    """站点自述。客户端拿到域名先读这里，再决定用不用。"""
+    return sites.well_known()
 
 
 def get_conn():

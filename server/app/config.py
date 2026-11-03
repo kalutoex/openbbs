@@ -24,6 +24,22 @@ DEFAULTS = {
         "site_id": "",
         # 主站地址。空 = 本机即主站，签发自签，黑名单直接读本地表。
         "master_url": "",
+        # 以下是清单里对外自述的字段，站点自己填。
+        "lang": "zh-Hans",
+        "icon": "",
+        "tags": [],
+        "contact": "",
+        # 多个入口（v6 直连、v4 中转…）。空则只报 base_url。
+        "endpoints": [],
+        # 是否开放注册。清单里给客户端看的。
+        "open": True,
+    },
+    "sites": {
+        # 登记接口会回访对方地址。默认不许回访内网，免得被拿来探内网。
+        # 本机测试时打开。
+        "allow_private": False,
+        # 同一 IP 每小时最多登记几次。0 = 不限。
+        "register_per_hour_ip": 10,
     },
     "paths": {
         # 空字符串 = 落在 server/data 下，开箱即用。
@@ -102,6 +118,12 @@ _ENV_MAP = {
     "OPENBBS_SITE_BASE_URL": ("site", "base_url"),
     "OPENBBS_SITE_ID": ("site", "site_id"),
     "OPENBBS_MASTER_URL": ("site", "master_url"),
+    "OPENBBS_SITE_LANG": ("site", "lang"),
+    "OPENBBS_SITE_ICON": ("site", "icon"),
+    "OPENBBS_SITE_TAGS": ("site", "tags"),
+    "OPENBBS_SITE_CONTACT": ("site", "contact"),
+    "OPENBBS_SITES_ALLOW_PRIVATE": ("sites", "allow_private"),
+    "OPENBBS_SITES_REGISTER_PER_HOUR_IP": ("sites", "register_per_hour_ip"),
     "OPENBBS_PUBLIC_KEY": ("auth", "public_key"),
     "OPENBBS_BLACKLIST_PULL_SECONDS": ("auth", "blacklist_pull_seconds"),
     "OPENBBS_DATA_DIR": ("paths", "data"),
