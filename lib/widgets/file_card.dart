@@ -228,10 +228,9 @@ class _FileCardState extends State<_FileCard> {
   }
 }
 
-/// 主页列表里的附件：一行小条，点一下直接下载。
+/// 主页列表里的附件：一张小卡片，点一下直接下载。
 ///
-/// 列表上不能摆整块卡片——一个帖子带三四个附件就把屏幕吃满了。
-/// 多的收成 "+N"，点进去看详情页。
+/// 尺寸固定 220x80，多了会换行——列表上摆太大就把正文挤没了。
 class CompactFiles extends StatefulWidget {
   const CompactFiles({super.key, required this.files});
 
@@ -246,6 +245,8 @@ class _CompactFilesState extends State<CompactFiles> {
   double _progress = 0;
 
   static const _maxShown = 2;
+  static const _w = 220.0;
+  static const _h = 80.0;
 
   Future<void> _open(PostFile f, int i) async {
     if (_busy >= 0) return;
@@ -285,10 +286,12 @@ class _CompactFilesState extends State<CompactFiles> {
         runSpacing: 8,
         children: [
           for (var i = 0; i < shown.length; i++)
-            _chip(context, shown[i], i, scheme, tt),
+            _card(context, shown[i], i, scheme, tt),
           if (rest > 0)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+              width: _w,
+              height: _h,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(10),
@@ -303,49 +306,73 @@ class _CompactFilesState extends State<CompactFiles> {
     );
   }
 
-  Widget _chip(BuildContext context, PostFile f, int i, ColorScheme scheme,
+  Widget _card(BuildContext context, PostFile f, int i, ColorScheme scheme,
       TextTheme tt) {
     final busy = _busy == i;
-    final label = busy && _progress > 0
-        ? '${(_progress * 100).toStringAsFixed(0)}%'
-        : f.sizeText;
-    return Material(
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
+    return SizedBox(
+      width: _w,
+      height: _h,
+      child: Material(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
-        onTap: _busy >= 0 ? null : () => _open(f, i),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              busy
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        value: _progress > 0 ? _progress : null,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: _busy >= 0 ? null : () => _open(f, i),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                busy
+                    ? SizedBox(
+                        width: 30,
+                        height: 30,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          value: _progress > 0 ? _progress : null,
+                        ),
+                      )
+                    : Icon(_iconFor(f.name), size: 30, color: scheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        f.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: tt.bodyMedium?.copyWith(
+                          color: scheme.onSurface,
+                          height: 1.25,
+                        ),
                       ),
-                    )
-                  : Icon(_iconFor(f.name), size: 20, color: scheme.primary),
-              const SizedBox(width: 7),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 180),
-                child: Text(
-                  f.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: tt.bodyMedium?.copyWith(color: scheme.onSurface),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              busy && _progress > 0
+                                  ? '${(_progress * 100).toStringAsFixed(0)}% · ${f.sizeText}'
+                                  : f.sizeText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: tt.bodySmall
+                                  ?.copyWith(color: scheme.outline),
+                            ),
+                          ),
+                          Icon(
+                            Icons.download_outlined,
+                            size: 15,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: tt.labelSmall?.copyWith(color: scheme.outline),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
