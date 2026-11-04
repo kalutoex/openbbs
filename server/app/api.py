@@ -2287,3 +2287,113 @@ def friend_del(uid: int, c=Depends(get_conn), user=Depends(require_user)):
     c.execute("DELETE FROM friends WHERE user_id=?", (uid,))
     c.commit()
     return {"ok": True}
+
+
+# ---------------------------------------------------------------- 云盘
+
+
+def _refs(c, digest):
+    """这个文件被几个帖子/回帖用着。删之前要提示，帖子里显示失效也靠它。"""
+    n = 0
+    for table in ("threads", "replies"):
+        rows = c.execute("SELECT files FROM %s WHERE files LIKE ?" % table, ("%" + digest + "%",))
+        for row in rows:
+            try:
+                items = json.loads(row["files"] or "[]")
+            except Exception:
+                continue
+            if not isinstance(items, list):
+                continue
+            if any(isinstance(it, dict) and digest in str(it.get("url") or "") for it in items):
+                n += 1
+    return n
+
+
+def _cloud_item(c, r):
+    it = {
+        "id": r["id"],
+        "digest": r["digest"],
+        "name": r["name"],
+        "size": r["size"],
+        "url": "/f/" + r["digest"],
+        "source": r["source"],
+        "created_at": r["created_at"],
+        "refs": _refs(c, r["digest"]),
+    }
+    if "deleted_at" in r.keys() and r["deleted_at"]:
+        days = int(config.get("limits", "cloud_trash_days", 7) or 7)
+        left = r["deleted_at"] + days * 86400 - int(time.time())
+        it["expires_in"] = max(0, left)
+    return it
+
+
+@router.get("/cloud/usage")
+def cloud_usage(c=Depends(get_conn), user=Depends(require_user)):
+    """我的额度。quota 为 null 表示不限。"""
+    q = filesvc.quota_of(user)
+    t = c.execute(
+        "SELECT COALESCE(SUM(size),0) AS s, COUNT(*) AS n FROM user_files "
+        "WHERE user_id=? AND deleted_at IS NOT NULL", (user["id"],)).fetchone()
+    return {
+        "quota": q,
+        "used": filesvc.used(c, user["id"]),
+        "count": c.execute(
+            "SELECT COUNT(*) FROM user_files WHERE user_id=? AND deleted_at IS NULL",
+            (user["id"],)).fetchone()[0],
+        "trash": t["s"],
+        "trash_count": t["n"],
+    }
+
+
+@router.get("/cloud/files")
+def cloud_files(q: str = "", sort: str = "time", page: int = 1,
+                per_page: int = 20, c=Depends(get_conn), user=Depends(require_user)):
+    """我的文件，平铺。按时间或大小排，名字可搜。"""
+    page = max(1, int(page or 1))
+    per_page = min(100, max(1, int(per_page or 20)))
+    where = "user_id=? AND deleted_at IS NULL"
+    args = [user["id"]]
+    kw = (q or "").strip()
+    if kw:
+        where += " AND name LIKE ?"
+        args.append("%" + kw + "%")
+    order = "size DESC, id DESC" if sort == "size" else "created_at DESC, id DESC"
+    total = c.execute("SELECT COUNT(*) FROM user_files WHERE " + where, args).fetchone()[0]
+    rows = c.execute(
+        "SELECT * FROM user_files WHERE " + where + " ORDER BY " + order +
+        " LIMIT ? OFFSET ?", args + [per_page, (page - 1) * per_page]).fetchall()
+    return {"items": [_cloud_item(c, r) for r in rows], "page": page, "total": total}
+
+
+@router.delete("/cloud/files/{fid}")
+def cloud_del(fid: int, c=Depends(get_conn), user=Depends(require_user)):
+    """删进回收站，不删物理文件。空间立刻还回来。"""
+    r = c.execute("SELECT * FROM user_files WHERE id=? AND user_id=?",
+                  (fid, user["id"])).fetchone()
+    if not r or r["deleted_at"]:
+        raise HTTPException(404, "文件不在了")
+    c.execute("UPDATE user_files SET deleted_at=? WHERE id=?", (int(time.time()), fid))
+    c.commit()
+    return {"ok": True, "freed": r["size"], "refs": _refs(c, r["digest"])}
+
+
+@router.get("/cloud/trash")
+def cloud_trash(c=Depends(get_conn), user=Depends(require_user)):
+    rows = c.execute(
+        "SELECT * FROM user_files WHERE user_id=? AND deleted_at IS NOT NULL "
+        "ORDER BY deleted_at DESC", (user["id"],)).fetchall()
+    return {"items": [_cloud_item(c, r) for r in rows]}
+
+
+@router.post("/cloud/files/{fid}/restore")
+def cloud_restore(fid: int, c=Depends(get_conn), user=Depends(require_user)):
+    r = c.execute("SELECT * FROM user_files WHERE id=? AND user_id=?",
+                  (fid, user["id"])).fetchone()
+    if not r or not r["deleted_at"]:
+        raise HTTPException(404, "文件不在了")
+    left = filesvc.remaining(c, user)
+    if left is not None and r["size"] > left:
+        raise HTTPException(413, filesvc.full_msg(r["size"] - left))
+    c.execute("UPDATE user_files SET deleted_at=NULL WHERE id=?", (fid,))
+    c.commit()
+    return {"ok": True}
