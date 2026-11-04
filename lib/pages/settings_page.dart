@@ -16,6 +16,7 @@ import '../update.dart';
 import '../update_prompt.dart';
 import 'about_page.dart';
 import 'accounts_page.dart';
+import 'cloud_settings_page.dart';
 import 'permissions_page.dart';
 import 'sites_page.dart';
 import 'theme_color_page.dart';
@@ -24,7 +25,7 @@ import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../widgets/toast.dart';
 
-/// 设置：外观、浏览、内容、账号、关于。
+/// 设置：外观、浏览、云服务、网络、内容、账号、关于。
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
@@ -109,6 +110,17 @@ class SettingsPage extends StatelessWidget {
                   subtitle: Text(Lc.current.autoCheckNoticeHint),
                   value: v,
                   onChanged: (x) => st.setAutoUnread(x),
+                ),
+              ),
+              const Divider(height: 24),
+              _label(context, Lc.current.cloudSection),
+              ListTile(
+                leading: const Icon(Icons.cloud_outlined),
+                title: Text(Lc.current.cloudSettings),
+                subtitle: Text(Lc.current.cloudSettingsHint),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CloudSettingsPage()),
                 ),
               ),
               const Divider(height: 24),

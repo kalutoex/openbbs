@@ -128,7 +128,8 @@ class _CloudPageState extends State<CloudPage> {
   Future<void> _open(CloudFile f) async {
     try {
       final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
-      await openRemoteFile(url, f.name);
+      final saved = await openRemoteFile(url, f.name);
+      if (mounted) _toast(Lc.current.savedTo(saved.display));
     } catch (e) {
       if (mounted) _toast(errorText(context, e));
     }

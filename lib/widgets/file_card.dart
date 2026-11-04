@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../file_open.dart';
 import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 import 'toast.dart';
 
 /// 帖子里的一个附件。服务端给的名字和大小，客户端只负责摆出来。
@@ -151,13 +152,14 @@ class _FileCardState extends State<_FileCard> {
       final url = widget.file.url.startsWith('http')
           ? widget.file.url
           : '${Api.base}${widget.file.url}';
-      await openRemoteFile(
+      final saved = await openRemoteFile(
         url,
         widget.file.name,
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);
         },
       );
+      if (mounted) toast(context, Lc.current.savedTo(saved.display));
     } catch (e) {
       if (mounted) {
         toast(context, errorText(context, e));
@@ -300,13 +302,14 @@ class _CompactFilesState extends State<CompactFiles> {
     });
     try {
       final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
-      await openRemoteFile(
+      final saved = await openRemoteFile(
         url,
         f.name,
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);
         },
       );
+      if (mounted) toast(context, Lc.current.savedTo(saved.display));
     } catch (e) {
       if (mounted) {
         toast(context, errorText(context, e));

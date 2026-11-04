@@ -3817,6 +3817,102 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'全站默认'**
   String get cloudQuotaDefault;
+
+  /// No description provided for @cloudSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'云服务'**
+  String get cloudSection;
+
+  /// No description provided for @cloudSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'云服务设置'**
+  String get cloudSettings;
+
+  /// No description provided for @cloudSettingsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载存哪、下完做什么'**
+  String get cloudSettingsHint;
+
+  /// No description provided for @cloudSettingsIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'云盘和帖子里的文件，下载后会存到下面这个位置。要换个地方就在这里改。'**
+  String get cloudSettingsIntro;
+
+  /// No description provided for @downloadLocation.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载位置'**
+  String get downloadLocation;
+
+  /// No description provided for @downloadLocationDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没改过，用默认的「下载/OpenBBS」'**
+  String get downloadLocationDefault;
+
+  /// No description provided for @downloadLocationReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认位置'**
+  String get downloadLocationReset;
+
+  /// No description provided for @downloadLocationDefaultHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到「下载/OpenBBS」'**
+  String get downloadLocationDefaultHint;
+
+  /// No description provided for @downloadDirReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复默认位置'**
+  String get downloadDirReset;
+
+  /// No description provided for @downloadAutoOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'下完自动打开'**
+  String get downloadAutoOpen;
+
+  /// No description provided for @downloadAutoOpenHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'关掉就只存下来，自己去文件夹里找'**
+  String get downloadAutoOpenHint;
+
+  /// No description provided for @downloadCache.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载缓存'**
+  String get downloadCache;
+
+  /// No description provided for @downloadCacheUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'断掉的下载残留 {v1}'**
+  String downloadCacheUsed(String v1);
+
+  /// No description provided for @downloadCacheEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有残留'**
+  String get downloadCacheEmpty;
+
+  /// No description provided for @cacheCleared.
+  ///
+  /// In zh, this message translates to:
+  /// **'清掉了'**
+  String get cacheCleared;
+
+  /// No description provided for @downloadByBrowser.
+  ///
+  /// In zh, this message translates to:
+  /// **'网页版的下载位置由浏览器决定，在浏览器自己的设置里改。'**
+  String get downloadByBrowser;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

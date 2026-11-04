@@ -2084,4 +2084,54 @@ class LZh extends L {
 
   @override
   String get cloudQuotaDefault => '全站默认';
+
+  @override
+  String get cloudSection => '云服务';
+
+  @override
+  String get cloudSettings => '云服务设置';
+
+  @override
+  String get cloudSettingsHint => '下载存哪、下完做什么';
+
+  @override
+  String get cloudSettingsIntro => '云盘和帖子里的文件，下载后会存到下面这个位置。要换个地方就在这里改。';
+
+  @override
+  String get downloadLocation => '下载位置';
+
+  @override
+  String get downloadLocationDefault => '还没改过，用默认的「下载/OpenBBS」';
+
+  @override
+  String get downloadLocationReset => '恢复默认位置';
+
+  @override
+  String get downloadLocationDefaultHint => '回到「下载/OpenBBS」';
+
+  @override
+  String get downloadDirReset => '已恢复默认位置';
+
+  @override
+  String get downloadAutoOpen => '下完自动打开';
+
+  @override
+  String get downloadAutoOpenHint => '关掉就只存下来，自己去文件夹里找';
+
+  @override
+  String get downloadCache => '下载缓存';
+
+  @override
+  String downloadCacheUsed(String v1) {
+    return '断掉的下载残留 $v1';
+  }
+
+  @override
+  String get downloadCacheEmpty => '没有残留';
+
+  @override
+  String get cacheCleared => '清掉了';
+
+  @override
+  String get downloadByBrowser => '网页版的下载位置由浏览器决定，在浏览器自己的设置里改。';
 }

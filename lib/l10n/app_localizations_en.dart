@@ -2124,4 +2124,57 @@ class LEn extends L {
 
   @override
   String get cloudQuotaDefault => 'site default';
+
+  @override
+  String get cloudSection => 'Cloud';
+
+  @override
+  String get cloudSettings => 'Cloud settings';
+
+  @override
+  String get cloudSettingsHint => 'Where downloads go, what happens after';
+
+  @override
+  String get cloudSettingsIntro =>
+      'Files from the cloud drive and posts are saved to the location below. Change it here.';
+
+  @override
+  String get downloadLocation => 'Download location';
+
+  @override
+  String get downloadLocationDefault => 'Untouched — using Download/OpenBBS';
+
+  @override
+  String get downloadLocationReset => 'Back to default location';
+
+  @override
+  String get downloadLocationDefaultHint => 'Returns to Download/OpenBBS';
+
+  @override
+  String get downloadDirReset => 'Back to the default location';
+
+  @override
+  String get downloadAutoOpen => 'Open when done';
+
+  @override
+  String get downloadAutoOpenHint =>
+      'Off means it is only saved — open it from your files app';
+
+  @override
+  String get downloadCache => 'Download leftovers';
+
+  @override
+  String downloadCacheUsed(String v1) {
+    return 'Partial downloads, $v1';
+  }
+
+  @override
+  String get downloadCacheEmpty => 'Nothing left over';
+
+  @override
+  String get cacheCleared => 'Cleared';
+
+  @override
+  String get downloadByBrowser =>
+      'On the web build the browser decides where downloads go — change it in the browser settings.';
 }

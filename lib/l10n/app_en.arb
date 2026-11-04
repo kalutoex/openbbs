@@ -833,5 +833,21 @@
   "changeQuota": "Change quota",
   "quotaMbHint": "Quota in MB (empty = site default)",
   "quotaSaved": "Quota updated",
-  "cloudQuotaDefault": "site default"
+  "cloudQuotaDefault": "site default",
+  "cloudSection": "Cloud",
+  "cloudSettings": "Cloud settings",
+  "cloudSettingsHint": "Where downloads go, what happens after",
+  "cloudSettingsIntro": "Files from the cloud drive and posts are saved to the location below. Change it here.",
+  "downloadLocation": "Download location",
+  "downloadLocationDefault": "Untouched — using Download/OpenBBS",
+  "downloadLocationReset": "Back to default location",
+  "downloadLocationDefaultHint": "Returns to Download/OpenBBS",
+  "downloadDirReset": "Back to the default location",
+  "downloadAutoOpen": "Open when done",
+  "downloadAutoOpenHint": "Off means it is only saved — open it from your files app",
+  "downloadCache": "Download leftovers",
+  "downloadCacheUsed": "Partial downloads, {v1}",
+  "downloadCacheEmpty": "Nothing left over",
+  "cacheCleared": "Cleared",
+  "downloadByBrowser": "On the web build the browser decides where downloads go — change it in the browser settings."
 }
