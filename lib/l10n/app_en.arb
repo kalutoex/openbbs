@@ -866,5 +866,45 @@
     }
   },
   "downloadingShort": "Downloading",
-  "trashStillCounting": "These files still use your quota — space returns only after deleting them permanently"
+  "trashStillCounting": "These files still use your quota — space returns only after deleting them permanently",
+  "browseFiles": "Files on this phone",
+  "browseFilesHint": "Browse the phone and upload what you pick",
+  "pickFromSystem": "System picker",
+  "allFilesAccess": "Access all files",
+  "allFilesWhy": "Browsing the whole phone needs this permission. It is only used to read the files you pick.",
+  "allFilesOpen": "Open settings",
+  "allFilesDenied": "No access, cannot browse storage",
+  "allFilesRetry": "Granted, try again",
+  "searchThisFolder": "Search in this folder",
+  "folderEmpty": "This folder is empty",
+  "noAccessFolder": "Cannot open, blocked by the system",
+  "pickedCount": "{v1} selected",
+  "uploadPicked": "Upload {v1}",
+  "uploadingIndexOf": "Uploading {v1}/{v2}: {v3}",
+  "uploadSomeFailed": "{v1} uploaded, {v2} failed",
+  "storageRoot": "Storage",
+  "systemFolderHidden": "System folder (contents hidden)",
+  "@pickedCount": {
+    "placeholders": {
+      "v1": {"type": "String"}
+    }
+  },
+  "@uploadPicked": {
+    "placeholders": {
+      "v1": {"type": "String"}
+    }
+  },
+  "@uploadingIndexOf": {
+    "placeholders": {
+      "v1": {"type": "String"},
+      "v2": {"type": "String"},
+      "v3": {"type": "String"}
+    }
+  },
+  "@uploadSomeFailed": {
+    "placeholders": {
+      "v1": {"type": "String"},
+      "v2": {"type": "String"}
+    }
+  }
 }

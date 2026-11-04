@@ -2157,4 +2157,63 @@ class LZh extends L {
 
   @override
   String get trashStillCounting => '这些文件还占着额度，彻底删除才还空间';
+
+  @override
+  String get browseFiles => '手机文件';
+
+  @override
+  String get browseFilesHint => '翻手机里的文件，选中直接传';
+
+  @override
+  String get pickFromSystem => '系统选择器';
+
+  @override
+  String get allFilesAccess => '访问所有文件';
+
+  @override
+  String get allFilesWhy => '要翻整个手机的存储，得在系统设置里给这个权限。只用来读你选中的文件，别的不动。';
+
+  @override
+  String get allFilesOpen => '去设置里开';
+
+  @override
+  String get allFilesDenied => '没拿到访问权限，翻不了手机存储';
+
+  @override
+  String get allFilesRetry => '我开好了，再试一次';
+
+  @override
+  String get searchThisFolder => '在这个文件夹里找';
+
+  @override
+  String get folderEmpty => '这个文件夹是空的';
+
+  @override
+  String get noAccessFolder => '进不去，系统限制了';
+
+  @override
+  String pickedCount(String v1) {
+    return '已选 $v1';
+  }
+
+  @override
+  String uploadPicked(String v1) {
+    return '上传 $v1 个';
+  }
+
+  @override
+  String uploadingIndexOf(String v1, String v2, String v3) {
+    return '正在传 $v1/$v2：$v3';
+  }
+
+  @override
+  String uploadSomeFailed(String v1, String v2) {
+    return '传完 $v1 个，$v2 个没传上去';
+  }
+
+  @override
+  String get storageRoot => '存储';
+
+  @override
+  String get systemFolderHidden => '系统目录（看不到内容）';
 }

@@ -2202,4 +2202,64 @@ class LEn extends L {
   @override
   String get trashStillCounting =>
       'These files still use your quota — space returns only after deleting them permanently';
+
+  @override
+  String get browseFiles => 'Files on this phone';
+
+  @override
+  String get browseFilesHint => 'Browse the phone and upload what you pick';
+
+  @override
+  String get pickFromSystem => 'System picker';
+
+  @override
+  String get allFilesAccess => 'Access all files';
+
+  @override
+  String get allFilesWhy =>
+      'Browsing the whole phone needs this permission. It is only used to read the files you pick.';
+
+  @override
+  String get allFilesOpen => 'Open settings';
+
+  @override
+  String get allFilesDenied => 'No access, cannot browse storage';
+
+  @override
+  String get allFilesRetry => 'Granted, try again';
+
+  @override
+  String get searchThisFolder => 'Search in this folder';
+
+  @override
+  String get folderEmpty => 'This folder is empty';
+
+  @override
+  String get noAccessFolder => 'Cannot open, blocked by the system';
+
+  @override
+  String pickedCount(String v1) {
+    return '$v1 selected';
+  }
+
+  @override
+  String uploadPicked(String v1) {
+    return 'Upload $v1';
+  }
+
+  @override
+  String uploadingIndexOf(String v1, String v2, String v3) {
+    return 'Uploading $v1/$v2: $v3';
+  }
+
+  @override
+  String uploadSomeFailed(String v1, String v2) {
+    return '$v1 uploaded, $v2 failed';
+  }
+
+  @override
+  String get storageRoot => 'Storage';
+
+  @override
+  String get systemFolderHidden => 'System folder (contents hidden)';
 }

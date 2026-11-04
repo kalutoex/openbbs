@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"/>
+    <!-- 手机文件浏览器：要翻整个存储，安卓 11 起只能在系统设置里给这个权限。
+         只读不写，不删不改用户文件；不上架商店，自己分发，不涉及商店审核。 -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
     <!-- 存图到相册：10 及以下要写权限 -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29"/>

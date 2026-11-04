@@ -1456,5 +1456,49 @@
     }
   },
   "downloadingShort": "下载中",
-  "trashStillCounting": "这些文件还占着额度，彻底删除才还空间"
+  "trashStillCounting": "这些文件还占着额度，彻底删除才还空间",
+  "browseFiles": "手机文件",
+  "browseFilesHint": "翻手机里的文件，选中直接传",
+  "pickFromSystem": "系统选择器",
+  "allFilesAccess": "访问所有文件",
+  "allFilesWhy": "要翻整个手机的存储，得在系统设置里给这个权限。只用来读你选中的文件，别的不动。",
+  "allFilesOpen": "去设置里开",
+  "allFilesDenied": "没拿到访问权限，翻不了手机存储",
+  "allFilesRetry": "我开好了，再试一次",
+  "searchThisFolder": "在这个文件夹里找",
+  "folderEmpty": "这个文件夹是空的",
+  "noAccessFolder": "进不去，系统限制了",
+  "pickedCount": "已选 {v1}",
+  "uploadPicked": "上传 {v1} 个",
+  "uploadingIndexOf": "正在传 {v1}/{v2}：{v3}",
+  "uploadSomeFailed": "传完 {v1} 个，{v2} 个没传上去",
+  "storageRoot": "存储",
+  "systemFolderHidden": "系统目录（看不到内容）",
+  "@pickedCount": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "@uploadPicked": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "@uploadingIndexOf": {
+    "placeholders": {
+      "v1": {"type": "String"},
+      "v2": {"type": "String"},
+      "v3": {"type": "String"}
+    }
+  },
+  "@uploadSomeFailed": {
+    "placeholders": {
+      "v1": {"type": "String"},
+      "v2": {"type": "String"}
+    }
+  }
 }

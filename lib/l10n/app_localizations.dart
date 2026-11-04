@@ -3955,6 +3955,108 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'这些文件还占着额度，彻底删除才还空间'**
   String get trashStillCounting;
+
+  /// No description provided for @browseFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'手机文件'**
+  String get browseFiles;
+
+  /// No description provided for @browseFilesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'翻手机里的文件，选中直接传'**
+  String get browseFilesHint;
+
+  /// No description provided for @pickFromSystem.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统选择器'**
+  String get pickFromSystem;
+
+  /// No description provided for @allFilesAccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'访问所有文件'**
+  String get allFilesAccess;
+
+  /// No description provided for @allFilesWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'要翻整个手机的存储，得在系统设置里给这个权限。只用来读你选中的文件，别的不动。'**
+  String get allFilesWhy;
+
+  /// No description provided for @allFilesOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'去设置里开'**
+  String get allFilesOpen;
+
+  /// No description provided for @allFilesDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'没拿到访问权限，翻不了手机存储'**
+  String get allFilesDenied;
+
+  /// No description provided for @allFilesRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'我开好了，再试一次'**
+  String get allFilesRetry;
+
+  /// No description provided for @searchThisFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'在这个文件夹里找'**
+  String get searchThisFolder;
+
+  /// No description provided for @folderEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个文件夹是空的'**
+  String get folderEmpty;
+
+  /// No description provided for @noAccessFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'进不去，系统限制了'**
+  String get noAccessFolder;
+
+  /// No description provided for @pickedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选 {v1}'**
+  String pickedCount(String v1);
+
+  /// No description provided for @uploadPicked.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传 {v1} 个'**
+  String uploadPicked(String v1);
+
+  /// No description provided for @uploadingIndexOf.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在传 {v1}/{v2}：{v3}'**
+  String uploadingIndexOf(String v1, String v2, String v3);
+
+  /// No description provided for @uploadSomeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'传完 {v1} 个，{v2} 个没传上去'**
+  String uploadSomeFailed(String v1, String v2);
+
+  /// No description provided for @storageRoot.
+  ///
+  /// In zh, this message translates to:
+  /// **'存储'**
+  String get storageRoot;
+
+  /// No description provided for @systemFolderHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统目录（看不到内容）'**
+  String get systemFolderHidden;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

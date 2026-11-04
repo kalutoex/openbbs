@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../cloud.dart';
 import '../downloads.dart';
+import '../file_browser.dart';
 import '../file_open.dart';
 import '../file_pick.dart';
 import '../l10n/error_text.dart';
@@ -225,6 +226,47 @@ class _CloudPageState extends State<CloudPage> {
     );
   }
 
+  /// 上传入口。手机上有内置的文件浏览器，可以翻整个存储；
+  /// 别的地方（网页、桌面）还是系统选择器。
+  Future<void> _uploadEntry() async {
+    if (_uploading) return;
+    if (!fileBrowserSupported) {
+      await _upload();
+      return;
+    }
+    final v = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_outlined),
+              title: Text(Lc.current.browseFiles),
+              subtitle: Text(Lc.current.browseFilesHint),
+              onTap: () => Navigator.pop(ctx, 'phone'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_open_outlined),
+              title: Text(Lc.current.pickFromSystem),
+              onTap: () => Navigator.pop(ctx, 'system'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || v == null) return;
+    if (v == 'phone') {
+      final up = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const FileBrowserPage()),
+      );
+      if (up == true && mounted) _load();
+    } else {
+      await _upload();
+    }
+  }
+
   /// 选一个文件就传。传完刷新列表，额度条跟着变。
   Future<void> _upload() async {
     if (_uploading) return;
@@ -267,7 +309,7 @@ class _CloudPageState extends State<CloudPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _uploading ? null : _upload,
+        onPressed: _uploading ? null : _uploadEntry,
         icon: _uploading
             ? const SizedBox(
                 width: 18,
