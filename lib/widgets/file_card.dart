@@ -281,21 +281,21 @@ class _CompactFilesState extends State<CompactFiles> {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
+        spacing: 8,
+        runSpacing: 8,
         children: [
           for (var i = 0; i < shown.length; i++)
             _chip(context, shown[i], i, scheme, tt),
           if (rest > 0)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '+$rest',
-                style: tt.labelSmall?.copyWith(color: scheme.outline),
+                style: tt.labelLarge?.copyWith(color: scheme.outline),
               ),
             ),
         ],
@@ -311,36 +311,36 @@ class _CompactFilesState extends State<CompactFiles> {
         : f.sizeText;
     return Material(
       color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         onTap: _busy >= 0 ? null : () => _open(f, i),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               busy
                   ? SizedBox(
-                      width: 14,
-                      height: 14,
+                      width: 18,
+                      height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         value: _progress > 0 ? _progress : null,
                       ),
                     )
-                  : Icon(_iconFor(f.name), size: 15, color: scheme.primary),
-              const SizedBox(width: 5),
+                  : Icon(_iconFor(f.name), size: 20, color: scheme.primary),
+              const SizedBox(width: 7),
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 132),
+                constraints: const BoxConstraints(maxWidth: 180),
                 child: Text(
                   f.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: tt.labelMedium?.copyWith(color: scheme.onSurface),
+                  style: tt.bodyMedium?.copyWith(color: scheme.onSurface),
                 ),
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 6),
               Text(
                 label,
                 style: tt.labelSmall?.copyWith(color: scheme.outline),
