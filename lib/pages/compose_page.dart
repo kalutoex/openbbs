@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:image_picker/image_picker.dart' hide PickedFile;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
@@ -20,6 +20,7 @@ import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../widgets/toast.dart';
 import '../cloud.dart';
+import '../file_browser.dart';
 import 'cloud_pick_page.dart';
 
 /// 发主题帖。
@@ -235,45 +236,68 @@ class _ComposePageState extends State<ComposePage> {
       _snack(Lc.current.attachMax('5'));
       return;
     }
+    final left = 5 - _files.length;
     final src = await _fileSource();
     if (!mounted || src == null) return;
     if (src == 'cloud') {
-      await _addFromCloud(5 - _files.length);
+      await _addFromCloud(left);
+      return;
+    }
+    await _pickFromDevice(left);
+  }
+
+  /// 设备上的文件。手机用自己写的浏览器翻，桌面和网页退到系统选择器
+  /// ——那边没有「应用能随便读盘」这回事。
+  Future<void> _pickFromDevice(int left) async {
+    if (fileBrowserSupported) {
+      final picked = await Navigator.of(context).push<List<PickedFile>>(
+        MaterialPageRoute(
+          builder: (_) => const FileBrowserPage(pickOnly: true),
+        ),
+      );
+      if (!mounted || picked == null || picked.isEmpty) return;
+      await _uploadPicked(picked.take(left).toList());
       return;
     }
     final f = await pickFile();
-    if (f == null) return;
-    if (f.size > 500 * 1024 * 1024) {
-      _snack(Lc.current.attachTooBig('500MB'));
-      return;
-    }
-    setState(() {
-      _busy = true;
-      _status = Lc.current.attachUploading(f.name);
-      _progress = 0;
-    });
-    try {
-      final r = await Api.uploadFile(f);
-      if (!mounted) return;
-      setState(
-        () => _files.add(
-          PostFile(
-            url: '${r['url']}',
-            name: '${r['name']}',
-            size: r['size'] is int ? r['size'] as int : f.size,
+    if (f == null || !mounted) return;
+    await _uploadPicked([f]);
+  }
+
+  Future<void> _uploadPicked(List<PickedFile> list) async {
+    for (final f in list) {
+      if (f.size > 500 * 1024 * 1024) {
+        _snack(Lc.current.attachTooBig('500MB'));
+        continue;
+      }
+      setState(() {
+        _busy = true;
+        _status = Lc.current.attachUploading(f.name);
+        _progress = 0;
+      });
+      try {
+        final r = await Api.uploadFile(f);
+        if (!mounted) return;
+        setState(
+          () => _files.add(
+            PostFile(
+              url: '${r['url']}',
+              name: '${r['name']}',
+              size: r['size'] is int ? r['size'] as int : f.size,
+            ),
           ),
-        ),
-      );
-    } catch (e) {
-      _fail(e);
-      return;
-    } finally {
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _status = '';
-          _progress = 0;
-        });
+        );
+      } catch (e) {
+        _fail(e);
+        return;
+      } finally {
+        if (mounted) {
+          setState(() {
+            _busy = false;
+            _status = '';
+            _progress = 0;
+          });
+        }
       }
     }
   }

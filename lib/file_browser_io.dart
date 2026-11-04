@@ -25,7 +25,11 @@ bool get fileBrowserSupported => Platform.isAndroid;
 const _blockedNames = {'Android'};
 
 class FileBrowserPage extends StatefulWidget {
-  const FileBrowserPage({super.key});
+  const FileBrowserPage({super.key, this.pickOnly = false});
+
+  /// 只挑不传：选完把文件交回调用方，由它自己决定传不传、传到哪里。
+  /// 云盘那边是 false——点一下就直接传上去了。
+  final bool pickOnly;
 
   @override
   State<FileBrowserPage> createState() => _FileBrowserPageState();
@@ -242,8 +246,12 @@ class _FileBrowserPageState extends State<FileBrowserPage>
       return;
     }
     if (!_selecting && !force) {
-      // 单击一个文件：直接传这一个，不必先进多选
-      _uploadAll([r.path]);
+      // 单击一个文件：直接用它，不必先进多选
+      if (widget.pickOnly) {
+        _handOff([r.path]);
+      } else {
+        _uploadAll([r.path]);
+      }
       return;
     }
     setState(() {
@@ -258,6 +266,28 @@ class _FileBrowserPageState extends State<FileBrowserPage>
       _picked.clear();
       _selecting = false;
     });
+  }
+
+  /// 只挑不传：把路径量一下大小交回调用方。
+  Future<void> _handOff(List<String> paths) async {
+    if (paths.isEmpty || _uploading) return;
+    setState(() => _uploading = true);
+    final out = <PickedFile>[];
+    for (final p in paths) {
+      try {
+        final st = await File(p).stat();
+        out.add(PickedFile(name: _base(p), size: st.size, path: p));
+      } catch (_) {
+        // 读不到的就跳过，别让一个坏文件挡住整批
+      }
+    }
+    if (!mounted) return;
+    setState(() => _uploading = false);
+    if (out.isEmpty) {
+      toast(context, Lc.current.uploadSomeFailed('0', '${paths.length}'));
+      return;
+    }
+    Navigator.pop(context, out);
   }
 
   Future<void> _uploadAll(List<String> paths) async {
@@ -336,9 +366,17 @@ class _FileBrowserPageState extends State<FileBrowserPage>
         ),
         floatingActionButton: _selecting && _picked.isNotEmpty && !_uploading
             ? FloatingActionButton.extended(
-                onPressed: () => _uploadAll(_picked.toList()),
-                icon: const Icon(Icons.upload_file),
-                label: Text(Lc.current.uploadPicked('${_picked.length}')),
+                onPressed: () => widget.pickOnly
+                    ? _handOff(_picked.toList())
+                    : _uploadAll(_picked.toList()),
+                icon: Icon(
+                  widget.pickOnly ? Icons.check : Icons.upload_file,
+                ),
+                label: Text(
+                  widget.pickOnly
+                      ? Lc.current.cloudPickDone('${_picked.length}')
+                      : Lc.current.uploadPicked('${_picked.length}'),
+                ),
               )
             : null,
         body: _body(cs),

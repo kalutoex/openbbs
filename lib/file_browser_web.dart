@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 bool get fileBrowserSupported => false;
 
 class FileBrowserPage extends StatelessWidget {
-  const FileBrowserPage({super.key});
+  const FileBrowserPage({super.key, this.pickOnly = false});
+
+  final bool pickOnly;
 
   @override
   Widget build(BuildContext context) => const SizedBox.shrink();
