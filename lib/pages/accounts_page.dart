@@ -6,6 +6,8 @@ import '../widgets/avatar.dart';
 import 'login_page.dart';
 
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 本机登录过的账号列表。点一下就换，不用重新输密码。
 class AccountsPage extends StatelessWidget {
   const AccountsPage({super.key});
@@ -16,14 +18,14 @@ class AccountsPage extends StatelessWidget {
       Navigator.of(context).pop();
       return;
     }
-    final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
     final ok = await st.switchAccount(a);
     if (!context.mounted) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(ok ? Lc.current.switchedTo('${a.nickname}') : Lc.current.accountExpiredRemoved('${a.nickname}')),
-      ),
+    toast(
+      context,
+      ok
+          ? Lc.current.switchedTo('${a.nickname}')
+          : Lc.current.accountExpiredRemoved('${a.nickname}'),
     );
     if (ok) nav.pop();
   }
@@ -57,8 +59,11 @@ class AccountsPage extends StatelessWidget {
         .push<bool>(MaterialPageRoute(builder: (_) => const LoginPage()));
     if (!context.mounted) return;
     if (ok == true && st.accounts.length > before) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(Lc.current.accountAdded('${st.activeAccount?.nickname ?? Lc.current.accounts}'))),
+      toast(
+        context,
+        Lc.current.accountAdded(
+          '${st.activeAccount?.nickname ?? Lc.current.accounts}',
+        ),
       );
     }
   }

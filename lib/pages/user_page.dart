@@ -17,6 +17,8 @@ import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 用户主页：封面 + 资料区 + 帖子列表，结构照着 X 来。
 class UserPage extends StatefulWidget {
   final String name;
@@ -117,13 +119,7 @@ class _UserPageState extends State<UserPage> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        duration: const Duration(milliseconds: 1500),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    toast(context, msg, floating: true);
   }
 
   Future<void> _edit() async {
@@ -599,12 +595,14 @@ class _UserPageState extends State<UserPage> {
     if (info == null) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ChatPage(peer: {
-          'id': info['id'],
-          'name': info['name'],
-          'nickname': info['nickname'],
-          'avatar': info['avatar'],
-        }),
+        builder: (_) => ChatPage(
+          peer: {
+            'id': info['id'],
+            'name': info['name'],
+            'nickname': info['nickname'],
+            'avatar': info['avatar'],
+          },
+        ),
       ),
     );
   }

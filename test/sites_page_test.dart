@@ -99,9 +99,15 @@ void main() {
 
     await tester.longPress(find.text('二号站'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    // 行上直接能看到「测速中…」，不用等结果。
-    expect(find.text(Lc.current.siteSpeedRunning), findsWidgets);
+    // 提示不排队：新的顶掉旧的，跑完留下的就是结果那条。
+    expect(
+      find.text(
+        Lc.current.siteSpeedResult(Lc.current.siteSpeedNone),
+      ),
+      findsWidgets,
+    );
 
     // 测试环境的 HTTP 一律回 400：让请求真跑完，别把 future 留到测试之后。
     await tester.runAsync(

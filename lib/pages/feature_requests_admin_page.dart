@@ -6,6 +6,8 @@ import '../utils.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 管理员看需求单。采纳或者不做，顺手回一句话给提交人。
 class FeatureRequestsAdminPage extends StatefulWidget {
   const FeatureRequestsAdminPage({super.key});
@@ -40,12 +42,12 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
       }
     });
     try {
-      final r = await Api.get('/admin/feature-requests', query: {
-        'page': '$_page',
-        'done': '$_done',
-      });
-      final items =
-          ((r['items'] as List?) ?? const []).cast<Map<String, dynamic>>();
+      final r = await Api.get(
+        '/admin/feature-requests',
+        query: {'page': '$_page', 'done': '$_done'},
+      );
+      final items = ((r['items'] as List?) ?? const [])
+          .cast<Map<String, dynamic>>();
       setState(() {
         if (reset) _items.clear();
         _items.addAll(items);
@@ -65,9 +67,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
 
   Future<void> _handle(Map<String, dynamic> it, int status) async {
     final id = it['id'] as int;
-    final ctrl = TextEditingController(
-      text: (it['note'] ?? '') as String,
-    );
+    final ctrl = TextEditingController(text: (it['note'] ?? '') as String);
     final go = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -128,19 +128,14 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
         _total = _total > 0 ? _total - 1 : 0;
       });
       if (!_done) AppState.instance.setFeatureOpen(_total);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(switch (status) {
-            1 => Lc.current.accepted,
-            2 => Lc.current.markedWontDo,
-            _ => Lc.current.movedBack,
-          }),
-        ),
-      );
+      toast(context, switch (status) {
+        1 => Lc.current.accepted,
+        2 => Lc.current.markedWontDo,
+        _ => Lc.current.movedBack,
+      });
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
+      toast(context, errorText(context, e));
     }
   }
 
@@ -149,9 +144,13 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_done
-            ? Lc.current.requestsDone
-            : (_total > 0 ? Lc.current.requestsCount('${_total}') : Lc.current.requests)),
+        title: Text(
+          _done
+              ? Lc.current.requestsDone
+              : (_total > 0
+                    ? Lc.current.requestsCount('${_total}')
+                    : Lc.current.requests),
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -196,7 +195,11 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
       );
     }
     if (_items.isEmpty) {
-      return Center(child: Text(_done ? Lc.current.nothingHandled : Lc.current.noPendingRequests));
+      return Center(
+        child: Text(
+          _done ? Lc.current.nothingHandled : Lc.current.noPendingRequests,
+        ),
+      );
     }
     return ListView.separated(
       itemCount: _items.length + 1,
@@ -234,7 +237,9 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
                       padding: const EdgeInsets.only(right: 8),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: (status == 1 ? cs.primary : cs.error)
@@ -299,7 +304,8 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
                     : [
                         TextButton(
                           style: TextButton.styleFrom(
-                              foregroundColor: cs.error),
+                            foregroundColor: cs.error,
+                          ),
                           onPressed: () => _handle(it, 2),
                           child: Text(Lc.current.wontDo),
                         ),

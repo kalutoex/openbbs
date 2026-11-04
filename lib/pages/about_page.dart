@@ -5,6 +5,8 @@ import '../site_config.dart';
 import 'friends_page.dart';
 
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 关于：只放开源信息和链接。
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -33,9 +35,8 @@ class AboutPage extends StatelessWidget {
             title: Text(Lc.current.thanksFriends),
             subtitle: Text(Lc.current.thanksFriendsSub),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const FriendsPage()),
-            ),
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const FriendsPage())),
           ),
           ListTile(
             leading: const Icon(Icons.description_outlined),
@@ -43,14 +44,17 @@ class AboutPage extends StatelessWidget {
             subtitle: Text(Lc.current.thirdPartyLicensesSub),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => showLicensePage(
-                context: context, applicationName: SiteConfig.brand),
+              context: context,
+              applicationName: SiteConfig.brand,
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.balance),
             title: Text(Lc.current.gplLicense),
             subtitle: Text(Lc.current.gplLicenseSub),
             trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () => _open(context, 'https://www.gnu.org/licenses/gpl-3.0.txt'),
+            onTap: () =>
+                _open(context, 'https://www.gnu.org/licenses/gpl-3.0.txt'),
           ),
 
           _label(context, Lc.current.links),
@@ -98,9 +102,7 @@ class AboutPage extends StatelessWidget {
       ok = false;
     }
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(Lc.current.cantOpenLink)),
-      );
+      toast(context, Lc.current.cantOpenLink);
     }
   }
 }

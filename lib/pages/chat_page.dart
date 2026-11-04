@@ -11,6 +11,7 @@ import '../widgets/avatar.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import 'user_page.dart';
+import '../widgets/toast.dart';
 
 /// 一对一私信。进页面拉最新 30 条，往上翻更早，15 秒轮询一次。
 ///
@@ -105,8 +106,7 @@ class _ChatPageState extends State<ChatPage> {
 
   bool get _atBottom {
     if (!_scroll.hasClients) return true;
-    return _scroll.position.pixels >
-        _scroll.position.maxScrollExtent - 80;
+    return _scroll.position.pixels > _scroll.position.maxScrollExtent - 80;
   }
 
   Future<void> _loadEarlier() async {
@@ -138,8 +138,7 @@ class _ChatPageState extends State<ChatPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(Lc.current.readImageFailed('$e'))));
+        toast(context, Lc.current.readImageFailed('$e'));
       }
     } finally {
       if (mounted) setState(() => _compressing = false);
@@ -156,10 +155,7 @@ class _ChatPageState extends State<ChatPage> {
       for (final b in _pending) {
         urls.add(await Api.uploadImage(b));
       }
-      await Api.post('/dm/$_peerId', {
-        'body': text,
-        'images': urls,
-      });
+      await Api.post('/dm/$_peerId', {'body': text, 'images': urls});
       if (!mounted) return;
       _input.clear();
       setState(() {
@@ -171,13 +167,11 @@ class _ChatPageState extends State<ChatPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
+      toast(context, errorText(context, e));
     } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('$e')));
+      toast(context, '$e');
     }
   }
 
@@ -189,16 +183,22 @@ class _ChatPageState extends State<ChatPage> {
       appBar: AppBar(
         titleSpacing: 4,
         title: InkWell(
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => UserPage(name: (widget.peer['name'] ?? '') as String),
-          )),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  UserPage(name: (widget.peer['name'] ?? '') as String),
+            ),
+          ),
           child: Row(
             children: [
               CircleAvatarImg(url: avatar, name: _peerName, radius: 16),
               const SizedBox(width: 10),
               Flexible(
-                child: Text(_peerName,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text(
+                  _peerName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -231,15 +231,17 @@ class _ChatPageState extends State<ChatPage> {
                             right: 0,
                             top: 0,
                             child: GestureDetector(
-                              onTap: () =>
-                                  setState(() => _pending.removeAt(i)),
+                              onTap: () => setState(() => _pending.removeAt(i)),
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.black54,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.close,
-                                    size: 16, color: Colors.white),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
@@ -254,7 +256,8 @@ class _ChatPageState extends State<ChatPage> {
             child: Container(
               decoration: BoxDecoration(
                 border: Border(
-                    top: BorderSide(color: cs.outlineVariant, width: 0.5)),
+                  top: BorderSide(color: cs.outlineVariant, width: 0.5),
+                ),
               ),
               padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
               child: Row(
@@ -285,7 +288,8 @@ class _ChatPageState extends State<ChatPage> {
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2))
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Icon(Icons.send_rounded),
                     tooltip: Lc.current.send,
                   ),
@@ -350,8 +354,9 @@ class _ChatPageState extends State<ChatPage> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
-              crossAxisAlignment:
-                  mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              crossAxisAlignment: mine
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
               children: [
                 if (imgs.isNotEmpty)
                   Wrap(

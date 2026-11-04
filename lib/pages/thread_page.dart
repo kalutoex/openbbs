@@ -21,6 +21,8 @@ import '../widgets/user_link.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 帖子详情：楼层 + 楼中楼。
 class ThreadPage extends StatefulWidget {
   final int threadId;
@@ -203,7 +205,11 @@ class _ThreadPageState extends State<ThreadPage> {
     final list = _shownList();
     final idx = list.indexWhere((p) => (p['floor'] ?? 0) == n);
     if (idx < 0) {
-      _toast(_page <= _pages ? Lc.current.notReachedFloor('${n}') : Lc.current.noSuchFloor('${n}'));
+      _toast(
+        _page <= _pages
+            ? Lc.current.notReachedFloor('${n}')
+            : Lc.current.noSuchFloor('${n}'),
+      );
       return;
     }
     if (!_itemScroll.isAttached) return;
@@ -360,7 +366,7 @@ class _ThreadPageState extends State<ThreadPage> {
   void _toast(Object s) {
     if (!mounted) return;
     final t = s is String ? s : errorText(context, s);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
+    toast(context, t);
   }
 
   void _beginReply(Map<String, dynamic> post) {
@@ -382,7 +388,11 @@ class _ThreadPageState extends State<ThreadPage> {
       setState(() {
         _thread = {...t, if (kind == 'top') 'is_top': on else 'is_good': on};
       });
-      _toast(kind == 'top' ? (on ? Lc.current.pinnedToast : Lc.current.unpinnedToast) : (on ? Lc.current.featuredToast : Lc.current.unfeaturedToast));
+      _toast(
+        kind == 'top'
+            ? (on ? Lc.current.pinnedToast : Lc.current.unpinnedToast)
+            : (on ? Lc.current.featuredToast : Lc.current.unfeaturedToast),
+      );
     } on ApiException catch (e) {
       _toast(e);
     }
@@ -406,7 +416,13 @@ class _ThreadPageState extends State<ThreadPage> {
                 ),
               ),
             ),
-            for (final r in [Lc.current.reportSpam, Lc.current.reportAbuse, Lc.current.reportIllegal, Lc.current.reportFalse, Lc.current.reportOther])
+            for (final r in [
+              Lc.current.reportSpam,
+              Lc.current.reportAbuse,
+              Lc.current.reportIllegal,
+              Lc.current.reportFalse,
+              Lc.current.reportOther,
+            ])
               ListTile(title: Text(r), onTap: () => Navigator.of(ctx).pop(r)),
           ],
         ),
@@ -417,7 +433,11 @@ class _ThreadPageState extends State<ThreadPage> {
   Future<void> _sendReport(Map<String, dynamic> body) async {
     try {
       final r = await Api.post('/report', body);
-      _toast(r['duplicate'] == true ? Lc.current.reportDuplicate : Lc.current.reportThanks);
+      _toast(
+        r['duplicate'] == true
+            ? Lc.current.reportDuplicate
+            : Lc.current.reportThanks,
+      );
     } on ApiException catch (e) {
       _toast(e);
     }
@@ -579,7 +599,10 @@ class _ThreadPageState extends State<ThreadPage> {
       _toast(Lc.current.needLogin);
       return;
     }
-    final ok = await _confirmDelete(Lc.current.deletePostConfirm, Lc.current.deleteThreadConfirm);
+    final ok = await _confirmDelete(
+      Lc.current.deletePostConfirm,
+      Lc.current.deleteThreadConfirm,
+    );
     if (!ok) return;
     try {
       await Api.delete('/t/${widget.threadId}');
@@ -623,7 +646,10 @@ class _ThreadPageState extends State<ThreadPage> {
       _toast(Lc.current.needLogin);
       return;
     }
-    final ok = await _confirmDelete(Lc.current.deleteReplyConfirm, Lc.current.cannotUndo);
+    final ok = await _confirmDelete(
+      Lc.current.deleteReplyConfirm,
+      Lc.current.cannotUndo,
+    );
     if (!ok) return;
     try {
       await Api.delete('/c/${sub['id']}');
@@ -702,7 +728,11 @@ class _ThreadPageState extends State<ThreadPage> {
                         size: 18,
                       ),
                       const SizedBox(width: 10),
-                      Text(_onlyAuthor ? Lc.current.onlyAuthorOn : Lc.current.onlyAuthorOff),
+                      Text(
+                        _onlyAuthor
+                            ? Lc.current.onlyAuthorOn
+                            : Lc.current.onlyAuthorOff,
+                      ),
                     ],
                   ),
                 ),
@@ -712,7 +742,11 @@ class _ThreadPageState extends State<ThreadPage> {
                     children: [
                       const Icon(Icons.tag, size: 18),
                       const SizedBox(width: 10),
-                      Text(_pages > 1 ? Lc.current.jumpToFloorPages('${_pages}') : Lc.current.jumpToFloor),
+                      Text(
+                        _pages > 1
+                            ? Lc.current.jumpToFloorPages('${_pages}')
+                            : Lc.current.jumpToFloor,
+                      ),
                     ],
                   ),
                 ),
@@ -728,7 +762,11 @@ class _ThreadPageState extends State<ThreadPage> {
                           size: 18,
                         ),
                         const SizedBox(width: 10),
-                        Text(_thread!['is_top'] == true ? Lc.current.unpin : Lc.current.pinned),
+                        Text(
+                          _thread!['is_top'] == true
+                              ? Lc.current.unpin
+                              : Lc.current.pinned,
+                        ),
                       ],
                     ),
                   ),
@@ -744,7 +782,11 @@ class _ThreadPageState extends State<ThreadPage> {
                           size: 18,
                         ),
                         const SizedBox(width: 10),
-                        Text(_thread!['is_good'] == true ? Lc.current.unfeature : Lc.current.feature),
+                        Text(
+                          _thread!['is_good'] == true
+                              ? Lc.current.unfeature
+                              : Lc.current.feature,
+                        ),
                       ],
                     ),
                   ),
@@ -833,8 +875,7 @@ class _ThreadPageState extends State<ThreadPage> {
                       return _PostCard(
                         post: p,
                         highlight:
-                            _flashFloor > 0 &&
-                            (p['floor'] ?? 0) == _flashFloor,
+                            _flashFloor > 0 && (p['floor'] ?? 0) == _flashFloor,
                         onReply: () => _beginReply(p),
                         onAgree: () => _agree(p),
                         onEdit: p['can_edit'] == true
@@ -1013,7 +1054,9 @@ class _ThreadPageState extends State<ThreadPage> {
               Icon(Icons.keyboard_arrow_down, size: 18, color: cs.outline),
               const Spacer(),
               Text(
-                replies > 0 ? Lc.current.repliesCount('${bigNum(replies)}') : Lc.current.noReplies,
+                replies > 0
+                    ? Lc.current.repliesCount('${bigNum(replies)}')
+                    : Lc.current.noReplies,
                 style: TextStyle(fontSize: 12, color: cs.outline),
               ),
             ],
@@ -1088,8 +1131,9 @@ class _ThreadPageState extends State<ThreadPage> {
   Widget _replyBar(ColorScheme cs) {
     final me = AppState.instance.user;
     final meAvatar = (me?['avatar'] ?? '') as String;
-    final meName = ((me?['nickname'] ?? me?['name'] ?? Lc.current.meShort) as Object)
-        .toString();
+    final meName =
+        ((me?['nickname'] ?? me?['name'] ?? Lc.current.meShort) as Object)
+            .toString();
     return SafeArea(
       top: false,
       child: Container(
@@ -1121,7 +1165,9 @@ class _ThreadPageState extends State<ThreadPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      Lc.current.replyTo('${(_replyTo!['author'] ?? '') as String}'),
+                      Lc.current.replyTo(
+                        '${(_replyTo!['author'] ?? '') as String}',
+                      ),
                       style: TextStyle(fontSize: 12, color: cs.primary),
                     ),
                     GestureDetector(
@@ -1257,11 +1303,15 @@ class _ThreadPageState extends State<ThreadPage> {
     try {
       final r = await Api.uploadFile(f);
       if (!mounted) return;
-      setState(() => _files.add(PostFile(
+      setState(
+        () => _files.add(
+          PostFile(
             url: '${r['url']}',
             name: '${r['name']}',
             size: r['size'] is int ? r['size'] as int : f.size,
-          )));
+          ),
+        ),
+      );
     } catch (e) {
       _toast(e);
     } finally {
@@ -1395,186 +1445,200 @@ class _PostCardState extends State<_PostCard> {
         behavior: HitTestBehavior.translucent,
         onLongPress: _moreSheet,
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () => openUserPage(context, handle),
-                  child: CircleAvatarImg(url: avatar, name: author, radius: 19),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              author,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () => openUserPage(context, handle),
+                    child: CircleAvatarImg(
+                      url: avatar,
+                      name: author,
+                      radius: 19,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                author,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                          if (isOp)
-                            Container(
-                              margin: const EdgeInsets.only(left: 5),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 1,
+                            if (isOp)
+                              Container(
+                                margin: const EdgeInsets.only(left: 5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: cs.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Text(
+                                  Lc.current.opAuthor,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: cs.primary,
+                                  ),
+                                ),
                               ),
-                              decoration: BoxDecoration(
-                                color: cs.primary.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
+                            const SizedBox(width: 6),
+                            Flexible(
                               child: Text(
-                                Lc.current.opAuthor,
+                                [
+                                  if (handle.isNotEmpty) '@$handle',
+                                  timeAgo(created),
+                                  if (((post['edited_at'] ?? 0) as int) > 0)
+                                    Lc.current.edited,
+                                ].join(' · '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 9,
+                                  fontSize: 12,
+                                  color: cs.outline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        RichBody(
+                          bodyText,
+                          style: const TextStyle(fontSize: 14, height: 1.5),
+                          contextMenuBuilder: (ctx, editable) =>
+                              AdaptiveTextSelectionToolbar.buttonItems(
+                                anchors: editable.contextMenuAnchors,
+                                buttonItems: [
+                                  ContextMenuButtonItem(
+                                    label: Lc.current.copyFullText,
+                                    onPressed: () {
+                                      Clipboard.setData(
+                                        ClipboardData(text: bodyText),
+                                      );
+                                      editable.hideToolbar();
+                                      _toastOf(ctx, Lc.current.copied);
+                                    },
+                                  ),
+                                  ...editable.contextMenuButtonItems,
+                                ],
+                              ),
+                        ),
+                        if (imgs.isNotEmpty)
+                          PostImages(urls: imgs, sizes: sizes),
+                        if (files.isNotEmpty) FileCards(files: files),
+                        if (subs.isNotEmpty) _subThread(cs, subs),
+                        if (subs.length > 3)
+                          GestureDetector(
+                            onTap: () => setState(() => _all = !_all),
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 6, bottom: 2),
+                              child: Text(
+                                _all
+                                    ? Lc.current.collapse
+                                    : Lc.current.expandAllReplies(
+                                        '${subs.length}',
+                                      ),
+                                style: TextStyle(
+                                  fontSize: 12,
                                   color: cs.primary,
                                 ),
                               ),
                             ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              [
-                                if (handle.isNotEmpty) '@$handle',
-                                timeAgo(created),
-                                if (((post['edited_at'] ?? 0) as int) > 0)
-                                  Lc.current.edited,
-                              ].join(' · '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, color: cs.outline),
-                            ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      RichBody(
-                        bodyText,
-                        style: const TextStyle(fontSize: 14, height: 1.5),
-                        contextMenuBuilder: (ctx, editable) =>
-                            AdaptiveTextSelectionToolbar.buttonItems(
-                              anchors: editable.contextMenuAnchors,
-                              buttonItems: [
-                                ContextMenuButtonItem(
-                                  label: Lc.current.copyFullText,
-                                  onPressed: () {
-                                    Clipboard.setData(
-                                      ClipboardData(text: bodyText),
-                                    );
-                                    editable.hideToolbar();
-                                    _toastOf(ctx, Lc.current.copied);
-                                  },
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            InkWell(
+                              onTap: widget.onReply,
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                  vertical: 6,
                                 ),
-                                ...editable.contextMenuButtonItems,
-                              ],
-                            ),
-                      ),
-                      if (imgs.isNotEmpty)
-                        PostImages(urls: imgs, sizes: sizes),
-                      if (files.isNotEmpty) FileCards(files: files),
-                      if (subs.isNotEmpty) _subThread(cs, subs),
-                      if (subs.length > 3)
-                        GestureDetector(
-                          onTap: () => setState(() => _all = !_all),
-                          behavior: HitTestBehavior.opaque,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 6, bottom: 2),
-                            child: Text(
-                              _all ? Lc.current.collapse : Lc.current.expandAllReplies('${subs.length}'),
-                              style: TextStyle(fontSize: 12, color: cs.primary),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          InkWell(
-                            onTap: widget.onReply,
-                            borderRadius: BorderRadius.circular(4),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 2,
-                                vertical: 6,
-                              ),
-                              child: Icon(
-                                Icons.mode_comment_outlined,
-                                size: 16,
-                                color: cs.outline,
+                                child: Icon(
+                                  Icons.mode_comment_outlined,
+                                  size: 16,
+                                  color: cs.outline,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 22),
-                          InkWell(
-                            onTap: widget.onAgree,
-                            borderRadius: BorderRadius.circular(4),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 2,
-                                vertical: 6,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    agreed
-                                        ? Icons.favorite
-                                        : Icons.favorite_border,
-                                    size: 16,
-                                    color: liked,
-                                  ),
-                                  if (agree > 0) ...[
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      bigNum(agree),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: liked,
-                                      ),
+                            const SizedBox(width: 22),
+                            InkWell(
+                              onTap: widget.onAgree,
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                  vertical: 6,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      agreed
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      size: 16,
+                                      color: liked,
                                     ),
+                                    if (agree > 0) ...[
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        bigNum(agree),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: liked,
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (widget.onDelete != null || widget.onEdit != null)
-                  GestureDetector(
-                    onTap: _moreSheet,
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 4, top: 2),
-                      child: Icon(
-                        Icons.more_horiz,
-                        size: 18,
-                        color: cs.outline,
-                      ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-              ],
+                  if (widget.onDelete != null || widget.onEdit != null)
+                    GestureDetector(
+                      onTap: _moreSheet,
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 4, top: 2),
+                        child: Icon(
+                          Icons.more_horiz,
+                          size: 18,
+                          color: cs.outline,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Divider(
-            height: 1,
-            indent: 62,
-            color: cs.outlineVariant.withValues(alpha: 0.3),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Divider(
+              height: 1,
+              indent: 62,
+              color: cs.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ],
         ),
       ),
     );
@@ -1643,11 +1707,5 @@ class _PostCardState extends State<_PostCard> {
 }
 
 void _toastOf(BuildContext ctx, String msg) {
-  ScaffoldMessenger.of(ctx).showSnackBar(
-    SnackBar(
-      content: Text(msg),
-      duration: const Duration(milliseconds: 1200),
-      behavior: SnackBarBehavior.floating,
-    ),
-  );
+  toast(ctx, msg, floating: true);
 }

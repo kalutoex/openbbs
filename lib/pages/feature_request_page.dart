@@ -5,6 +5,8 @@ import '../utils.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 普通用户提需求：想要什么功能写清楚，提交给管理员。
 /// 下面顺带列出自己提过的，状态和回复都能看见。
 class FeatureRequestPage extends StatefulWidget {
@@ -37,7 +39,7 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
   void _toast(Object msg) {
     if (!mounted) return;
     final t = msg is String ? msg : errorText(context, msg);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
+    toast(context, t);
   }
 
   Future<void> _loadMine() async {
@@ -45,8 +47,8 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
       final d = await Api.get('/feature-requests/mine');
       if (!mounted) return;
       setState(() {
-        _mine =
-            ((d['items'] as List?) ?? const []).cast<Map<String, dynamic>>();
+        _mine = ((d['items'] as List?) ?? const [])
+            .cast<Map<String, dynamic>>();
         _loaded = true;
       });
     } on ApiException {
@@ -71,7 +73,11 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
       _title.clear();
       _body.clear();
       FocusScope.of(context).unfocus();
-      _toast(r['duplicate'] == true ? Lc.current.requestDuplicate : Lc.current.requestSubmitted);
+      _toast(
+        r['duplicate'] == true
+            ? Lc.current.requestDuplicate
+            : Lc.current.requestSubmitted,
+      );
       await _loadMine();
     } on ApiException catch (e) {
       _toast(e);
@@ -234,8 +240,11 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.subdirectory_arrow_right,
-                      size: 15, color: cs.outline),
+                  Icon(
+                    Icons.subdirectory_arrow_right,
+                    size: 15,
+                    color: cs.outline,
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(

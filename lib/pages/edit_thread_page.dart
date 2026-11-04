@@ -16,6 +16,8 @@ import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 改自己的帖子：标题、正文、配图。
 ///
 /// 图片分两种：已经传上去的（服务端给的 /img/ 路径，可以摘掉）和这次新选的
@@ -73,9 +75,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
 
   void _snack(String m) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(m)));
+    toast(context, m);
   }
 
   /// 选一个附件直接传上去。传完列表里多一行，保存时才随 PATCH 提交。
@@ -97,11 +97,15 @@ class _EditThreadPageState extends State<EditThreadPage> {
     try {
       final r = await Api.uploadFile(f);
       if (!mounted) return;
-      setState(() => _files.add(PostFile(
+      setState(
+        () => _files.add(
+          PostFile(
             url: '${r['url']}',
             name: '${r['name']}',
             size: r['size'] is int ? r['size'] as int : f.size,
-          )));
+          ),
+        ),
+      );
     } catch (e) {
       _snack(errorText(context, e));
     } finally {
@@ -159,13 +163,20 @@ class _EditThreadPageState extends State<EditThreadPage> {
     }
     setState(() {
       _busy = true;
-      _status = _added.isEmpty ? Lc.current.saving : Lc.current.uploadingNewStart('${_added.length}');
+      _status = _added.isEmpty
+          ? Lc.current.saving
+          : Lc.current.uploadingNewStart('${_added.length}');
     });
     try {
       final urls = [..._remote];
       for (var i = 0; i < _added.length; i++) {
         if (mounted) {
-          setState(() => _status = Lc.current.uploadingNewImages('${i + 1}', '${_added.length}'));
+          setState(
+            () => _status = Lc.current.uploadingNewImages(
+              '${i + 1}',
+              '${_added.length}',
+            ),
+          );
         }
         urls.add(await Api.uploadImage(_added[i]));
       }
@@ -351,7 +362,10 @@ class _EditThreadPageState extends State<EditThreadPage> {
   Widget _imgsGrid(ColorScheme cs) {
     final n = _count;
     if (n == 0) {
-      return Text(Lc.current.noImagesYet, style: TextStyle(fontSize: 12, color: cs.outline));
+      return Text(
+        Lc.current.noImagesYet,
+        style: TextStyle(fontSize: 12, color: cs.outline),
+      );
     }
     return GridView.builder(
       shrinkWrap: true,

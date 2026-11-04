@@ -14,6 +14,8 @@ import 'user_link.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import 'toast.dart';
+
 /// 时间线里的一条帖子。
 class ThreadTile extends StatelessWidget {
   final Map<String, dynamic> item;
@@ -49,13 +51,11 @@ class ThreadTile extends StatelessWidget {
     try {
       await Api.delete('/t/${item['id']}');
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(Lc.current.postDeleted)));
+      toast(context, Lc.current.postDeleted);
       onDeleted?.call();
     } on ApiException catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
+      toast(context, errorText(context, e));
     }
   }
 
@@ -198,17 +198,17 @@ class ThreadTile extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       child: CachedNetworkImage(
                         cacheManager: ImgCache.manager,
-                        imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
+                        imageRenderMethodForWeb:
+                            ImageRenderMethodForWeb.HttpGet,
                         imageUrl: Api.thumb(cover, 320),
                         fit: BoxFit.cover,
                         alignment: Alignment.topCenter,
-                        memCacheWidth: (208 *
-                                MediaQuery.devicePixelRatioOf(context))
-                            .round()
-                            .clamp(208, 640),
-                        placeholder: (_, _) => Container(
-                          color: cs.surfaceContainerHighest,
-                        ),
+                        memCacheWidth:
+                            (208 * MediaQuery.devicePixelRatioOf(context))
+                                .round()
+                                .clamp(208, 640),
+                        placeholder: (_, _) =>
+                            Container(color: cs.surfaceContainerHighest),
                         errorWidget: (_, _, _) => Container(
                           color: cs.surfaceContainerHighest,
                           child: Icon(

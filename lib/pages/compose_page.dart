@@ -18,6 +18,8 @@ import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 发主题帖。
 ///
 /// 站内只有一层：发到主站还是小站，选完就直接发，没有板块可选。
@@ -151,7 +153,9 @@ class _ComposePageState extends State<ComposePage> {
       _savedImgSig = _imgs.map((e) => e.id).join(',');
     });
     _snack(
-      imgs.isEmpty ? Lc.current.resumeDraft : Lc.current.resumeDraftImages('${imgs.length}'),
+      imgs.isEmpty
+          ? Lc.current.resumeDraft
+          : Lc.current.resumeDraftImages('${imgs.length}'),
       action: SnackBarAction(
         label: Lc.current.discardDraft,
         onPressed: () {
@@ -170,9 +174,7 @@ class _ComposePageState extends State<ComposePage> {
 
   void _snack(String m, {SnackBarAction? action}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(m), action: action));
+    toast(context, m, action: action);
   }
 
   // ── 图片 ───────────────────────────────────────────────
@@ -245,11 +247,15 @@ class _ComposePageState extends State<ComposePage> {
     try {
       final r = await Api.uploadFile(f);
       if (!mounted) return;
-      setState(() => _files.add(PostFile(
+      setState(
+        () => _files.add(
+          PostFile(
             url: '${r['url']}',
             name: '${r['name']}',
             size: r['size'] is int ? r['size'] as int : f.size,
-          )));
+          ),
+        ),
+      );
     } catch (e) {
       _fail(e);
       return;
@@ -450,7 +456,9 @@ class _ComposePageState extends State<ComposePage> {
     setState(() {
       _busy = true;
       _progress = 0;
-      _status = _imgs.isEmpty ? Lc.current.publishing : Lc.current.uploadingStart('${_imgs.length}');
+      _status = _imgs.isEmpty
+          ? Lc.current.publishing
+          : Lc.current.uploadingStart('${_imgs.length}');
     });
     try {
       final urls = <String>[];
@@ -640,7 +648,9 @@ class _ComposePageState extends State<ComposePage> {
                   s.isHome
                       ? l.siteMaster
                       // 小站多于一座时得带上名字，否则分不出是哪个
-                      : (small > 1 ? '${l.siteSmall} · ${s.display}' : l.siteSmall),
+                      : (small > 1
+                            ? '${l.siteSmall} · ${s.display}'
+                            : l.siteSmall),
                 ),
                 selected: picked?.key == s.key,
                 onSelected: (_) => setState(() => _targetKey = s.key),
@@ -726,7 +736,10 @@ class _ComposePageState extends State<ComposePage> {
         ),
         const Spacer(),
         if (_imgs.length > 1)
-          Text(Lc.current.dragToReorder, style: TextStyle(fontSize: 11, color: cs.outline)),
+          Text(
+            Lc.current.dragToReorder,
+            style: TextStyle(fontSize: 11, color: cs.outline),
+          ),
       ],
     );
   }

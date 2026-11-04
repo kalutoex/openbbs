@@ -10,6 +10,8 @@ import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 改自己的昵称、@标识、签名、头像。
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic> info;
@@ -49,13 +51,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        duration: const Duration(milliseconds: 1400),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    toast(context, msg, floating: true);
   }
 
   /// 选图 -> 压到 100KB 左右 -> 传到 /upload -> 填进 _avatar。

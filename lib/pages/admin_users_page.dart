@@ -7,6 +7,8 @@ import '../utils.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 管理员：账号管理。
 ///
 /// 只干一件事——把某个人的密码重置成随机临时密码。
@@ -21,6 +23,7 @@ class AdminUsersPage extends StatefulWidget {
 class _AdminUsersPageState extends State<AdminUsersPage> {
   final _q = TextEditingController();
   List<Map<String, dynamic>> _items = const [];
+
   /// user_id -> 云盘用量，跟 _items 一起拉回来拼着显示。
   Map<int, Map<String, dynamic>> _cloud = const {};
   bool _loading = true;
@@ -81,7 +84,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(Lc.current.forgetIt)),
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text(Lc.current.forgetIt),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(c, true),
             child: Text(Lc.current.reset),
@@ -114,10 +120,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                Lc.current.newPasswordOnce,
-                style: TextStyle(fontSize: 12),
-              ),
+              Text(Lc.current.newPasswordOnce, style: TextStyle(fontSize: 12)),
             ],
           ),
           actions: [
@@ -133,9 +136,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorText(context, e))));
+      toast(context, errorText(context, e));
     }
   }
 
@@ -196,15 +197,11 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     try {
       await AppState.instance.adminSetCloudQuota(uid, saved);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(Lc.current.quotaSaved)),
-      );
+      toast(context, Lc.current.quotaSaved);
       _load();
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorText(context, e))));
+      toast(context, errorText(context, e));
     }
   }
 
@@ -255,7 +252,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 children: [
                   Text(_err!, style: TextStyle(color: cs.error)),
                   const SizedBox(height: 12),
-                  OutlinedButton(onPressed: _load, child: Text(Lc.current.retry)),
+                  OutlinedButton(
+                    onPressed: _load,
+                    child: Text(Lc.current.retry),
+                  ),
                 ],
               ),
             )
@@ -276,7 +276,11 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       ),
                       if (u['is_admin'] == true) ...[
                         const SizedBox(width: 6),
-                        Icon(Icons.shield_outlined, size: 14, color: cs.primary),
+                        Icon(
+                          Icons.shield_outlined,
+                          size: 14,
+                          color: cs.primary,
+                        ),
                       ],
                     ],
                   ),

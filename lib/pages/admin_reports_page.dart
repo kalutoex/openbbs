@@ -7,6 +7,8 @@ import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 管理员看举报。删掉或者认定没问题，二选一。
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({super.key});
@@ -73,7 +75,11 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(keep ? Lc.current.ignoreReportConfirm : Lc.current.deleteContentConfirm),
+        title: Text(
+          keep
+              ? Lc.current.ignoreReportConfirm
+              : Lc.current.deleteContentConfirm,
+        ),
         content: Text(note),
         actions: [
           TextButton(
@@ -102,12 +108,10 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         _total = _total > 0 ? _total - 1 : 0;
       });
       AppState.instance.setReportOpen(_total);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(keep ? Lc.current.ignored : Lc.current.deleted)));
+      toast(context, keep ? Lc.current.ignored : Lc.current.deleted);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
+      toast(context, errorText(context, e));
     }
   }
 
@@ -116,7 +120,9 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_total > 0 ? Lc.current.reportsCount('${_total}') : Lc.current.report),
+        title: Text(
+          _total > 0 ? Lc.current.reportsCount('${_total}') : Lc.current.report,
+        ),
         actions: [
           IconButton(
             onPressed: () => _load(reset: true),
@@ -175,7 +181,9 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
           );
         }
         final it = _items[i];
-        final kind = it['reply_id'] != null ? Lc.current.floor : Lc.current.post;
+        final kind = it['reply_id'] != null
+            ? Lc.current.floor
+            : Lc.current.post;
         return InkWell(
           onTap: () {
             final tid = it['thread_id'];
@@ -237,7 +245,10 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  Lc.current.reportLine('${(it['reason'] ?? '')}', '${(it['reporter'] ?? '')}'),
+                  Lc.current.reportLine(
+                    '${(it['reason'] ?? '')}',
+                    '${(it['reporter'] ?? '')}',
+                  ),
                   style: TextStyle(fontSize: 11, color: cs.outline),
                 ),
                 Row(

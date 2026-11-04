@@ -7,6 +7,8 @@ import '../store.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 账号安全：绑定或换绑邮箱。
 ///
 /// 早一批账号注册时还没有邮箱这回事，忘了密码就只能找管理员。
@@ -63,9 +65,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
       final cd = await AppState.instance.requestBindCode(e);
       if (!mounted) return;
       _startCool(cd);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(Lc.current.codeSentCheckEmail)),
-      );
+      toast(context, Lc.current.codeSentCheckEmail);
     } on ApiException catch (e2) {
       if (mounted) setState(() => _err = errorText(context, e2));
     } finally {
@@ -90,9 +90,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
       _code.clear();
       _email.clear();
       setState(() {});
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(Lc.current.emailBound)));
+      toast(context, Lc.current.emailBound);
     } on ApiException catch (e2) {
       if (mounted) setState(() => _err = errorText(context, e2));
     } finally {
@@ -199,7 +197,11 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
           const SizedBox(height: 18),
           FilledButton(
             onPressed: _busy ? null : _bind,
-            child: Text(_busy ? Lc.current.processing : (bound.isEmpty ? Lc.current.bind : Lc.current.rebind)),
+            child: Text(
+              _busy
+                  ? Lc.current.processing
+                  : (bound.isEmpty ? Lc.current.bind : Lc.current.rebind),
+            ),
           ),
           const SizedBox(height: 22),
           Text(

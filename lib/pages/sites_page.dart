@@ -10,6 +10,8 @@ import '../store.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 站点管理：本机站点表。加、删、切、设登录站，以及清单导入。
 ///
 /// 这里的规矩：
@@ -45,7 +47,7 @@ class _SitesPageState extends State<SitesPage> {
 
   void _toast(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    toast(context, msg);
   }
 
   /// 测速：长按某座站就跑一遍，回每条入口的毫秒数。
@@ -72,10 +74,13 @@ class _SitesPageState extends State<SitesPage> {
       if (!mounted) return;
       setState(() {});
       final parts = <String>[
-        for (final e in ms.entries) '${looksV6(e.key) ? 'IPv6' : 'IPv4'} ${e.value}ms',
+        for (final e in ms.entries)
+          '${looksV6(e.key) ? 'IPv6' : 'IPv4'} ${e.value}ms',
       ];
       _toast(
-        Lc.current.siteSpeedResult(parts.isEmpty ? Lc.current.siteSpeedNone : parts.join(' · ')),
+        Lc.current.siteSpeedResult(
+          parts.isEmpty ? Lc.current.siteSpeedNone : parts.join(' · '),
+        ),
       );
     } finally {
       _testing.remove(s.key);
@@ -122,7 +127,11 @@ class _SitesPageState extends State<SitesPage> {
     await _probeOne(s);
     if (!mounted) return;
     setState(() => _busy = false);
-    _toast(ok ? Lc.current.switchedTo(s.display) : Lc.current.connectFailedBody(s.display));
+    _toast(
+      ok
+          ? Lc.current.switchedTo(s.display)
+          : Lc.current.connectFailedBody(s.display),
+    );
     if (ok) widget.onSwitched?.call();
   }
 
@@ -193,7 +202,9 @@ class _SitesPageState extends State<SitesPage> {
     final v = normalizeUrl(url ?? '');
     if (v.isEmpty) return;
     setState(() => _busy = true);
-    final added = await _st.addSites([SiteEntry(urls: [v])]);
+    final added = await _st.addSites([
+      SiteEntry(urls: [v]),
+    ]);
     // 新加的这座马上探一次，顺手把它切过去——刚填完地址就是想看它。
     SiteEntry? hit;
     for (final s in _st.sites) {
@@ -360,9 +371,7 @@ class _SitesPageState extends State<SitesPage> {
                     tooltip: Lc.current.menu,
                   ),
             title: Text(
-              widget.onMenu == null
-                  ? Lc.current.sitesManage
-                  : Lc.current.sites,
+              widget.onMenu == null ? Lc.current.sitesManage : Lc.current.sites,
             ),
             actions: [
               if (_busy || _probing)
@@ -496,9 +505,7 @@ class _SitesPageState extends State<SitesPage> {
     if (!home)
       PopupMenuItem(
         value: 'block',
-        child: Text(
-          s.blocked ? Lc.current.siteUnblock : Lc.current.siteBlock,
-        ),
+        child: Text(s.blocked ? Lc.current.siteUnblock : Lc.current.siteBlock),
       ),
     if (!home)
       PopupMenuItem(
@@ -551,19 +558,39 @@ class _SitesPageState extends State<SitesPage> {
           const SizedBox(width: 6),
           // 主站 / 小站：发帖时只能选这两类，列表上先标清楚。
           home
-              ? _tag(Lc.current.siteMaster, cs.tertiaryContainer, cs.onTertiaryContainer)
-              : _tag(Lc.current.siteSmall, cs.surfaceContainerHighest, cs.onSurfaceVariant),
+              ? _tag(
+                  Lc.current.siteMaster,
+                  cs.tertiaryContainer,
+                  cs.onTertiaryContainer,
+                )
+              : _tag(
+                  Lc.current.siteSmall,
+                  cs.surfaceContainerHighest,
+                  cs.onSurfaceVariant,
+                ),
           if (s.master) ...[
             const SizedBox(width: 6),
-            _tag(Lc.current.siteLoginSite, cs.secondaryContainer, cs.onSecondaryContainer),
+            _tag(
+              Lc.current.siteLoginSite,
+              cs.secondaryContainer,
+              cs.onSecondaryContainer,
+            ),
           ],
           if (active) ...[
             const SizedBox(width: 6),
-            _tag(Lc.current.siteCurrentNow, cs.primaryContainer, cs.onPrimaryContainer),
+            _tag(
+              Lc.current.siteCurrentNow,
+              cs.primaryContainer,
+              cs.onPrimaryContainer,
+            ),
           ],
           if (s.blocked) ...[
             const SizedBox(width: 6),
-            _tag(Lc.current.siteBlocked, cs.errorContainer, cs.onErrorContainer),
+            _tag(
+              Lc.current.siteBlocked,
+              cs.errorContainer,
+              cs.onErrorContainer,
+            ),
           ],
         ],
       ),
@@ -573,7 +600,8 @@ class _SitesPageState extends State<SitesPage> {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           // 只报通不通：网址是给运维看的，用户只需要知道哪条路走着。
-          for (final u in s.orderedUrls) _epChip(u, s.epStatus[u], s.epMs[u], cs),
+          for (final u in s.orderedUrls)
+            _epChip(u, s.epStatus[u], s.epMs[u], cs),
           if (down)
             Text(
               Lc.current.siteUnreachable,
@@ -640,7 +668,10 @@ class _SitesPageState extends State<SitesPage> {
 
   Widget _tag(String text, Color bg, Color fg) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(4),
+    ),
     child: Text(text, style: TextStyle(fontSize: 11, color: fg)),
   );
 }

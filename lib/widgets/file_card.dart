@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../file_open.dart';
 import '../l10n/error_text.dart';
+import 'toast.dart';
 
 /// 帖子里的一个附件。服务端给的名字和大小，客户端只负责摆出来。
 class PostFile {
@@ -19,11 +20,13 @@ class PostFile {
       if (it is! Map) continue;
       final url = (it['url'] ?? '') as String;
       if (url.isEmpty) continue;
-      out.add(PostFile(
-        url: url,
-        name: (it['name'] ?? '') as String,
-        size: (it['size'] is int) ? it['size'] as int : 0,
-      ));
+      out.add(
+        PostFile(
+          url: url,
+          name: (it['name'] ?? '') as String,
+          size: (it['size'] is int) ? it['size'] as int : 0,
+        ),
+      );
     }
     return out;
   }
@@ -31,16 +34,14 @@ class PostFile {
   String get sizeText => size >= 1024 * 1024
       ? '${(size / 1024 / 1024).toStringAsFixed(1)} MB'
       : size >= 1024
-          ? '${(size / 1024).toStringAsFixed(0)} KB'
-          : '$size B';
+      ? '${(size / 1024).toStringAsFixed(0)} KB'
+      : '$size B';
 
   Map<String, dynamic> toJson() => {'url': url, 'name': name, 'size': size};
 }
 
 IconData fileIconFor(String name) {
-  final ext = name.contains('.')
-      ? name.split('.').last.toLowerCase()
-      : '';
+  final ext = name.contains('.') ? name.split('.').last.toLowerCase() : '';
   switch (ext) {
     case 'zip':
     case 'rar':
@@ -92,10 +93,7 @@ class FileCards extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
-        children: [
-          for (final f in files)
-            _FileCard(file: f, onRemove: null),
-        ],
+        children: [for (final f in files) _FileCard(file: f, onRemove: null)],
       ),
     );
   }
@@ -122,10 +120,7 @@ class EditableFileCards extends StatelessWidget {
       child: Column(
         children: [
           for (final f in files)
-            _FileCard(
-              file: f,
-              onRemove: busy ? null : () => onRemove(f),
-            ),
+            _FileCard(file: f, onRemove: busy ? null : () => onRemove(f)),
         ],
       ),
     );
@@ -156,14 +151,16 @@ class _FileCardState extends State<_FileCard> {
       final url = widget.file.url.startsWith('http')
           ? widget.file.url
           : '${Api.base}${widget.file.url}';
-      await openRemoteFile(url, widget.file.name, onProgress: (p) {
-        if (mounted) setState(() => _progress = p);
-      });
+      await openRemoteFile(
+        url,
+        widget.file.name,
+        onProgress: (p) {
+          if (mounted) setState(() => _progress = p);
+        },
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorText(context, e))),
-        );
+        toast(context, errorText(context, e));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -180,8 +177,8 @@ class _FileCardState extends State<_FileCard> {
         builder: (context, cons) {
           final w =
               cons.maxWidth.isFinite && cons.maxWidth < PostFileCard.maxWidth
-                  ? cons.maxWidth
-                  : PostFileCard.maxWidth;
+              ? cons.maxWidth
+              : PostFileCard.maxWidth;
           return SizedBox(
             width: w,
             height: PostFileCard.height,
@@ -192,18 +189,25 @@ class _FileCardState extends State<_FileCard> {
                 borderRadius: BorderRadius.circular(10),
                 onTap: widget.onRemove == null ? _open : null,
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   child: Row(
                     children: [
                       _busy
                           ? const SizedBox(
                               width: 30,
                               height: 30,
-                              child: CircularProgressIndicator(strokeWidth: 2.5),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                              ),
                             )
-                          : Icon(fileIconFor(widget.file.name), size: 30,
-                              color: scheme.primary),
+                          : Icon(
+                              fileIconFor(widget.file.name),
+                              size: 30,
+                              color: scheme.primary,
+                            ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -214,8 +218,9 @@ class _FileCardState extends State<_FileCard> {
                               widget.file.name,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: t.textTheme.bodyMedium
-                                  ?.copyWith(height: 1.25),
+                              style: t.textTheme.bodyMedium?.copyWith(
+                                height: 1.25,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Row(
@@ -228,7 +233,8 @@ class _FileCardState extends State<_FileCard> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: t.textTheme.bodySmall?.copyWith(
-                                        color: scheme.onSurfaceVariant),
+                                      color: scheme.onSurfaceVariant,
+                                    ),
                                   ),
                                 ),
                                 if (widget.onRemove != null)
@@ -237,14 +243,19 @@ class _FileCardState extends State<_FileCard> {
                                     radius: 16,
                                     child: Padding(
                                       padding: const EdgeInsets.all(2),
-                                      child: Icon(Icons.close,
-                                          size: 18, color: scheme.outline),
+                                      child: Icon(
+                                        Icons.close,
+                                        size: 18,
+                                        color: scheme.outline,
+                                      ),
                                     ),
                                   )
                                 else if (!_busy)
-                                  Icon(Icons.download_outlined,
-                                      size: 16,
-                                      color: scheme.onSurfaceVariant),
+                                  Icon(
+                                    Icons.download_outlined,
+                                    size: 16,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
                               ],
                             ),
                           ],
@@ -289,14 +300,16 @@ class _CompactFilesState extends State<CompactFiles> {
     });
     try {
       final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
-      await openRemoteFile(url, f.name, onProgress: (p) {
-        if (mounted) setState(() => _progress = p);
-      });
+      await openRemoteFile(
+        url,
+        f.name,
+        onProgress: (p) {
+          if (mounted) setState(() => _progress = p);
+        },
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorText(context, e))),
-        );
+        toast(context, errorText(context, e));
       }
     } finally {
       if (mounted) setState(() => _busy = -1);
@@ -316,8 +329,8 @@ class _CompactFilesState extends State<CompactFiles> {
       padding: const EdgeInsets.only(top: 8),
       child: LayoutBuilder(
         builder: (context, cons) {
-          final w = cons.maxWidth.isFinite &&
-                  cons.maxWidth < PostFileCard.maxWidth
+          final w =
+              cons.maxWidth.isFinite && cons.maxWidth < PostFileCard.maxWidth
               ? cons.maxWidth
               : PostFileCard.maxWidth;
           return Column(
@@ -334,8 +347,9 @@ class _CompactFilesState extends State<CompactFiles> {
                   height: PostFileCard.height,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color:
-                        scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    color: scheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -351,8 +365,14 @@ class _CompactFilesState extends State<CompactFiles> {
     );
   }
 
-  Widget _card(BuildContext context, PostFile f, int i, double w,
-      ColorScheme scheme, TextTheme tt) {
+  Widget _card(
+    BuildContext context,
+    PostFile f,
+    int i,
+    double w,
+    ColorScheme scheme,
+    TextTheme tt,
+  ) {
     final busy = _busy == i;
     return SizedBox(
       width: w,
@@ -376,7 +396,11 @@ class _CompactFilesState extends State<CompactFiles> {
                           value: _progress > 0 ? _progress : null,
                         ),
                       )
-                    : Icon(fileIconFor(f.name), size: 30, color: scheme.primary),
+                    : Icon(
+                        fileIconFor(f.name),
+                        size: 30,
+                        color: scheme.primary,
+                      ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -402,8 +426,9 @@ class _CompactFilesState extends State<CompactFiles> {
                                   : f.sizeText,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: tt.bodySmall
-                                  ?.copyWith(color: scheme.outline),
+                              style: tt.bodySmall?.copyWith(
+                                color: scheme.outline,
+                              ),
                             ),
                           ),
                           Icon(

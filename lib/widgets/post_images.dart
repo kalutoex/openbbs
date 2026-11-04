@@ -13,6 +13,8 @@ import '../img_size_store.dart';
 import '../save_cover.dart';
 
 import '../l10n/l10n.dart';
+import 'toast.dart';
+
 /// 楼层里的图片。1 张大图，多张九宫格。点开全屏。
 class PostImages extends StatelessWidget {
   final List<String> urls;
@@ -177,18 +179,15 @@ class _RetryImageState extends State<_RetryImage> {
         if (!done.isCompleted) done.complete();
       }
 
-      listener = ImageStreamListener(
-        (info, _) {
-          unawaited(
-            ImgSizeStore.put(
-              widget.url,
-              Size(info.image.width.toDouble(), info.image.height.toDouble()),
-            ),
-          );
-          finish();
-        },
-        onError: (_, _) => finish(),
-      );
+      listener = ImageStreamListener((info, _) {
+        unawaited(
+          ImgSizeStore.put(
+            widget.url,
+            Size(info.image.width.toDouble(), info.image.height.toDouble()),
+          ),
+        );
+        finish();
+      }, onError: (_, _) => finish());
       stream.addListener(listener);
     } catch (_) {
       // 探测失败就继续用默认比例，不影响显示。
@@ -267,7 +266,6 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
   Future<void> _save() async {
     if (_saving || widget.urls.isEmpty) return;
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final r = await http
           .get(Uri.parse(Api.img(widget.urls[_i])))
@@ -277,19 +275,11 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
       }
       final name = 'openbbs_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final where = await saveImageBytes(r.bodyBytes, name);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(Lc.current.savedTo('${where}')),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (!mounted) return;
+      toast(context, Lc.current.savedTo('${where}'), floating: true);
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(Lc.current.saveFailed('$e')),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (!mounted) return;
+      toast(context, Lc.current.saveFailed('$e'), floating: true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

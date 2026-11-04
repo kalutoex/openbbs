@@ -7,6 +7,8 @@ import 'package:photo_manager/photo_manager.dart';
 import '../plat.dart';
 
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 自己的相册页：直接读本机媒体库，缩略图网格 + 多选。
 ///
 /// 用它的原因：系统照片选择器在安卓 13+ 只给「选中的照片」这种受限访问，
@@ -138,9 +140,7 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
       return;
     }
     if (_selected.length >= widget.maxCount) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(Lc.current.maxSelectImages('${widget.maxCount}'))));
+      toast(context, Lc.current.maxSelectImages('${widget.maxCount}'));
       return;
     }
     setState(() {
@@ -193,7 +193,9 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
           TextButton(
             onPressed: _selected.isEmpty || _loading ? null : _done,
             child: Text(
-              _selected.isEmpty ? Lc.current.done : Lc.current.doneWithCount('${_selected.length}'),
+              _selected.isEmpty
+                  ? Lc.current.done
+                  : Lc.current.doneWithCount('${_selected.length}'),
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: _selected.isEmpty ? null : cs.primary,
@@ -334,7 +336,9 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
             Icon(Icons.photo_library_outlined, size: 48, color: cs.outline),
             const SizedBox(height: 16),
             Text(
-              hasMediaStore ? Lc.current.needsAlbumPermission : Lc.current.noAlbumUsePicker,
+              hasMediaStore
+                  ? Lc.current.needsAlbumPermission
+                  : Lc.current.noAlbumUsePicker,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -358,7 +362,11 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
                 setState(() => _denied = false);
                 await _boot();
               },
-              child: Text(hasMediaStore ? Lc.current.grantPermission : Lc.current.pickAnotherWay),
+              child: Text(
+                hasMediaStore
+                    ? Lc.current.grantPermission
+                    : Lc.current.pickAnotherWay,
+              ),
             ),
           ],
         ),

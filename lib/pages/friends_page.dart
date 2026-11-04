@@ -7,6 +7,8 @@ import 'user_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 致谢：把成员挂出来。管理员可以直接增删。
 class FriendsPage extends StatefulWidget {
   const FriendsPage({super.key});
@@ -153,9 +155,7 @@ class _FriendsPageState extends State<FriendsPage> {
       _load();
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorText(context, e))),
-        );
+        toast(context, errorText(context, e));
       }
     }
   }
@@ -201,7 +201,10 @@ class _FriendsPageState extends State<FriendsPage> {
           }
           if (items.isEmpty) {
             return Center(
-              child: Text(Lc.current.nobodyYet, style: TextStyle(color: cs.onSurfaceVariant)),
+              child: Text(
+                Lc.current.nobodyYet,
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
             );
           }
           return ListView.builder(
@@ -225,8 +228,9 @@ class _FriendsPageState extends State<FriendsPage> {
               final nick = (u['nickname'] ?? u['name'] ?? '') as String;
               final handle = (u['handle'] ?? '') as String;
               final sig = (u['signature'] ?? '') as String;
-              final sub =
-                  sig.isNotEmpty ? sig : (handle.isNotEmpty ? '@$handle' : '');
+              final sub = sig.isNotEmpty
+                  ? sig
+                  : (handle.isNotEmpty ? '@$handle' : '');
               return ListTile(
                 leading: CircleAvatarImg(
                   url: (u['avatar'] ?? '') as String,
@@ -264,8 +268,7 @@ class _FriendsPageState extends State<FriendsPage> {
                     : null,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        UserPage(name: (u['name'] ?? '') as String),
+                    builder: (_) => UserPage(name: (u['name'] ?? '') as String),
                   ),
                 ),
               );

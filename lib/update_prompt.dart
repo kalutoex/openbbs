@@ -9,6 +9,7 @@ import 'l10n/l10n.dart';
 import 'open_path.dart';
 import 'plat.dart';
 import 'update.dart';
+import 'widgets/toast.dart';
 
 // 和设置页共用这几个键，名字别改。
 const _kBetaPref = 'update_beta';
@@ -176,18 +177,13 @@ Future<void> installApk(BuildContext context, AppRelease r) async {
     if (context.mounted) nav.pop();
     await openLocalFile(file.path);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isDesktop ? Lc.current.handedToSystem : Lc.current.handedToInstaller,
-        ),
-      ),
+    toast(
+      context,
+      isDesktop ? Lc.current.handedToSystem : Lc.current.handedToInstaller,
     );
   } catch (e) {
     if (context.mounted) nav.pop();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(Lc.current.downloadFailedWith('$e'))),
-    );
+    toast(context, Lc.current.downloadFailedWith('$e'));
   }
 }

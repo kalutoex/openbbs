@@ -22,6 +22,7 @@ import 'theme_color_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
 
 /// 设置：外观、浏览、内容、账号、关于。
 class SettingsPage extends StatelessWidget {
@@ -120,9 +121,8 @@ class SettingsPage extends StatelessWidget {
                     ? Lc.current.siteEmptyHint
                     : '${st.activeSite?.display ?? ''} · ${st.sites.length}',
                 value: _siteSummary(st),
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const SitesPage())),
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const SitesPage())),
               ),
               const Divider(height: 24),
               _label(context, Lc.current.contentSection),
@@ -590,8 +590,7 @@ class _WebEntryRow extends StatelessWidget {
 
   void _copy(BuildContext context, String s) {
     Clipboard.setData(ClipboardData(text: s));
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(Lc.current.addressCopied)));
+    toast(context, Lc.current.addressCopied);
   }
 }
 
@@ -647,14 +646,11 @@ class _ClearCacheTileState extends State<_ClearCacheTile> {
       _busy = false;
       _size = 0;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          before > 0
-              ? Lc.current.clearedAmount('${AppCache.human(before)}')
-              : Lc.current.cleared,
-        ),
-      ),
+    toast(
+      context,
+      before > 0
+          ? Lc.current.clearedAmount('${AppCache.human(before)}')
+          : Lc.current.cleared,
     );
   }
 

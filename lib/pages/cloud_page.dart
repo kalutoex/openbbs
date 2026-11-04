@@ -9,6 +9,8 @@ import '../utils.dart';
 import '../widgets/file_card.dart';
 
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 云盘：我自己传上来的东西。
 ///
 /// 只放自己上传的；帖子里的附件发帖时也算进来，删了帖子文件还在。
@@ -67,7 +69,12 @@ class _CloudPageState extends State<CloudPage> {
     }
     try {
       final u = await CloudApi.usage();
-      final p = await CloudApi.list(q: _q, sort: _sort, page: 1, perPage: _perPage);
+      final p = await CloudApi.list(
+        q: _q,
+        sort: _sort,
+        page: 1,
+        perPage: _perPage,
+      );
       if (!mounted) return;
       setState(() {
         _usage = u;
@@ -96,7 +103,11 @@ class _CloudPageState extends State<CloudPage> {
     setState(() => _more = true);
     try {
       final p = await CloudApi.list(
-          q: _q, sort: _sort, page: _page + 1, perPage: _perPage);
+        q: _q,
+        sort: _sort,
+        page: _page + 1,
+        perPage: _perPage,
+      );
       if (!mounted) return;
       setState(() {
         _items.addAll(p.items);
@@ -111,7 +122,7 @@ class _CloudPageState extends State<CloudPage> {
 
   void _toast(String text) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    toast(context, text);
   }
 
   Future<void> _open(CloudFile f) async {
@@ -130,9 +141,11 @@ class _CloudPageState extends State<CloudPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(Lc.current.deleteThisFile),
-        content: Text(used > 0
-            ? '${Lc.current.cloudRefsWarn('$used')}\n\n$trashHint'
-            : trashHint),
+        content: Text(
+          used > 0
+              ? '${Lc.current.cloudRefsWarn('$used')}\n\n$trashHint'
+              : trashHint,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -339,7 +352,9 @@ class _UsageBar extends StatelessWidget {
           Row(
             children: [
               Text(
-                usage.unlimited ? Lc.current.usedSpace('${usedText}') : Lc.current.usedOfTotal('${usedText}', '${quotaText}'),
+                usage.unlimited
+                    ? Lc.current.usedSpace('${usedText}')
+                    : Lc.current.usedOfTotal('${usedText}', '${quotaText}'),
                 style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
               ),
               const Spacer(),
@@ -397,8 +412,10 @@ class _SearchBar extends StatelessWidget {
                   isDense: true,
                   hintText: Lc.current.findFile,
                   prefixIcon: const Icon(Icons.search, size: 18),
-                  prefixIconConstraints:
-                      const BoxConstraints(minWidth: 36, minHeight: 36),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
                   filled: true,
                   fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
                   contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -524,12 +541,10 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
       await CloudApi.restore(f.id);
       if (!mounted) return;
       setState(() => _items?.removeWhere((x) => x.id == f.id));
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(Lc.current.restoredDone)));
+      toast(context, Lc.current.restoredDone);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(errorText(context, e))));
+      toast(context, errorText(context, e));
     }
   }
 
@@ -551,34 +566,40 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
       body: _items == null
           ? Center(
               child: _failed
-                  ? TextButton(onPressed: _load, child: Text(Lc.current.notConnectedTapRetry))
-                  : const CircularProgressIndicator())
+                  ? TextButton(
+                      onPressed: _load,
+                      child: Text(Lc.current.notConnectedTapRetry),
+                    )
+                  : const CircularProgressIndicator(),
+            )
           : _items!.isEmpty
-              ? Center(
-                  child: Text(
-                    Lc.current.emptyHere,
-                    style: TextStyle(color: cs.outline),
+          ? Center(
+              child: Text(
+                Lc.current.emptyHere,
+                style: TextStyle(color: cs.outline),
+              ),
+            )
+          : ListView.builder(
+              itemCount: _items!.length,
+              itemBuilder: (context, i) {
+                final f = _items![i];
+                return ListTile(
+                  leading: Icon(fileIconFor(f.name), color: cs.outline),
+                  title: Text(
+                    f.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                )
-              : ListView.builder(
-                  itemCount: _items!.length,
-                  itemBuilder: (context, i) {
-                    final f = _items![i];
-                    return ListTile(
-                      leading: Icon(fileIconFor(f.name), color: cs.outline),
-                      title: Text(
-                        f.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text('${bytesText(f.size)} · ${_left(f.expiresIn)}'),
-                      trailing: TextButton(
-                        onPressed: () => _restore(f),
-                        child: Text(Lc.current.restore),
-                      ),
-                    );
-                  },
-                ),
+                  subtitle: Text(
+                    '${bytesText(f.size)} · ${_left(f.expiresIn)}',
+                  ),
+                  trailing: TextButton(
+                    onPressed: () => _restore(f),
+                    child: Text(Lc.current.restore),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

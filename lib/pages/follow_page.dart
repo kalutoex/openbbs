@@ -7,6 +7,8 @@ import '../widgets/user_link.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/toast.dart';
+
 /// 关注 / 粉丝。
 ///
 /// 一个页面两个列表，顶上是自己画的分段控件（原来用 TabBar 塞进 AppBar，
@@ -88,9 +90,7 @@ class _FollowPageState extends State<FollowPage> {
 
   void _say(String s) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(s), duration: const Duration(seconds: 2)));
+    toast(context, s);
   }
 
   /// 取关：先从列表里拿掉，失败再放回去。
@@ -268,10 +268,11 @@ class _FollowPageState extends State<FollowPage> {
     if (b.isEmpty) {
       return _hint(
         following ? Lc.current.notFollowingAnyone : Lc.current.noFans,
-        icon: following
-            ? Icons.person_add_alt_outlined
-            : Icons.people_outline,
-        action: TextButton(onPressed: _refresh, child: Text(Lc.current.refresh)),
+        icon: following ? Icons.person_add_alt_outlined : Icons.people_outline,
+        action: TextButton(
+          onPressed: _refresh,
+          child: Text(Lc.current.refresh),
+        ),
       );
     }
     return RefreshIndicator(
@@ -280,11 +281,8 @@ class _FollowPageState extends State<FollowPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 24),
         itemCount: b.items.length,
-        separatorBuilder: (_, _) => const Divider(
-          height: 1,
-          indent: 68,
-          endIndent: 16,
-        ),
+        separatorBuilder: (_, _) =>
+            const Divider(height: 1, indent: 68, endIndent: 16),
         itemBuilder: (context, i) => _tile(b.items[i], following: following),
       ),
     );
@@ -350,7 +348,11 @@ class _FollowPageState extends State<FollowPage> {
             else if (mutual)
               _pill(Lc.current.mutual, onTap: null, filled: false)
             else
-              _pill(Lc.current.followBack, onTap: () => _followBack(u), filled: true),
+              _pill(
+                Lc.current.followBack,
+                onTap: () => _followBack(u),
+                filled: true,
+              ),
           ],
         ),
       ),
@@ -445,11 +447,7 @@ class _Skeleton extends StatelessWidget {
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                bar(96, 13),
-                const SizedBox(height: 7),
-                bar(150, 10),
-              ],
+              children: [bar(96, 13), const SizedBox(height: 7), bar(150, 10)],
             ),
           ],
         ),
