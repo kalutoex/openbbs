@@ -5,9 +5,11 @@
 App（api.py）用后加的列，两边共用一个库，谁也别去动对方的列。
 """
 import hashlib
+import json
 import os
 import re
 import sqlite3
+import time
 
 from . import config
 
@@ -51,6 +53,25 @@ CREATE TABLE IF NOT EXISTS files (
   downloads  INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_files_uploader ON files(uploader, created_at);
+
+-- 云盘账本：每人一份文件清单，指向 files 里那份物理文件。
+-- 空间按这张表算：deleted_at 为空的行才算占用。
+-- files.uploader 只是「谁先传的」，不再是配额依据。
+CREATE TABLE IF NOT EXISTS user_files (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL,
+  digest     TEXT    NOT NULL,
+  name       TEXT    NOT NULL,
+  size       INTEGER NOT NULL,
+  source     TEXT    NOT NULL DEFAULT 'cloud',
+  thread_id  INTEGER,
+  public     INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  deleted_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_user_files_owner ON user_files(user_id, deleted_at, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_files_digest ON user_files(digest);
+CREATE INDEX IF NOT EXISTS idx_user_files_trash ON user_files(deleted_at) WHERE deleted_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_threads_updated ON threads(updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS likes (
@@ -74,6 +95,37 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, id DESC);
+
+-- 私信：一对一会话。a_id < b_id，唯一键保证两个人只有一条会话。
+CREATE TABLE IF NOT EXISTS dm_threads (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  a_id       INTEGER NOT NULL,
+  b_id       INTEGER NOT NULL,
+  last_id    INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  UNIQUE(a_id, b_id)
+);
+CREATE TABLE IF NOT EXISTS dm_messages (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  thread_id  INTEGER NOT NULL,
+  from_id    INTEGER NOT NULL,
+  to_id      INTEGER NOT NULL,
+  body       TEXT NOT NULL DEFAULT '',
+  images     TEXT NOT NULL DEFAULT '[]',
+  is_read    INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+
+-- 会话的个人状态：置顶、免打扰、从自己列表里删掉（只清列表，记录还在）。
+-- hidden_upto 存删除那一刻的 last_id，之后有新消息 last_id 变大，会话自己就回来了。
+CREATE TABLE IF NOT EXISTS dm_state (
+  user_id     INTEGER NOT NULL,
+  thread_id   INTEGER NOT NULL,
+  pinned      INTEGER NOT NULL DEFAULT 0,
+  muted       INTEGER NOT NULL DEFAULT 0,
+  hidden_upto INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, thread_id)
+);
 
 -- 举报：thread_id / reply_id 二选一，handled=0 表示待处理。
 CREATE TABLE IF NOT EXISTS reports (
@@ -187,10 +239,22 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_sites_url ON sites(url);
 
 # 依赖 ALTER 加出来的列，必须在补列之后才能建。
 LATE_SCHEMA = """
+-- 全文索引：trigram 能中文子串（3 字起），2 字查询回退 LIKE。
+-- 正文在索引里再存一份。不用 external content：trigram + external content 下
+-- 的 'delete' 命令在本地实测会报 database disk image is malformed，宁可多占点地方。
+CREATE VIRTUAL TABLE IF NOT EXISTS threads_fts USING fts5(
+  title, body, tokenize='trigram'
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS replies_fts USING fts5(
+  body, tokenize='trigram'
+);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_handle ON users(handle);
 CREATE INDEX IF NOT EXISTS idx_fr_status ON feature_requests(status, id DESC);
 CREATE INDEX IF NOT EXISTS idx_fr_user ON feature_requests(user_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_replies_parent ON replies(parent_id);
+CREATE INDEX IF NOT EXISTS idx_dm_msg_thread ON dm_messages(thread_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_dm_unread ON dm_messages(to_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_dm_last ON dm_threads(last_id DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;
 """
 
@@ -214,6 +278,8 @@ EXTRA_COLUMNS = [
     ("replies", "floor_no", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "handle", "TEXT"),
     ("users", "cover", "TEXT NOT NULL DEFAULT ''"),
+    # 云盘额度（字节）。NULL = 用全局默认 limits.cloud_quota_mb，VIP 就是改这一列。
+    ("users", "quota_bytes", "INTEGER"),
     # 编辑过的帖子记一下时间，界面上标「已编辑」
     ("threads", "edited_at", "INTEGER"),
     ("replies", "edited_at", "INTEGER"),
@@ -286,6 +352,22 @@ def init():
                     # 另一个进程（IPv4/IPv6 各一个）同时补了同一列，忽略
                     pass
         c.executescript(LATE_SCHEMA)
+        # 云盘账本：老附件补记录，帖子引用过的标公开。幂等。
+        backfill_user_files(c)
+        # 全文索引落后就整体重建（老库第一次启动会走到这里）。
+        # 没有 fts5 的 SQLite 会让上面的建表语句直接失败，所以这里也兜一层。
+        try:
+            if c.execute("SELECT count(*) FROM threads_fts").fetchone()[0] != \
+                    c.execute("SELECT count(*) FROM threads").fetchone()[0]:
+                c.execute("DELETE FROM threads_fts")
+                c.execute("INSERT INTO threads_fts(rowid, title, body) "
+                          "SELECT id, title, body FROM threads")
+            if c.execute("SELECT count(*) FROM replies_fts").fetchone()[0] != \
+                    c.execute("SELECT count(*) FROM replies").fetchone()[0]:
+                c.execute("DELETE FROM replies_fts")
+                c.execute("INSERT INTO replies_fts(rowid, body) SELECT id, body FROM replies")
+        except sqlite3.OperationalError:
+            pass
         # 板块这一层拿掉了：老库里的 forums / forum_follows 和 threads.forum_id
         # 一并收走。帖子不再带归属字段，全部算主站的。新库上这三步都是空转。
         if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='forums'").fetchone():
@@ -319,3 +401,89 @@ def init():
         c.commit()
     finally:
         c.close()
+
+
+# ---------------------------------------------------------------- 全文索引同步
+#
+# 全量先按 rowid 删再插。FTS5 普通表支持 DELETE ... WHERE rowid=?，幂等。
+# 删行要在真删之前调 fts_delete —— 虽然这里只需要 rowid，早调晚调都行，但统一放前面。
+
+def fts_upsert_thread(c, tid):
+    try:
+        c.execute("DELETE FROM threads_fts WHERE rowid=?", (tid,))
+        c.execute("INSERT INTO threads_fts(rowid, title, body) "
+                  "SELECT id, title, body FROM threads WHERE id=?", (tid,))
+    except sqlite3.OperationalError:
+        pass
+
+
+def fts_upsert_reply(c, rid):
+    try:
+        c.execute("DELETE FROM replies_fts WHERE rowid=?", (rid,))
+        c.execute("INSERT INTO replies_fts(rowid, body) "
+                  "SELECT id, body FROM replies WHERE id=?", (rid,))
+    except sqlite3.OperationalError:
+        pass
+
+
+def fts_delete(c, kind, row_id):
+    """kind: thread / reply。必须在真删之前调。"""
+    try:
+        if kind == "thread":
+            c.execute("DELETE FROM threads_fts WHERE rowid=?", (row_id,))
+        else:
+            c.execute("DELETE FROM replies_fts WHERE rowid=?", (row_id,))
+    except sqlite3.OperationalError:
+        pass
+
+
+# ---------------------------------------------------------------- 云盘账本回填
+
+# 老库里 files 表的每一行补一条账本记录。走 WHERE NOT EXISTS，跑多少遍都安全。
+_BACKFILL_USER_FILES = """
+INSERT INTO user_files(user_id, digest, name, size, source, public, created_at)
+SELECT f.uploader, f.digest, f.name, f.size, 'cloud', 0, f.created_at
+FROM files f
+JOIN users u ON u.id = f.uploader
+WHERE NOT EXISTS (
+  SELECT 1 FROM user_files uf WHERE uf.user_id = f.uploader AND uf.digest = f.digest
+)
+"""
+
+
+def _digest_of(item):
+    """/f/<20位hex> → digest。认不出来就当没有。"""
+    if not isinstance(item, dict):
+        return None
+    url = str(item.get("url") or "")
+    m = re.search(r"/f/([0-9a-f]{20})$", url)
+    return m.group(1) if m else None
+
+
+def backfill_user_files(c):
+    """把 files 表补进账本，并把帖子引用过的文件标成公开。
+
+    每次启动跑一遍，代价是扫一遍 files 表（行数 = 物理文件数，很小）。
+    帖子表的扫描只在有附件时才走，量也小。
+    """
+    try:
+        c.execute(_BACKFILL_USER_FILES)
+        digests = set()
+        for table in ("threads", "replies"):
+            for row in c.execute(
+                    "SELECT files FROM %s WHERE files IS NOT NULL AND files LIKE '%%/f/%%'" % table):
+                try:
+                    items = json.loads(row["files"])
+                except Exception:
+                    continue
+                if not isinstance(items, list):
+                    continue
+                for it in items:
+                    d = _digest_of(it)
+                    if d:
+                        digests.add(d)
+        for d in digests:
+            c.execute("UPDATE user_files SET public=1 WHERE digest=?", (d,))
+        c.commit()
+    except sqlite3.OperationalError:
+        pass
