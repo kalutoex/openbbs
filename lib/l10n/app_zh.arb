@@ -1444,19 +1444,7 @@
   "deleteForeverHint": "彻底删除后找不回来，回收站里也不会再有。",
   "deletedForever": "已彻底删除",
   "downloadedBadge": "已下载",
-  "trashTakesSpace": "回收站 {v1} 个文件占 {v2}，彻底删除才还空间",
-  "@trashTakesSpace": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      },
-      "v2": {
-        "type": "String"
-      }
-    }
-  },
   "downloadingShort": "下载中",
-  "trashStillCounting": "这些文件还占着额度，彻底删除才还空间",
   "browseFiles": "手机文件",
   "browseFilesHint": "翻手机里的文件，选中直接传",
   "pickFromSystem": "系统选择器",

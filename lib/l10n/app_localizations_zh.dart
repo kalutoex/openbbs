@@ -2148,15 +2148,7 @@ class LZh extends L {
   String get downloadedBadge => '已下载';
 
   @override
-  String trashTakesSpace(String v1, String v2) {
-    return '回收站 $v1 个文件占 $v2，彻底删除才还空间';
-  }
-
-  @override
   String get downloadingShort => '下载中';
-
-  @override
-  String get trashStillCounting => '这些文件还占着额度，彻底删除才还空间';
 
   @override
   String get browseFiles => '手机文件';

@@ -854,19 +854,7 @@
   "deleteForeverHint": "This cannot be undone. It will not stay in Trash either.",
   "deletedForever": "Deleted permanently",
   "downloadedBadge": "Downloaded",
-  "trashTakesSpace": "{v1} file(s) in Trash take {v2}; space returns only after deleting them permanently",
-  "@trashTakesSpace": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      },
-      "v2": {
-        "type": "String"
-      }
-    }
-  },
   "downloadingShort": "Downloading",
-  "trashStillCounting": "These files still use your quota — space returns only after deleting them permanently",
   "browseFiles": "Files on this phone",
   "browseFilesHint": "Browse the phone and upload what you pick",
   "pickFromSystem": "System picker",

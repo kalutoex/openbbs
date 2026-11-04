@@ -2192,16 +2192,7 @@ class LEn extends L {
   String get downloadedBadge => 'Downloaded';
 
   @override
-  String trashTakesSpace(String v1, String v2) {
-    return '$v1 file(s) in Trash take $v2; space returns only after deleting them permanently';
-  }
-
-  @override
   String get downloadingShort => 'Downloading';
-
-  @override
-  String get trashStillCounting =>
-      'These files still use your quota — space returns only after deleting them permanently';
 
   @override
   String get browseFiles => 'Files on this phone';

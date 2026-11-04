@@ -3938,23 +3938,11 @@ abstract class L {
   /// **'已下载'**
   String get downloadedBadge;
 
-  /// No description provided for @trashTakesSpace.
-  ///
-  /// In zh, this message translates to:
-  /// **'回收站 {v1} 个文件占 {v2}，彻底删除才还空间'**
-  String trashTakesSpace(String v1, String v2);
-
   /// No description provided for @downloadingShort.
   ///
   /// In zh, this message translates to:
   /// **'下载中'**
   String get downloadingShort;
-
-  /// No description provided for @trashStillCounting.
-  ///
-  /// In zh, this message translates to:
-  /// **'这些文件还占着额度，彻底删除才还空间'**
-  String get trashStillCounting;
 
   /// No description provided for @browseFiles.
   ///

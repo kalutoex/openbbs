@@ -443,18 +443,6 @@ class _UsageBar extends StatelessWidget {
               color: usage.ratio > 0.9 ? cs.error : cs.primary,
             ),
           ),
-          // 回收站里的也占额度，得说清楚，不然「我明明删了」会成为常问的
-          if (usage.trashCount > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: Text(
-                Lc.current.trashTakesSpace(
-                  '${usage.trashCount}',
-                  bytesText(usage.trash),
-                ),
-                style: TextStyle(fontSize: 11.5, color: cs.error),
-              ),
-            ),
         ],
       ),
     );
@@ -698,9 +686,7 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(Lc.current.deleteForever),
-        content: Text(
-          '${f.name}\n\n${Lc.current.deleteForeverHint}',
-        ),
+        content: Text('${f.name}\n\n${Lc.current.deleteForeverHint}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -760,18 +746,9 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
               ),
             )
           : ListView.builder(
-              itemCount: _items!.length + 1,
+              itemCount: _items!.length,
               itemBuilder: (context, i) {
-                if (i == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Text(
-                      Lc.current.trashStillCounting,
-                      style: TextStyle(fontSize: 12, color: cs.error),
-                    ),
-                  );
-                }
-                final f = _items![i - 1];
+                final f = _items![i];
                 return ListTile(
                   leading: Icon(fileIconFor(f.name), color: cs.outline),
                   title: Text(

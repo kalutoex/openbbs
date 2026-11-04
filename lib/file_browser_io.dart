@@ -433,16 +433,30 @@ class _FileBrowserPageState extends State<FileBrowserPage>
 
   Widget _crumbs(ColorScheme cs) {
     if (_path.isEmpty) return const SizedBox.shrink();
-    final parts = _path.split('/').where((s) => s.isNotEmpty).toList();
+    // 根目录不拆开显示。真按路径拆，「存储」后面还会跟一行 storage > emulated > 0，
+    // 层层点进去本来也是同一个地方，白占一整行。
+    var base = _roots.isEmpty ? '' : _roots.first;
+    for (final r in _roots) {
+      if (_path == r || _path.startsWith('$r/')) {
+        base = r;
+        break;
+      }
+    }
+    final rel = base.isNotEmpty && _path.startsWith(base)
+        ? _path.substring(base.length)
+        : _path;
+    final parts = rel.split('/').where((s) => s.isNotEmpty).toList();
     final items = <Widget>[];
-    var acc = '';
+    var acc = base;
     items.add(
       InkWell(
-        onTap: () => _load(_roots.isEmpty ? _path : _roots.first),
+        onTap: base.isEmpty ? null : () => _load(base),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Text(
-            Lc.current.storageRoot,
+            base == (_roots.isEmpty ? '' : _roots.first)
+                ? Lc.current.storageRoot
+                : _base(base),
             style: TextStyle(fontSize: 12.5, color: cs.primary),
           ),
         ),
