@@ -17,6 +17,7 @@ import 'avatar.dart';
 import 'name_tag.dart';
 
 import '../l10n/l10n.dart';
+import '../pages/cloud_page.dart';
 /// 左侧抽屉：身份、导航、我的入口。
 class AppDrawer extends StatefulWidget {
   /// 当前底部 tab，用来标出选中项。
@@ -156,6 +157,12 @@ class _AppDrawerState extends State<AppDrawer> {
                               emptyText: Lc.current.noFavoritesYet,
                             ),
                           ),
+                        ),
+                        _item(
+                          context,
+                          icon: Icons.cloud_outlined,
+                          label: Lc.current.cloudDisk,
+                          onTap: () => _push(const CloudPage()),
                         ),
                         _item(
                           context,

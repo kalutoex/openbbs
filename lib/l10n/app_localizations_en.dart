@@ -1721,7 +1721,7 @@ class LEn extends L {
   }
 
   @override
-  String siteNeedsUpdate(String v1, String v2) {
+  String siteNeedsUpdate(Object v1, Object v2) {
     return 'This site speaks API $v1, but this client only supports up to $v2. Update the app to keep using it.';
   }
 
@@ -1965,4 +1965,140 @@ class LEn extends L {
   String attachUploading(String v1) {
     return 'Uploading $v1';
   }
+
+  @override
+  String get pasteCredential => 'Paste login credential';
+
+  @override
+  String get copyCredential => 'Copy login credential';
+
+  @override
+  String get copyCredentialHint =>
+      'After a reinstall or a new device, paste it on the login page to restore';
+
+  @override
+  String get credentialCopied => 'Credential copied';
+
+  @override
+  String get credentialHint =>
+      'Copy it on the old device under Settings → Copy login credential';
+
+  @override
+  String get restore => 'Restore';
+
+  @override
+  String get credentialInvalid => 'Credential is invalid or expired';
+
+  @override
+  String get restoreWithCredential => 'Restore with a login credential';
+
+  @override
+  String myFollowedForums(String v1) {
+    return 'Following ($v1)';
+  }
+
+  @override
+  String allForums(String v1) {
+    return 'All ($v1)';
+  }
+
+  @override
+  String forumStats(String v1, String v2) {
+    return '$v1 posts · $v2 followers';
+  }
+
+  @override
+  String get addFromDevice => 'Bring an account from another device';
+
+  @override
+  String get cloudDisk => 'Cloud';
+
+  @override
+  String get recycleBin => 'Trash';
+
+  @override
+  String get deleteThisFile => 'Delete this file?';
+
+  @override
+  String fileUsedByPosts(String v1) {
+    return '$v1 posts use this file. Those places will show \"file unavailable\" after you delete it.';
+  }
+
+  @override
+  String get goesToTrashHint =>
+      'The file goes to Trash and can be restored within 7 days. Space is freed right away.';
+
+  @override
+  String get movedToTrash => 'Moved to Trash';
+
+  @override
+  String get notConnectedTapRetry => 'Not connected. Tap to retry';
+
+  @override
+  String get nothingUploadedYet => 'Nothing uploaded yet';
+
+  @override
+  String get notFound => 'Not found';
+
+  @override
+  String get findFile => 'Find a file';
+
+  @override
+  String get bySize => 'By size';
+
+  @override
+  String get byTime => 'By time';
+
+  @override
+  String usedByPosts(String v1) {
+    return 'Used by $v1 posts';
+  }
+
+  @override
+  String fileCount2(String v1) {
+    return '$v1 files';
+  }
+
+  @override
+  String usedSpace(String v1) {
+    return 'Used $v1';
+  }
+
+  @override
+  String usedOfTotal(String v1, String v2) {
+    return '$v1 / $v2';
+  }
+
+  @override
+  String daysLeft(String v1) {
+    return '$v1 days left';
+  }
+
+  @override
+  String hoursLeft(String v1) {
+    return '$v1 hours left';
+  }
+
+  @override
+  String get expiringSoon => 'About to be cleared';
+
+  @override
+  String get emptyHere => 'Empty';
+
+  @override
+  String get download => 'Download';
+
+  @override
+  String get upload => 'Upload';
+
+  @override
+  String uploadingFile2(String v1) {
+    return 'Uploading $v1';
+  }
+
+  @override
+  String get uploadedDone => 'Uploaded';
+
+  @override
+  String get fileTooBigHint => 'Keep each file under 500MB';
 }

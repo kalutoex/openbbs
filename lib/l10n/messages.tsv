@@ -520,3 +520,28 @@ id 重复	skipDuplicateId	duplicate id
 、	listSep	, 
 账号已被封禁	bannedTitle	Account banned
 这个账号被管理员封了，帖子也发不出去。换个号，或者找站长问原因。	bannedBody	An admin banned this account, so posts won't go through. Use another account or ask the site owner why.
+云盘	cloudDisk	Cloud
+回收站	recycleBin	Trash
+删除这个文件？	deleteThisFile	Delete this file?
+有 $used 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。	fileUsedByPosts	{v1} posts use this file. Those places will show "file unavailable" after you delete it.
+文件先进回收站，7 天内还能恢复。空间会立刻还回来。	goesToTrashHint	The file goes to Trash and can be restored within 7 days. Space is freed right away.
+已移入回收站	movedToTrash	Moved to Trash
+没连上，点这里重试	notConnectedTapRetry	Not connected. Tap to retry
+还没传过东西	nothingUploadedYet	Nothing uploaded yet
+没找到	notFound	Not found
+找文件	findFile	Find a file
+按大小	bySize	By size
+按时间	byTime	By time
+$refs 个帖子在用	usedByPosts	Used by {v1} posts
+${usage.count} 个文件	fileCount2	{v1} files
+已用 $usedText	usedSpace	Used {v1}
+$usedText / $quotaText	usedOfTotal	{v1} / {v2}
+还剩 $days 天	daysLeft	{v1} days left
+还剩 $hours 小时	hoursLeft	{v1} hours left
+就要清了	expiringSoon	About to be cleared
+空的	emptyHere	Empty
+下载	download	Download
+上传	upload	Upload
+正在上传 $name	uploadingFile2	Uploading {v1}
+传好了	uploadedDone	Uploaded
+单个文件别超过 500MB	fileTooBigHint	Keep each file under 500MB

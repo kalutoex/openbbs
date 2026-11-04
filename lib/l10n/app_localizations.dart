@@ -358,7 +358,7 @@ abstract class L {
   /// No description provided for @home.
   ///
   /// In zh, this message translates to:
-  /// **'主页'**
+  /// **'首页'**
   String get home;
 
   /// No description provided for @notice.
@@ -3029,7 +3029,7 @@ abstract class L {
   /// No description provided for @loginBenefits.
   ///
   /// In zh, this message translates to:
-  /// **'登录后可以发帖、回复'**
+  /// **'登录后可以发帖、回复、关注吧'**
   String get loginBenefits;
 
   /// No description provided for @hot.
@@ -3126,7 +3126,7 @@ abstract class L {
   ///
   /// In zh, this message translates to:
   /// **'这个站点的接口版本是 {v1}，当前客户端只认到 {v2}。请更新客户端后再用。'**
-  String siteNeedsUpdate(String v1, String v2);
+  String siteNeedsUpdate(Object v1, Object v2);
 
   /// No description provided for @sitesManage.
   ///
@@ -3553,6 +3553,228 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'正在上传 {v1}'**
   String attachUploading(String v1);
+
+  /// No description provided for @pasteCredential.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴登录凭证'**
+  String get pasteCredential;
+
+  /// No description provided for @copyCredential.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制登录凭证'**
+  String get copyCredential;
+
+  /// No description provided for @copyCredentialHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'重装或换机后，登录页可粘贴恢复'**
+  String get copyCredentialHint;
+
+  /// No description provided for @credentialCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'凭证已复制'**
+  String get credentialCopied;
+
+  /// No description provided for @credentialHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'在旧设备「设置 → 复制登录凭证」里复制'**
+  String get credentialHint;
+
+  /// No description provided for @restore.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复'**
+  String get restore;
+
+  /// No description provided for @credentialInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'凭证无效或已失效'**
+  String get credentialInvalid;
+
+  /// No description provided for @restoreWithCredential.
+  ///
+  /// In zh, this message translates to:
+  /// **'用登录凭证恢复'**
+  String get restoreWithCredential;
+
+  /// No description provided for @myFollowedForums.
+  ///
+  /// In zh, this message translates to:
+  /// **'我关注的 {v1}'**
+  String myFollowedForums(String v1);
+
+  /// No description provided for @allForums.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部 {v1}'**
+  String allForums(String v1);
+
+  /// No description provided for @forumStats.
+  ///
+  /// In zh, this message translates to:
+  /// **'{v1} 帖 · {v2} 关注'**
+  String forumStats(String v1, String v2);
+
+  /// No description provided for @addFromDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'把别的设备上的账号加进这台机器'**
+  String get addFromDevice;
+
+  /// No description provided for @cloudDisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'云盘'**
+  String get cloudDisk;
+
+  /// No description provided for @recycleBin.
+  ///
+  /// In zh, this message translates to:
+  /// **'回收站'**
+  String get recycleBin;
+
+  /// No description provided for @deleteThisFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这个文件？'**
+  String get deleteThisFile;
+
+  /// No description provided for @fileUsedByPosts.
+  ///
+  /// In zh, this message translates to:
+  /// **'有 {v1} 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。'**
+  String fileUsedByPosts(String v1);
+
+  /// No description provided for @goesToTrashHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件先进回收站，7 天内还能恢复。空间会立刻还回来。'**
+  String get goesToTrashHint;
+
+  /// No description provided for @movedToTrash.
+  ///
+  /// In zh, this message translates to:
+  /// **'已移入回收站'**
+  String get movedToTrash;
+
+  /// No description provided for @notConnectedTapRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'没连上，点这里重试'**
+  String get notConnectedTapRetry;
+
+  /// No description provided for @nothingUploadedYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没传过东西'**
+  String get nothingUploadedYet;
+
+  /// No description provided for @notFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'没找到'**
+  String get notFound;
+
+  /// No description provided for @findFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'找文件'**
+  String get findFile;
+
+  /// No description provided for @bySize.
+  ///
+  /// In zh, this message translates to:
+  /// **'按大小'**
+  String get bySize;
+
+  /// No description provided for @byTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'按时间'**
+  String get byTime;
+
+  /// No description provided for @usedByPosts.
+  ///
+  /// In zh, this message translates to:
+  /// **'{v1} 个帖子在用'**
+  String usedByPosts(String v1);
+
+  /// No description provided for @fileCount2.
+  ///
+  /// In zh, this message translates to:
+  /// **'{v1} 个文件'**
+  String fileCount2(String v1);
+
+  /// No description provided for @usedSpace.
+  ///
+  /// In zh, this message translates to:
+  /// **'已用 {v1}'**
+  String usedSpace(String v1);
+
+  /// No description provided for @usedOfTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'{v1} / {v2}'**
+  String usedOfTotal(String v1, String v2);
+
+  /// No description provided for @daysLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'还剩 {v1} 天'**
+  String daysLeft(String v1);
+
+  /// No description provided for @hoursLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'还剩 {v1} 小时'**
+  String hoursLeft(String v1);
+
+  /// No description provided for @expiringSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'就要清了'**
+  String get expiringSoon;
+
+  /// No description provided for @emptyHere.
+  ///
+  /// In zh, this message translates to:
+  /// **'空的'**
+  String get emptyHere;
+
+  /// No description provided for @download.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载'**
+  String get download;
+
+  /// No description provided for @upload.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传'**
+  String get upload;
+
+  /// No description provided for @uploadingFile2.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在上传 {v1}'**
+  String uploadingFile2(String v1);
+
+  /// No description provided for @uploadedDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'传好了'**
+  String get uploadedDone;
+
+  /// No description provided for @fileTooBigHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'单个文件别超过 500MB'**
+  String get fileTooBigHint;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

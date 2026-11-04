@@ -37,7 +37,7 @@ class PostFile {
   Map<String, dynamic> toJson() => {'url': url, 'name': name, 'size': size};
 }
 
-IconData _iconFor(String name) {
+IconData fileIconFor(String name) {
   final ext = name.contains('.')
       ? name.split('.').last.toLowerCase()
       : '';
@@ -202,7 +202,7 @@ class _FileCardState extends State<_FileCard> {
                               height: 30,
                               child: CircularProgressIndicator(strokeWidth: 2.5),
                             )
-                          : Icon(_iconFor(widget.file.name), size: 30,
+                          : Icon(fileIconFor(widget.file.name), size: 30,
                               color: scheme.primary),
                       const SizedBox(width: 10),
                       Expanded(
@@ -376,7 +376,7 @@ class _CompactFilesState extends State<CompactFiles> {
                           value: _progress > 0 ? _progress : null,
                         ),
                       )
-                    : Icon(_iconFor(f.name), size: 30, color: scheme.primary),
+                    : Icon(fileIconFor(f.name), size: 30, color: scheme.primary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(

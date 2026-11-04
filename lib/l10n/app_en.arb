@@ -650,16 +650,6 @@
     }
   },
   "siteNeedsUpdate": "This site speaks API {v1}, but this client only supports up to {v2}. Update the app to keep using it.",
-  "@siteNeedsUpdate": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      },
-      "v2": {
-        "type": "String"
-      }
-    }
-  },
   "sitesManage": "Sites",
   "sitesManageHint": "One app, many sites — unreachable ones are skipped",
   "siteAdd": "Add site",
@@ -792,5 +782,42 @@
   "attachFile": "Attach file",
   "attachMax": "Up to {v1} files",
   "attachTooBig": "File must be under {v1}",
-  "attachUploading": "Uploading {v1}"
+  "attachUploading": "Uploading {v1}",
+  "pasteCredential": "Paste login credential",
+  "copyCredential": "Copy login credential",
+  "copyCredentialHint": "After a reinstall or a new device, paste it on the login page to restore",
+  "credentialCopied": "Credential copied",
+  "credentialHint": "Copy it on the old device under Settings → Copy login credential",
+  "restore": "Restore",
+  "credentialInvalid": "Credential is invalid or expired",
+  "restoreWithCredential": "Restore with a login credential",
+  "myFollowedForums": "Following ({v1})",
+  "allForums": "All ({v1})",
+  "forumStats": "{v1} posts · {v2} followers",
+  "addFromDevice": "Bring an account from another device",
+  "cloudDisk": "Cloud",
+  "recycleBin": "Trash",
+  "deleteThisFile": "Delete this file?",
+  "fileUsedByPosts": "{v1} posts use this file. Those places will show \"file unavailable\" after you delete it.",
+  "goesToTrashHint": "The file goes to Trash and can be restored within 7 days. Space is freed right away.",
+  "movedToTrash": "Moved to Trash",
+  "notConnectedTapRetry": "Not connected. Tap to retry",
+  "nothingUploadedYet": "Nothing uploaded yet",
+  "notFound": "Not found",
+  "findFile": "Find a file",
+  "bySize": "By size",
+  "byTime": "By time",
+  "usedByPosts": "Used by {v1} posts",
+  "fileCount2": "{v1} files",
+  "usedSpace": "Used {v1}",
+  "usedOfTotal": "{v1} / {v2}",
+  "daysLeft": "{v1} days left",
+  "hoursLeft": "{v1} hours left",
+  "expiringSoon": "About to be cleared",
+  "emptyHere": "Empty",
+  "download": "Download",
+  "upload": "Upload",
+  "uploadingFile2": "Uploading {v1}",
+  "uploadedDone": "Uploaded",
+  "fileTooBigHint": "Keep each file under 500MB"
 }

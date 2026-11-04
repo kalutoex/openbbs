@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+import 'api.dart';
 import 'open_path.dart';
 
 /// 手机上不能直接「打开」一个网络地址：先落到临时目录，再交给系统。
@@ -23,6 +24,11 @@ Future<void> openRemoteFile(String url, String name,
   final client = http.Client();
   try {
     final req = http.Request('GET', Uri.parse(url));
+    // 云盘里的私人文件要凭证；帖子附件公开，带了也无害
+    final tok = Api.token;
+    if (tok != null && tok.isNotEmpty) {
+      req.headers['Authorization'] = 'Bearer $tok';
+    }
     if (have > 0) req.headers['Range'] = 'bytes=$have-';
     final res = await client.send(req);
     final ok = res.statusCode == 200 || res.statusCode == 206;

@@ -43,7 +43,7 @@
   "accentColor": "主题色",
   "language": "语言",
   "languageSystem": "跟随系统",
-  "home": "主页",
+  "home": "首页",
   "notice": "通知",
   "me": "我的",
   "newThread": "发帖",
@@ -1105,7 +1105,7 @@
   "featured": "精华",
   "multiImage": "多图片",
   "comments": "评论",
-  "loginBenefits": "登录后可以发帖、回复",
+  "loginBenefits": "登录后可以发帖、回复、关注吧",
   "hot": "热门",
   "permIntro": "联网权限安装时已经给了，这里只剩通知和相册需要你点头。",
   "network": "联网",
@@ -1129,16 +1129,6 @@
     }
   },
   "siteNeedsUpdate": "这个站点的接口版本是 {v1}，当前客户端只认到 {v2}。请更新客户端后再用。",
-  "@siteNeedsUpdate": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      },
-      "v2": {
-        "type": "String"
-      }
-    }
-  },
   "sitesManage": "站点管理",
   "sitesManageHint": "一个入口管多个站，连不上的自动跳过",
   "siteAdd": "添加站点",
@@ -1292,5 +1282,125 @@
         "type": "String"
       }
     }
-  }
+  },
+  "pasteCredential": "粘贴登录凭证",
+  "copyCredential": "复制登录凭证",
+  "copyCredentialHint": "重装或换机后，登录页可粘贴恢复",
+  "credentialCopied": "凭证已复制",
+  "credentialHint": "在旧设备「设置 → 复制登录凭证」里复制",
+  "restore": "恢复",
+  "credentialInvalid": "凭证无效或已失效",
+  "restoreWithCredential": "用登录凭证恢复",
+  "myFollowedForums": "我关注的 {v1}",
+  "@myFollowedForums": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "allForums": "全部 {v1}",
+  "@allForums": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "forumStats": "{v1} 帖 · {v2} 关注",
+  "@forumStats": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "addFromDevice": "把别的设备上的账号加进这台机器",
+  "cloudDisk": "云盘",
+  "recycleBin": "回收站",
+  "deleteThisFile": "删除这个文件？",
+  "fileUsedByPosts": "有 {v1} 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。",
+  "@fileUsedByPosts": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "goesToTrashHint": "文件先进回收站，7 天内还能恢复。空间会立刻还回来。",
+  "movedToTrash": "已移入回收站",
+  "notConnectedTapRetry": "没连上，点这里重试",
+  "nothingUploadedYet": "还没传过东西",
+  "notFound": "没找到",
+  "findFile": "找文件",
+  "bySize": "按大小",
+  "byTime": "按时间",
+  "usedByPosts": "{v1} 个帖子在用",
+  "@usedByPosts": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "fileCount2": "{v1} 个文件",
+  "@fileCount2": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "usedSpace": "已用 {v1}",
+  "@usedSpace": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "usedOfTotal": "{v1} / {v2}",
+  "@usedOfTotal": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "daysLeft": "还剩 {v1} 天",
+  "@daysLeft": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "hoursLeft": "还剩 {v1} 小时",
+  "@hoursLeft": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "expiringSoon": "就要清了",
+  "emptyHere": "空的",
+  "download": "下载",
+  "upload": "上传",
+  "uploadingFile2": "正在上传 {v1}",
+  "@uploadingFile2": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadedDone": "传好了",
+  "fileTooBigHint": "单个文件别超过 500MB"
 }

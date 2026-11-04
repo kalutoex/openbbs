@@ -139,7 +139,7 @@ class LZh extends L {
   String get languageSystem => '跟随系统';
 
   @override
-  String get home => '主页';
+  String get home => '首页';
 
   @override
   String get notice => '通知';
@@ -1640,7 +1640,7 @@ class LZh extends L {
   String get comments => '评论';
 
   @override
-  String get loginBenefits => '登录后可以发帖、回复';
+  String get loginBenefits => '登录后可以发帖、回复、关注吧';
 
   @override
   String get hot => '热门';
@@ -1690,7 +1690,7 @@ class LZh extends L {
   }
 
   @override
-  String siteNeedsUpdate(String v1, String v2) {
+  String siteNeedsUpdate(Object v1, Object v2) {
     return '这个站点的接口版本是 $v1，当前客户端只认到 $v2。请更新客户端后再用。';
   }
 
@@ -1928,4 +1928,137 @@ class LZh extends L {
   String attachUploading(String v1) {
     return '正在上传 $v1';
   }
+
+  @override
+  String get pasteCredential => '粘贴登录凭证';
+
+  @override
+  String get copyCredential => '复制登录凭证';
+
+  @override
+  String get copyCredentialHint => '重装或换机后，登录页可粘贴恢复';
+
+  @override
+  String get credentialCopied => '凭证已复制';
+
+  @override
+  String get credentialHint => '在旧设备「设置 → 复制登录凭证」里复制';
+
+  @override
+  String get restore => '恢复';
+
+  @override
+  String get credentialInvalid => '凭证无效或已失效';
+
+  @override
+  String get restoreWithCredential => '用登录凭证恢复';
+
+  @override
+  String myFollowedForums(String v1) {
+    return '我关注的 $v1';
+  }
+
+  @override
+  String allForums(String v1) {
+    return '全部 $v1';
+  }
+
+  @override
+  String forumStats(String v1, String v2) {
+    return '$v1 帖 · $v2 关注';
+  }
+
+  @override
+  String get addFromDevice => '把别的设备上的账号加进这台机器';
+
+  @override
+  String get cloudDisk => '云盘';
+
+  @override
+  String get recycleBin => '回收站';
+
+  @override
+  String get deleteThisFile => '删除这个文件？';
+
+  @override
+  String fileUsedByPosts(String v1) {
+    return '有 $v1 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。';
+  }
+
+  @override
+  String get goesToTrashHint => '文件先进回收站，7 天内还能恢复。空间会立刻还回来。';
+
+  @override
+  String get movedToTrash => '已移入回收站';
+
+  @override
+  String get notConnectedTapRetry => '没连上，点这里重试';
+
+  @override
+  String get nothingUploadedYet => '还没传过东西';
+
+  @override
+  String get notFound => '没找到';
+
+  @override
+  String get findFile => '找文件';
+
+  @override
+  String get bySize => '按大小';
+
+  @override
+  String get byTime => '按时间';
+
+  @override
+  String usedByPosts(String v1) {
+    return '$v1 个帖子在用';
+  }
+
+  @override
+  String fileCount2(String v1) {
+    return '$v1 个文件';
+  }
+
+  @override
+  String usedSpace(String v1) {
+    return '已用 $v1';
+  }
+
+  @override
+  String usedOfTotal(String v1, String v2) {
+    return '$v1 / $v2';
+  }
+
+  @override
+  String daysLeft(String v1) {
+    return '还剩 $v1 天';
+  }
+
+  @override
+  String hoursLeft(String v1) {
+    return '还剩 $v1 小时';
+  }
+
+  @override
+  String get expiringSoon => '就要清了';
+
+  @override
+  String get emptyHere => '空的';
+
+  @override
+  String get download => '下载';
+
+  @override
+  String get upload => '上传';
+
+  @override
+  String uploadingFile2(String v1) {
+    return '正在上传 $v1';
+  }
+
+  @override
+  String get uploadedDone => '传好了';
+
+  @override
+  String get fileTooBigHint => '单个文件别超过 500MB';
 }
