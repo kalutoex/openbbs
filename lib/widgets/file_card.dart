@@ -74,6 +74,12 @@ IconData _iconFor(String name) {
   return Icons.insert_drive_file_outlined;
 }
 
+/// 附件卡的尺寸。主页和帖子里共用一套，改一处两边都变。
+class PostFileCard {
+  static const double height = 80;
+  static const double maxWidth = 420;
+}
+
 /// 帖子里那一排附件卡片。点一下就下载。
 class FileCards extends StatelessWidget {
   const FileCards({super.key, required this.files});
@@ -169,60 +175,88 @@ class _FileCardState extends State<_FileCard> {
     final t = Theme.of(context);
     final scheme = t.colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Material(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: widget.onRemove == null ? _open : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(
-              children: [
-                Icon(_iconFor(widget.file.name), size: 22,
-                    color: scheme.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: LayoutBuilder(
+        builder: (context, cons) {
+          final w =
+              cons.maxWidth.isFinite && cons.maxWidth < PostFileCard.maxWidth
+                  ? cons.maxWidth
+                  : PostFileCard.maxWidth;
+          return SizedBox(
+            width: w,
+            height: PostFileCard.height,
+            child: Material(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: widget.onRemove == null ? _open : null,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
                     children: [
-                      Text(
-                        widget.file.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: t.textTheme.bodyMedium,
-                      ),
-                      Text(
-                        _busy && _progress > 0
-                            ? '${(_progress * 100).toStringAsFixed(0)}% · ${widget.file.sizeText}'
-                            : widget.file.sizeText,
-                        style: t.textTheme.bodySmall
-                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      _busy
+                          ? const SizedBox(
+                              width: 30,
+                              height: 30,
+                              child: CircularProgressIndicator(strokeWidth: 2.5),
+                            )
+                          : Icon(_iconFor(widget.file.name), size: 30,
+                              color: scheme.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              widget.file.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: t.textTheme.bodyMedium
+                                  ?.copyWith(height: 1.25),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _busy && _progress > 0
+                                        ? '${(_progress * 100).toStringAsFixed(0)}% · ${widget.file.sizeText}'
+                                        : widget.file.sizeText,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: t.textTheme.bodySmall?.copyWith(
+                                        color: scheme.onSurfaceVariant),
+                                  ),
+                                ),
+                                if (widget.onRemove != null)
+                                  InkResponse(
+                                    onTap: widget.onRemove,
+                                    radius: 16,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(2),
+                                      child: Icon(Icons.close,
+                                          size: 18, color: scheme.outline),
+                                    ),
+                                  )
+                                else if (!_busy)
+                                  Icon(Icons.download_outlined,
+                                      size: 16,
+                                      color: scheme.onSurfaceVariant),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                if (widget.onRemove != null)
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: widget.onRemove,
-                  )
-                else if (_busy)
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  Icon(Icons.download_outlined,
-                      size: 20, color: scheme.onSurfaceVariant),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -246,8 +280,6 @@ class _CompactFilesState extends State<CompactFiles> {
   double _progress = 0;
 
   static const _maxShown = 2;
-  static const _maxW = 420.0;
-  static const _h = 80.0;
 
   Future<void> _open(PostFile f, int i) async {
     if (_busy >= 0) return;
@@ -284,9 +316,10 @@ class _CompactFilesState extends State<CompactFiles> {
       padding: const EdgeInsets.only(top: 8),
       child: LayoutBuilder(
         builder: (context, cons) {
-          final w = cons.maxWidth.isFinite && cons.maxWidth < _maxW
+          final w = cons.maxWidth.isFinite &&
+                  cons.maxWidth < PostFileCard.maxWidth
               ? cons.maxWidth
-              : _maxW;
+              : PostFileCard.maxWidth;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -298,7 +331,7 @@ class _CompactFilesState extends State<CompactFiles> {
                 if (shown.isNotEmpty) const SizedBox(height: 8),
                 Container(
                   width: w,
-                  height: _h,
+                  height: PostFileCard.height,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color:
@@ -323,7 +356,7 @@ class _CompactFilesState extends State<CompactFiles> {
     final busy = _busy == i;
     return SizedBox(
       width: w,
-      height: _h,
+      height: PostFileCard.height,
       child: Material(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
