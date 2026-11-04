@@ -459,7 +459,21 @@ class _ChatPageState extends State<ChatPage> {
         ),
       );
     }
-    if (_msgs.isEmpty) return const SizedBox.expand();
+    if (_msgs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.chat_bubble_outline, size: 34, color: cs.outlineVariant),
+            const SizedBox(height: 10),
+            Text(
+              Lc.current.dmNoChat,
+              style: TextStyle(fontSize: 13, color: cs.outline),
+            ),
+          ],
+        ),
+      );
+    }
     // 点消息区任意空白、或者开始往上翻，都收键盘
     return NotificationListener<ScrollStartNotification>(
       onNotification: (_) {
@@ -517,7 +531,7 @@ class _ChatPageState extends State<ChatPage> {
       children: [
         if (showTime) _timePill(cs, ts),
         Padding(
-          padding: EdgeInsets.only(top: tight ? 4 : 14, left: 2, right: 2),
+          padding: EdgeInsets.only(top: tight ? 6 : 21, left: 2, right: 2),
           // 长按弹引用；点右边空白也管用，别只认气泡那小块
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -530,13 +544,13 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 if (!mine) ...[
                   _avatar(_peerAvatar, _peerName, _openPeer),
-                  const SizedBox(width: 9),
+                  const SizedBox(width: 7.5),
                 ],
                 Flexible(
                   child: _bubble(cs, mine, body, imgs, files, reply),
                 ),
                 if (mine) ...[
-                  const SizedBox(width: 9),
+                  const SizedBox(width: 7.5),
                   _avatar(_myAvatar, _myName, _openMe),
                 ],
               ],
@@ -720,7 +734,7 @@ class _ChatPageState extends State<ChatPage> {
   Widget _timePill(ColorScheme cs, int ts) {
     return Center(
       child: Container(
-        margin: const EdgeInsets.only(top: 14),
+        margin: const EdgeInsets.only(top: 21),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         decoration: BoxDecoration(
           color: cs.surfaceContainerHighest.withValues(alpha: 0.8),
@@ -996,8 +1010,6 @@ class _ChatPageState extends State<ChatPage> {
               style: const TextStyle(fontSize: 15, height: 1.3),
               decoration: InputDecoration(
                 isDense: true,
-                hintText: Lc.current.saySomething,
-                hintStyle: const TextStyle(fontSize: 15),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
