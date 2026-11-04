@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart'
+    show ImageRenderMethodForWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -70,6 +72,8 @@ class PostImages extends StatelessWidget {
                   url: url,
                   memCacheWidth: px,
                   fit: BoxFit.cover,
+                  // 服务端给了宽高就不用再解一次图去探比例。
+                  probeSize: sizes.isEmpty || sizes.first is! List,
                   // 长图裁的时候留上面那截，内容从头开始才对。
                   alignment: clipped ? Alignment.topCenter : Alignment.center,
                 ),
@@ -104,6 +108,7 @@ class PostImages extends StatelessWidget {
                 url: Api.img(urls[i]),
                 fit: BoxFit.cover,
                 memCacheWidth: cellPx,
+                probeSize: i >= sizes.length || sizes[i] is! List,
               ),
             ),
           ),
@@ -128,11 +133,16 @@ class _RetryImage extends StatefulWidget {
   final BoxFit fit;
   final Alignment alignment;
 
+  /// 要不要单独解一次图把真实宽高存下来。服务端已经给了尺寸就不做，
+  /// 网页版上那次多在 iOS 上是白占一份显存。
+  final bool probeSize;
+
   const _RetryImage({
     required this.url,
     required this.fit,
     this.memCacheWidth,
     this.alignment = Alignment.center,
+    this.probeSize = true,
   });
 
   @override
@@ -145,7 +155,7 @@ class _RetryImageState extends State<_RetryImage> {
   @override
   void initState() {
     super.initState();
-    unawaited(_remember());
+    if (widget.probeSize) unawaited(_remember());
   }
 
   /// 解码一次拿到真实宽高存起来，下次这个帖子再滑到就不用猜比例了。
@@ -156,6 +166,7 @@ class _RetryImageState extends State<_RetryImage> {
         widget.url,
         cacheManager: ImgCache.manager,
         maxWidth: widget.memCacheWidth,
+        imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
       );
       final stream = provider.resolve(ImageConfiguration.empty);
       late final ImageStreamListener listener;
@@ -193,6 +204,10 @@ class _RetryImageState extends State<_RetryImage> {
     final cs = Theme.of(context).colorScheme;
     return CachedNetworkImage(
       cacheManager: ImgCache.manager,
+      // 网页版默认用 <img> 元素取图，memCacheWidth 会被忽略，图按原尺寸解码。
+      // 一张 1200×1600 解码就是 7MB，几十张就把图片缓存顶穿，于是滑回去又要重下，
+      // 反复几次浏览器那边就再也画不出来。改成走 http 取字节，才能按显示尺寸解码。
+      imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
       key: ValueKey('${widget.url}#$_round'),
       fadeInDuration: const Duration(milliseconds: 180),
       imageUrl: widget.url,

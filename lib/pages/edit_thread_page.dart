@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart'
+    show ImageRenderMethodForWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -305,6 +307,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
         if (i < _remote.length) {
           img = CachedNetworkImage(
             cacheManager: ImgCache.manager,
+            imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
             imageUrl: Api.img(_remote[i]),
             fit: BoxFit.cover,
             placeholder: (_, _) => Container(color: cs.surfaceContainerHighest),

@@ -1,4 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart'
+    show ImageRenderMethodForWeb;
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -194,6 +196,7 @@ class ThreadTile extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       child: CachedNetworkImage(
                         cacheManager: ImgCache.manager,
+                        imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
                         imageUrl: Api.img(cover),
                         fit: BoxFit.cover,
                         alignment: Alignment.topCenter,

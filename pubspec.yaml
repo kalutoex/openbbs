@@ -39,6 +39,9 @@ dependencies:
   http: ^1.6.0
   image_picker: ^1.1.2
   cached_network_image: ^3.4.1
+  # 只为拿 ImageRenderMethodForWeb：网页版默认走 <img> 元素，memCacheWidth
+  # 不生效，图按原尺寸解码，几张 1200×1600 就把图片缓存顶爆，滑一下就重下。
+  cached_network_image_platform_interface: ^4.1.1
   flutter_image_compress: ^2.4.0
   scrollable_positioned_list: ^0.3.8
   shared_preferences: ^2.5.6
