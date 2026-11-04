@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:image_picker/image_picker.dart' hide PickedFile;
 
 import '../api.dart';
+import '../cloud.dart';
+import '../file_browser.dart';
 import '../file_pick.dart';
 import '../img_compress.dart';
 import '../l10n/error_text.dart';
@@ -14,6 +16,7 @@ import '../store.dart';
 import '../widgets/avatar.dart';
 import '../widgets/file_card.dart';
 import '../widgets/toast.dart';
+import 'cloud_pick_page.dart';
 import 'gallery_picker_page.dart';
 import 'user_page.dart';
 
@@ -281,32 +284,108 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  /// 文件从哪来：云盘里现成的，还是设备上挑新的。
+  Future<String?> _fileSource() {
+    return showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.cloud_outlined),
+              title: Text(Lc.current.pickFromCloud),
+              onTap: () => Navigator.of(c).pop('cloud'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.smartphone),
+              title: Text(Lc.current.pickFromDevice),
+              onTap: () => Navigator.of(c).pop('device'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int get _fileRoom => 5 - _pendingFiles.length;
+
   Future<void> _pickFile() async {
     if (_sending || _compressing) return;
-    try {
+    final src = await _fileSource();
+    if (!mounted || src == null) return;
+    if (src == 'cloud') {
+      await _addFromCloud();
+      return;
+    }
+    await _pickFromDevice();
+  }
+
+  Future<void> _addFromCloud() async {
+    final left = _fileRoom;
+    if (left <= 0) {
+      toast(context, Lc.current.attachMax('5'));
+      return;
+    }
+    final picked = await Navigator.of(context).push<List<CloudFile>>(
+      MaterialPageRoute(builder: (_) => CloudPickPage(maxCount: left)),
+    );
+    if (!mounted || picked == null || picked.isEmpty) return;
+    setState(() {
+      for (final f in picked.take(left)) {
+        _pendingFiles.add(PostFile(url: f.url, name: f.name, size: f.size));
+      }
+    });
+  }
+
+  /// 设备上的文件：手机上用自己的浏览器翻，网页版没这能力，退回系统选择器。
+  Future<void> _pickFromDevice() async {
+    final left = _fileRoom;
+    if (left <= 0) {
+      toast(context, Lc.current.attachMax('5'));
+      return;
+    }
+    List<PickedFile> list = const [];
+    if (fileBrowserSupported) {
+      final r = await Navigator.of(context).push<List<PickedFile>>(
+        MaterialPageRoute(
+          builder: (_) => const FileBrowserPage(pickOnly: true),
+        ),
+      );
+      list = r ?? const <PickedFile>[];
+    } else {
       final f = await pickFile();
-      if (f == null || !mounted) return;
-      setState(() => _compressing = true);
-      final d = await Api.uploadFile(f);
-      if (!mounted) return;
-      setState(() {
-        _pendingFiles.add(
-          PostFile(
-            url: '${d['url']}',
-            name: '${d['name']}',
-            size: d['size'] is int ? d['size'] as int : 0,
-          ),
-        );
-        _compressing = false;
-      });
+      if (f != null) list = [f];
+    }
+    if (!mounted || list.isEmpty) return;
+    await _uploadFiles(list.take(left).toList());
+  }
+
+  Future<void> _uploadFiles(List<PickedFile> list) async {
+    if (list.isEmpty) return;
+    setState(() => _compressing = true);
+    try {
+      for (final f in list) {
+        final d = await Api.uploadFile(f);
+        if (!mounted) return;
+        setState(() {
+          _pendingFiles.add(
+            PostFile(
+              url: '${d['url']}',
+              name: '${d['name']}',
+              size: d['size'] is int ? d['size'] as int : f.size,
+            ),
+          );
+        });
+      }
     } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _compressing = false);
-      toast(context, errorText(context, e));
+      if (mounted) toast(context, errorText(context, e));
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _compressing = false);
-      toast(context, '$e');
+      if (mounted) toast(context, '$e');
+    } finally {
+      if (mounted) setState(() => _compressing = false);
     }
   }
 
