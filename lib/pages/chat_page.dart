@@ -33,7 +33,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   /// 气泡最多占屏宽多少。留出地方给头像，也留点呼吸。
-  static const double _bubbleRatio = 0.68;
+  static const double _bubbleRatio = 0.72;
 
   final List<Map<String, dynamic>> _msgs = [];
   final TextEditingController _input = TextEditingController();
@@ -459,21 +459,7 @@ class _ChatPageState extends State<ChatPage> {
         ),
       );
     }
-    if (_msgs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.chat_bubble_outline, size: 34, color: cs.outlineVariant),
-            const SizedBox(height: 10),
-            Text(
-              Lc.current.dmNoChat,
-              style: TextStyle(fontSize: 13, color: cs.outline),
-            ),
-          ],
-        ),
-      );
-    }
+    if (_msgs.isEmpty) return const SizedBox.expand();
     // 点消息区任意空白、或者开始往上翻，都收键盘
     return NotificationListener<ScrollStartNotification>(
       onNotification: (_) {
@@ -485,7 +471,11 @@ class _ChatPageState extends State<ChatPage> {
         onTap: () => FocusScope.of(context).unfocus(),
         child: ListView.builder(
           controller: _scroll,
-          padding: const EdgeInsets.fromLTRB(10, 4, 10, 8),
+          // 内容不满一屏也能拖，拖到边上有回弹，跟 QQ 微信一个手感
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
           itemCount: _msgs.length + 1,
           itemBuilder: (context, i) {
             if (i == 0) {
@@ -527,7 +517,7 @@ class _ChatPageState extends State<ChatPage> {
       children: [
         if (showTime) _timePill(cs, ts),
         Padding(
-          padding: EdgeInsets.only(top: tight ? 3 : 10),
+          padding: EdgeInsets.only(top: tight ? 4 : 14, left: 2, right: 2),
           // 长按弹引用；点右边空白也管用，别只认气泡那小块
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -540,13 +530,13 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 if (!mine) ...[
                   _avatar(_peerAvatar, _peerName, _openPeer),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 9),
                 ],
                 Flexible(
                   child: _bubble(cs, mine, body, imgs, files, reply),
                 ),
                 if (mine) ...[
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 9),
                   _avatar(_myAvatar, _myName, _openMe),
                 ],
               ],
@@ -617,10 +607,9 @@ class _ChatPageState extends State<ChatPage> {
       child: IntrinsicWidth(
         child: _BubbleBox(
           color: bg,
-          mine: mine,
           // 纯图片几乎贴边；带图文的，图片也只留一点点，文字另外缩进
           padding: onlyImgs
-              ? const EdgeInsets.all(1.5)
+              ? const EdgeInsets.all(3)
               : const EdgeInsets.all(4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -640,14 +629,14 @@ class _ChatPageState extends State<ChatPage> {
               if (body.isNotEmpty)
                 Padding(
                   padding: EdgeInsets.fromLTRB(
-                    6,
-                    (imgs.isEmpty && files.isEmpty) ? 1 : 5,
-                    6,
-                    2,
+                    9,
+                    (imgs.isEmpty && files.isEmpty) ? 2 : 7,
+                    9,
+                    3,
                   ),
                   child: SelectableText(
                     body,
-                    style: TextStyle(fontSize: 15, height: 1.35, color: fg),
+                    style: TextStyle(fontSize: 15.5, height: 1.42, color: fg),
                   ),
                 ),
             ],
@@ -666,20 +655,23 @@ class _ChatPageState extends State<ChatPage> {
         ? text
         : (r['has_img'] == true ? Lc.current.replyImage : '');
     return Container(
-      margin: const EdgeInsets.only(bottom: 5),
-      padding: const EdgeInsets.fromLTRB(7, 3, 8, 3),
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.fromLTRB(8, 4, 9, 4),
       decoration: BoxDecoration(
-        color: tint.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(4),
+        color: tint.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: tint.withValues(alpha: 0.55), width: 2.5),
+        ),
       ),
       child: Text(
         '$name: $summary',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontSize: 12,
-          height: 1.3,
-          color: tint.withValues(alpha: 0.78),
+          fontSize: 12.5,
+          height: 1.32,
+          color: tint.withValues(alpha: 0.75),
         ),
       ),
     );
@@ -687,16 +679,16 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _images(List<String> imgs) {
     final one = imgs.length == 1;
-    final side = one ? 168.0 : 104.0;
+    final side = one ? 172.0 : 106.0;
     return Wrap(
-      spacing: 3,
-      runSpacing: 3,
+      spacing: 4,
+      runSpacing: 4,
       children: [
         for (var i = 0; i < imgs.length; i++)
           GestureDetector(
             onTap: () => _viewImage(imgs, i),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(one ? 10 : 6),
+              borderRadius: BorderRadius.circular(one ? 13 : 9),
               child: Image.network(
                 Api.img(imgs[i]),
                 width: side,
@@ -728,15 +720,19 @@ class _ChatPageState extends State<ChatPage> {
   Widget _timePill(ColorScheme cs, int ts) {
     return Center(
       child: Container(
-        margin: const EdgeInsets.only(top: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        margin: const EdgeInsets.only(top: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(4),
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           _fmtTime(ts),
-          style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+          style: TextStyle(
+            fontSize: 11.5,
+            color: cs.onSurfaceVariant,
+            height: 1.2,
+          ),
         ),
       ),
     );
@@ -980,12 +976,12 @@ class _ChatPageState extends State<ChatPage> {
                   height: 22,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.add_circle_outline, size: 30),
+              : const Icon(Icons.add_circle_outline, size: 27),
         ),
         Expanded(
           child: Container(
-            constraints: const BoxConstraints(minHeight: 50),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+            constraints: const BoxConstraints(minHeight: 42),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             decoration: BoxDecoration(
               color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(8),
@@ -1015,12 +1011,12 @@ class _ChatPageState extends State<ChatPage> {
         ),
         const SizedBox(width: 6),
         SizedBox(
-          height: 50,
+          height: 42,
           child: FilledButton(
             onPressed: canSend ? _send : null,
             style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 17),
-              minimumSize: const Size(0, 50),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              minimumSize: const Size(0, 42),
               visualDensity: VisualDensity.compact,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -1041,79 +1037,39 @@ class _ChatPageState extends State<ChatPage> {
 }
 
 /// 气泡本体：圆角 + 靠头像那侧一个小尖。
+/// 气泡壳。统一 16 的圆角，不再画尖角——尖角配小圆角显脏。
 class _BubbleBox extends StatelessWidget {
   const _BubbleBox({
     required this.color,
-    required this.mine,
     required this.padding,
     required this.child,
   });
 
   final Color color;
-  final bool mine;
   final EdgeInsets padding;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    const r = Radius.circular(14);
-    const small = Radius.circular(4);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.only(
-              topLeft: mine ? r : small,
-              topRight: mine ? small : r,
-              bottomLeft: r,
-              bottomRight: r,
-            ),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: dark ? 0.20 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-          child: child,
-        ),
-        Positioned(
-          top: 9,
-          left: mine ? null : -5,
-          right: mine ? -5 : null,
-          child: CustomPaint(
-            size: const Size(6, 10),
-            painter: _TailPainter(color, mine),
-          ),
-        ),
-      ],
+        ],
+      ),
+      child: child,
     );
   }
 }
 
-class _TailPainter extends CustomPainter {
-  _TailPainter(this.color, this.mine);
-
-  final Color color;
-  final bool mine;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Path();
-    if (mine) {
-      p.moveTo(0, 0);
-      p.lineTo(size.width, 0);
-      p.lineTo(0, size.height);
-    } else {
-      p.moveTo(size.width, 0);
-      p.lineTo(0, 0);
-      p.lineTo(size.width, size.height);
-    }
-    p.close();
-    canvas.drawPath(p, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(_TailPainter old) =>
-      old.color != color || old.mine != mine;
-}
 
 /// 图片全屏看。左右滑同一批图，点一下就关。
 class _ImageViewer extends StatefulWidget {
