@@ -269,8 +269,10 @@ class Api {
   }
 
   /// 缩略图地址。一屏里几张图，没必要每张都拉整图，服务端按宽度切好存着。
-  /// 拿不到本地路径（远端站点的图、空路径）就退回原图地址。
+  /// 只有网页版用：App 端有磁盘缓存，整图拉一次就长期留着，没必要为省流量牺牲清晰度。
+  /// 拿不到本地路径（远端站点的图、空路径）也退回原图地址。
   static String thumb(String path, int width) {
+    if (!kIsWeb) return img(path);
     if (path.startsWith('/img/')) {
       return img('/img/t/$width/${path.substring(5)}');
     }
