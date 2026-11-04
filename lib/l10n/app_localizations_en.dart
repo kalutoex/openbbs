@@ -2271,4 +2271,13 @@ class LEn extends L {
 
   @override
   String get replyImage => '[image]';
+
+  @override
+  String get dmPickImage => 'Photos';
+
+  @override
+  String get dmPickFile => 'File';
+
+  @override
+  String get dmAttach => 'Send';
 }

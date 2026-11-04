@@ -5,12 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api.dart';
+import '../file_pick.dart';
 import '../img_compress.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../plat.dart';
 import '../store.dart';
 import '../widgets/avatar.dart';
+import '../widgets/file_card.dart';
 import '../widgets/toast.dart';
+import 'gallery_picker_page.dart';
 import 'user_page.dart';
 
 /// 一对一私信。进页面拉最新 30 条，往上翻更早，15 秒轮询一次。
@@ -35,6 +39,9 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
   final List<Uint8List> _pending = [];
+
+  /// 待发的附件。和图分开存，发的时候一起送上去。
+  final List<PostFile> _pendingFiles = [];
   final ImagePicker _picker = ImagePicker();
 
   Timer? _poll;
@@ -176,11 +183,91 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  /// 加号：微信那种小面板，图片和文件分开走。
+  Future<void> _attachMenu() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: Row(
+            children: [
+              _attachTile(
+                ctx,
+                Icons.photo_library_outlined,
+                Lc.current.dmPickImage,
+                () {
+                  Navigator.pop(ctx);
+                  _pickImages();
+                },
+              ),
+              const SizedBox(width: 24),
+              _attachTile(
+                ctx,
+                Icons.attach_file,
+                Lc.current.dmPickFile,
+                () {
+                  Navigator.pop(ctx);
+                  _pickFile();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _attachTile(
+    BuildContext ctx,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
+    final cs = Theme.of(ctx).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 26, color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 6),
+            Text(label, style: const TextStyle(fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickImages() async {
     if (_pending.length >= 9 || _compressing) return;
     setState(() => _compressing = true);
     try {
-      final picked = await _picker.pickMultiImage();
+      // 手机上有自己的相册页就用它，网页版没有 MediaStore，退回系统选择
+      List<XFile> picked;
+      if (!hasMediaStore) {
+        picked = await _picker.pickMultiImage();
+      } else {
+        final r = await Navigator.of(context).push<List<XFile>>(
+          MaterialPageRoute(
+            builder: (_) =>
+                GalleryPickerPage(maxCount: 9 - _pending.length),
+          ),
+        );
+        picked = r ?? const <XFile>[];
+      }
       final room = 9 - _pending.length;
       for (final x in picked.take(room)) {
         final raw = await x.readAsBytes();
@@ -194,9 +281,40 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> _pickFile() async {
+    if (_sending || _compressing) return;
+    try {
+      final f = await pickFile();
+      if (f == null || !mounted) return;
+      setState(() => _compressing = true);
+      final d = await Api.uploadFile(f);
+      if (!mounted) return;
+      setState(() {
+        _pendingFiles.add(
+          PostFile(
+            url: '${d['url']}',
+            name: '${d['name']}',
+            size: d['size'] is int ? d['size'] as int : 0,
+          ),
+        );
+        _compressing = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _compressing = false);
+      toast(context, errorText(context, e));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _compressing = false);
+      toast(context, '$e');
+    }
+  }
+
   Future<void> _send() async {
     final text = _input.text.trim();
-    if ((text.isEmpty && _pending.isEmpty) || _sending) return;
+    if ((text.isEmpty && _pending.isEmpty && _pendingFiles.isEmpty) || _sending) {
+      return;
+    }
     setState(() => _sending = true);
     try {
       // 先把图传上去，拿到站内地址再发消息
@@ -207,12 +325,15 @@ class _ChatPageState extends State<ChatPage> {
       await Api.post('/dm/$_peerId', {
         'body': text,
         'images': urls,
+        if (_pendingFiles.isNotEmpty)
+          'files': _pendingFiles.map((f) => f.toJson()).toList(),
         if (_replyTo != null) 'reply_id': _replyTo!['id'],
       });
       if (!mounted) return;
       _input.clear();
       setState(() {
         _pending.clear();
+        _pendingFiles.clear();
         _replyTo = null;
         _sending = false;
       });
@@ -307,7 +428,8 @@ class _ChatPageState extends State<ChatPage> {
               ],
             ),
           ),
-          if (_pending.isNotEmpty) _pendingBar(cs),
+          if (_pending.isNotEmpty || _pendingFiles.isNotEmpty)
+            _pendingBar(cs),
           _composer(cs),
         ],
       ),
@@ -352,27 +474,38 @@ class _ChatPageState extends State<ChatPage> {
         ),
       );
     }
-    return ListView.builder(
-      controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 8),
-      itemCount: _msgs.length + 1,
-      itemBuilder: (context, i) {
-        if (i == 0) {
-          return SizedBox(
-            height: 34,
-            child: Center(
-              child: _loadingEarlier
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : null,
-            ),
-          );
-        }
-        return _row(cs, i - 1);
+    // 点消息区任意空白、或者开始往上翻，都收键盘
+    return NotificationListener<ScrollStartNotification>(
+      onNotification: (_) {
+        FocusScope.of(context).unfocus();
+        return false;
       },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: ListView.builder(
+          controller: _scroll,
+          padding: const EdgeInsets.fromLTRB(10, 4, 10, 8),
+          itemCount: _msgs.length + 1,
+          itemBuilder: (context, i) {
+            if (i == 0) {
+              return SizedBox(
+                height: 34,
+                child: Center(
+                  child: _loadingEarlier
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : null,
+                ),
+              );
+            }
+            return _row(cs, i - 1);
+          },
+        ),
+      ),
     );
   }
 
@@ -385,6 +518,7 @@ class _ChatPageState extends State<ChatPage> {
     final mine = (m['from_id'] ?? 0) == AppState.instance.user?['id'];
     final body = (m['body'] ?? '') as String;
     final imgs = (m['images'] as List? ?? const []).cast<String>();
+    final files = PostFile.listOf(m['files']);
     final reply = (m['reply'] as Map?)?.cast<String, dynamic>();
     final tight = prev != null && (ts - pts).abs() < 300;
 
@@ -408,7 +542,9 @@ class _ChatPageState extends State<ChatPage> {
                   _avatar(_peerAvatar, _peerName, _openPeer),
                   const SizedBox(width: 7),
                 ],
-                Flexible(child: _bubble(cs, mine, body, imgs, reply)),
+                Flexible(
+                  child: _bubble(cs, mine, body, imgs, files, reply),
+                ),
                 if (mine) ...[
                   const SizedBox(width: 7),
                   _avatar(_myAvatar, _myName, _openMe),
@@ -466,14 +602,14 @@ class _ChatPageState extends State<ChatPage> {
     bool mine,
     String body,
     List<String> imgs,
+    List<PostFile> files,
     Map<String, dynamic>? reply,
   ) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final bg = mine
-        ? cs.primary
-        : (dark ? cs.surfaceContainerHighest : cs.surface);
-    final fg = mine ? cs.onPrimary : cs.onSurface;
-    final onlyImgs = body.isEmpty && imgs.isNotEmpty && reply == null;
+    // 自己的用主题色，对方的用主题色的容器色，两边都在全局配色里
+    final bg = mine ? cs.primary : cs.primaryContainer;
+    final fg = mine ? cs.onPrimary : cs.onPrimaryContainer;
+    final onlyImgs =
+        body.isEmpty && imgs.isNotEmpty && files.isEmpty && reply == null;
     final maxW = MediaQuery.of(context).size.width * _bubbleRatio;
 
     return ConstrainedBox(
@@ -482,18 +618,33 @@ class _ChatPageState extends State<ChatPage> {
         child: _BubbleBox(
           color: bg,
           mine: mine,
+          // 纯图片几乎贴边；带图文的，图片也只留一点点，文字另外缩进
           padding: onlyImgs
-              ? const EdgeInsets.all(3)
-              : const EdgeInsets.fromLTRB(11, 8, 11, 8),
+              ? const EdgeInsets.all(1.5)
+              : const EdgeInsets.all(4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (reply != null) _quoteBlock(cs, mine, reply),
+              if (reply != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 1, 6, 0),
+                  child: _quoteBlock(cs, mine, reply),
+                ),
               if (imgs.isNotEmpty) _images(imgs),
+              if (files.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                  child: FileCards(files: files),
+                ),
               if (body.isNotEmpty)
                 Padding(
-                  padding: EdgeInsets.only(top: imgs.isEmpty ? 0 : 6),
+                  padding: EdgeInsets.fromLTRB(
+                    6,
+                    (imgs.isEmpty && files.isEmpty) ? 1 : 5,
+                    6,
+                    2,
+                  ),
                   child: SelectableText(
                     body,
                     style: TextStyle(fontSize: 15, height: 1.35, color: fg),
@@ -508,7 +659,7 @@ class _ChatPageState extends State<ChatPage> {
 
   /// 气泡顶上那小块引用。不带竖线，靠底色和浅字区分，省得深色模式下糊成一片。
   Widget _quoteBlock(ColorScheme cs, bool mine, Map<String, dynamic> r) {
-    final tint = mine ? cs.onPrimary : cs.onSurface;
+    final tint = mine ? cs.onPrimary : cs.onPrimaryContainer;
     final name = (r['name'] ?? '') as String;
     final text = (r['body'] ?? '') as String;
     final summary = text.isNotEmpty
@@ -613,9 +764,16 @@ class _ChatPageState extends State<ChatPage> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-        itemCount: _pending.length,
+        itemCount: _pending.length + _pendingFiles.length,
         separatorBuilder: (_, i) => const SizedBox(width: 8),
-        itemBuilder: (context, i) => Stack(
+        itemBuilder: (context, i) {
+          if (i >= _pending.length) {
+            final fi = i - _pending.length;
+            return _fileTile(cs, _pendingFiles[fi], () {
+              setState(() => _pendingFiles.removeAt(fi));
+            });
+          }
+          return Stack(
           clipBehavior: Clip.none,
           children: [
             ClipRRect(
@@ -643,8 +801,69 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
           ],
-        ),
+          );
+        },
       ),
+    );
+  }
+
+  /// 待发区里的一个附件。和图一样，右上角能删。
+  Widget _fileTile(ColorScheme cs, PostFile f, VoidCallback onRemove) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 172,
+          height: 60,
+          padding: const EdgeInsets.symmetric(horizontal: 9),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              Icon(fileIconFor(f.name), size: 22, color: cs.primary),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      f.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
+                    Text(
+                      f.sizeText,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          right: -6,
+          top: -6,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(2),
+              child: const Icon(Icons.close, size: 14, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -674,7 +893,10 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     final canSend =
-        (_input.text.trim().isNotEmpty || _pending.isNotEmpty) && !_sending;
+        (_input.text.trim().isNotEmpty ||
+            _pending.isNotEmpty ||
+            _pendingFiles.isNotEmpty) &&
+        !_sending;
     return SafeArea(
       top: false,
       child: Container(
@@ -704,7 +926,8 @@ class _ChatPageState extends State<ChatPage> {
   Widget _replyBar(ColorScheme cs) {
     final r = _replyTo!;
     final body = (r['body'] ?? '') as String;
-    final hasImg = (r['images'] as List? ?? const []).isNotEmpty;
+    final hasImg = (r['images'] as List? ?? const []).isNotEmpty ||
+        (r['files'] as List? ?? const []).isNotEmpty;
     final mine = (r['from_id'] ?? 0) == AppState.instance.user?['id'];
     final name = mine ? _myName : _peerName;
     final summary = body.isNotEmpty
@@ -748,23 +971,21 @@ class _ChatPageState extends State<ChatPage> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         IconButton(
-          onPressed: (_sending || _compressing || _pending.length >= 9)
-              ? null
-              : _pickImages,
+          onPressed: _sending ? null : _attachMenu,
           tooltip: Lc.current.addImage,
           visualDensity: VisualDensity.compact,
           icon: _compressing
               ? const SizedBox(
-                  width: 20,
-                  height: 20,
+                  width: 22,
+                  height: 22,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.add_circle_outline, size: 26),
+              : const Icon(Icons.add_circle_outline, size: 30),
         ),
         Expanded(
           child: Container(
-            constraints: const BoxConstraints(minHeight: 38),
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+            constraints: const BoxConstraints(minHeight: 50),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
             decoration: BoxDecoration(
               color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(8),
@@ -782,6 +1003,11 @@ class _ChatPageState extends State<ChatPage> {
                 hintText: Lc.current.saySomething,
                 hintStyle: const TextStyle(fontSize: 15),
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
             ),
@@ -789,12 +1015,12 @@ class _ChatPageState extends State<ChatPage> {
         ),
         const SizedBox(width: 6),
         SizedBox(
-          height: 38,
+          height: 50,
           child: FilledButton(
             onPressed: canSend ? _send : null,
             style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              minimumSize: const Size(0, 38),
+              padding: const EdgeInsets.symmetric(horizontal: 17),
+              minimumSize: const Size(0, 50),
               visualDensity: VisualDensity.compact,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),

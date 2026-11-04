@@ -2226,4 +2226,13 @@ class LZh extends L {
 
   @override
   String get replyImage => '[图片]';
+
+  @override
+  String get dmPickImage => '图片';
+
+  @override
+  String get dmPickFile => '文件';
+
+  @override
+  String get dmAttach => '发送';
 }

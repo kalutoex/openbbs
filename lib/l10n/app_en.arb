@@ -901,5 +901,8 @@
   "dmNoChat": "No messages yet — say hi",
   "quote": "Quote",
   "replyTo": "Reply to {v1}",
-  "replyImage": "[image]"
+  "replyImage": "[image]",
+  "dmPickImage": "Photos",
+  "dmPickFile": "File",
+  "dmAttach": "Send"
 }

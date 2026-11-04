@@ -4081,6 +4081,24 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'[图片]'**
   String get replyImage;
+
+  /// No description provided for @dmPickImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片'**
+  String get dmPickImage;
+
+  /// No description provided for @dmPickFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件'**
+  String get dmPickFile;
+
+  /// No description provided for @dmAttach.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送'**
+  String get dmAttach;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {
