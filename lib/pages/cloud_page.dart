@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../cloud.dart';
+import '../downloads.dart';
 import '../file_open.dart';
 import '../file_pick.dart';
 import '../l10n/error_text.dart';
@@ -37,6 +38,12 @@ class _CloudPageState extends State<CloudPage> {
 
   static const _perPage = 20;
   bool _uploading = false;
+
+  /// 正在下的：id -> 0..1。列表里就着那一行显示进度。
+  final Map<int, double> _dl = {};
+
+  /// 这次进来已经下完的，行尾给个绿标。还能再下，标不会清。
+  final Set<int> _done = {};
 
   @override
   void initState() {
@@ -126,12 +133,30 @@ class _CloudPageState extends State<CloudPage> {
   }
 
   Future<void> _open(CloudFile f) async {
+    if (_dl.containsKey(f.id)) return; // 同一个文件别叠着下
+    final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
+    setState(() => _dl[f.id] = 0);
     try {
-      final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
-      final saved = await openRemoteFile(url, f.name);
-      if (mounted) _toast(Lc.current.savedTo(saved.display));
+      final saved = await openRemoteFile(
+        url,
+        f.name,
+        onProgress: (p) {
+          if (mounted) setState(() => _dl[f.id] = p);
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _dl.remove(f.id);
+        _done.add(f.id);
+      });
+      // 落点只说一次；之后看行里的绿标就够了，不再弹提示。
+      if (await DownloadHint.firstTime()) {
+        if (mounted) _toast(Lc.current.savedTo(saved.display));
+      }
     } catch (e) {
-      if (mounted) _toast(errorText(context, e));
+      if (!mounted) return;
+      setState(() => _dl.remove(f.id));
+      _toast(errorText(context, e));
     }
   }
 
@@ -326,7 +351,8 @@ class _CloudPageState extends State<CloudPage> {
           file: f,
           onTap: () => _open(f),
           onLongPress: () => _menu(f),
-          onMenu: () => _menu(f),
+          progress: _dl[f.id],
+          downloaded: _done.contains(f.id),
         );
       },
     );
@@ -375,6 +401,18 @@ class _UsageBar extends StatelessWidget {
               color: usage.ratio > 0.9 ? cs.error : cs.primary,
             ),
           ),
+          // 回收站里的也占额度，得说清楚，不然「我明明删了」会成为常问的
+          if (usage.trashCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Text(
+                Lc.current.trashTakesSpace(
+                  '${usage.trashCount}',
+                  bytesText(usage.trash),
+                ),
+                style: TextStyle(fontSize: 11.5, color: cs.error),
+              ),
+            ),
         ],
       ),
     );
@@ -446,61 +484,124 @@ class _FileRow extends StatelessWidget {
     required this.file,
     required this.onTap,
     required this.onLongPress,
-    required this.onMenu,
+    this.progress,
+    this.downloaded = false,
   });
 
   final CloudFile file;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
-  final VoidCallback onMenu;
+
+  /// 正在下载就是 0..1，没在下就是 null。
+  final double? progress;
+
+  /// 这次进来下过了。还能再点，标一直留着。
+  final bool downloaded;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final refs = file.refs;
+    final p = progress;
     final sub = StringBuffer(bytesText(file.size));
     if (file.createdAt > 0) sub.write(' · ${timeAgo(file.createdAt)}');
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 6, 10),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
         child: Row(
           children: [
-            Icon(fileIconFor(file.name), size: 26, color: cs.primary),
+            Icon(
+              fileIconFor(file.name),
+              size: 26,
+              color: p == null ? cs.primary : cs.outline,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    file.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14.5),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          file.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14.5),
+                        ),
+                      ),
+                      if (downloaded) ...[
+                        const SizedBox(width: 6),
+                        const _DoneBadge(),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    sub.toString(),
-                    style: TextStyle(fontSize: 12, color: cs.outline),
-                  ),
-                  if (file.refs > 0)
+                  const SizedBox(height: 3),
+                  if (p == null)
+                    Text(
+                      sub.toString(),
+                      style: TextStyle(fontSize: 12, color: cs.outline),
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: p > 0 ? p.clamp(0.0, 1.0) : null,
+                              minHeight: 3,
+                              backgroundColor: cs.surfaceContainerHighest,
+                              color: cs.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          p > 0
+                              ? '${(p * 100).clamp(0, 100).toStringAsFixed(0)}%'
+                              : Lc.current.downloadingShort,
+                          style: TextStyle(fontSize: 11, color: cs.primary),
+                        ),
+                      ],
+                    ),
+                  if (refs > 0 && p == null)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(
-                        Lc.current.usedByPosts('${refs}'),
+                        Lc.current.usedByPosts('$refs'),
                         style: TextStyle(fontSize: 11.5, color: cs.primary),
                       ),
                     ),
                 ],
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.more_vert, size: 20),
-              onPressed: onMenu,
-            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 行尾那个绿标。下载过一次就给，之后一直在。
+class _DoneBadge extends StatelessWidget {
+  const _DoneBadge();
+
+  static const _green = Color(0xFF2E7D32);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: _green.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: Text(
+        Lc.current.downloadedBadge,
+        style: const TextStyle(fontSize: 10.5, color: _green),
       ),
     );
   }
@@ -549,6 +650,42 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
     }
   }
 
+  /// 彻底删除：不进 7 天倒计时，直接没了，空间当场还。
+  Future<void> _purge(CloudFile f) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(Lc.current.deleteForever),
+        content: Text(
+          '${f.name}\n\n${Lc.current.deleteForeverHint}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(Lc.current.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              Lc.current.deleteForever,
+              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await CloudApi.purge(f.id);
+      if (!mounted) return;
+      setState(() => _items?.removeWhere((x) => x.id == f.id));
+      toast(context, Lc.current.deletedForever);
+    } catch (e) {
+      if (!mounted) return;
+      toast(context, errorText(context, e));
+    }
+  }
+
   String _left(int? sec) {
     if (sec == null) return '';
     final d = Duration(seconds: sec);
@@ -581,9 +718,18 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
               ),
             )
           : ListView.builder(
-              itemCount: _items!.length,
+              itemCount: _items!.length + 1,
               itemBuilder: (context, i) {
-                final f = _items![i];
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Text(
+                      Lc.current.trashStillCounting,
+                      style: TextStyle(fontSize: 12, color: cs.error),
+                    ),
+                  );
+                }
+                final f = _items![i - 1];
                 return ListTile(
                   leading: Icon(fileIconFor(f.name), color: cs.outline),
                   title: Text(
@@ -594,9 +740,19 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
                   subtitle: Text(
                     '${bytesText(f.size)} · ${_left(f.expiresIn)}',
                   ),
-                  trailing: TextButton(
-                    onPressed: () => _restore(f),
-                    child: Text(Lc.current.restore),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: () => _restore(f),
+                        child: Text(Lc.current.restore),
+                      ),
+                      IconButton(
+                        tooltip: Lc.current.deleteForever,
+                        icon: Icon(Icons.delete_forever, color: cs.error),
+                        onPressed: () => _purge(f),
+                      ),
+                    ],
                   ),
                 );
               },

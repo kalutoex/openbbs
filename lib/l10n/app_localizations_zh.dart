@@ -2134,4 +2134,27 @@ class LZh extends L {
 
   @override
   String get downloadByBrowser => '网页版的下载位置由浏览器决定，在浏览器自己的设置里改。';
+
+  @override
+  String get deleteForever => '彻底删除';
+
+  @override
+  String get deleteForeverHint => '彻底删除后找不回来，回收站里也不会再有。';
+
+  @override
+  String get deletedForever => '已彻底删除';
+
+  @override
+  String get downloadedBadge => '已下载';
+
+  @override
+  String trashTakesSpace(String v1, String v2) {
+    return '回收站 $v1 个文件占 $v2，彻底删除才还空间';
+  }
+
+  @override
+  String get downloadingShort => '下载中';
+
+  @override
+  String get trashStillCounting => '这些文件还占着额度，彻底删除才还空间';
 }

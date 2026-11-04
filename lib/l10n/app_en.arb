@@ -849,5 +849,22 @@
   "downloadCacheUsed": "Partial downloads, {v1}",
   "downloadCacheEmpty": "Nothing left over",
   "cacheCleared": "Cleared",
-  "downloadByBrowser": "On the web build the browser decides where downloads go — change it in the browser settings."
+  "downloadByBrowser": "On the web build the browser decides where downloads go — change it in the browser settings.",
+  "deleteForever": "Delete permanently",
+  "deleteForeverHint": "This cannot be undone. It will not stay in Trash either.",
+  "deletedForever": "Deleted permanently",
+  "downloadedBadge": "Downloaded",
+  "trashTakesSpace": "{v1} file(s) in Trash take {v2}; space returns only after deleting them permanently",
+  "@trashTakesSpace": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingShort": "Downloading",
+  "trashStillCounting": "These files still use your quota — space returns only after deleting them permanently"
 }

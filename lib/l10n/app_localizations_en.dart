@@ -2177,4 +2177,29 @@ class LEn extends L {
   @override
   String get downloadByBrowser =>
       'On the web build the browser decides where downloads go — change it in the browser settings.';
+
+  @override
+  String get deleteForever => 'Delete permanently';
+
+  @override
+  String get deleteForeverHint =>
+      'This cannot be undone. It will not stay in Trash either.';
+
+  @override
+  String get deletedForever => 'Deleted permanently';
+
+  @override
+  String get downloadedBadge => 'Downloaded';
+
+  @override
+  String trashTakesSpace(String v1, String v2) {
+    return '$v1 file(s) in Trash take $v2; space returns only after deleting them permanently';
+  }
+
+  @override
+  String get downloadingShort => 'Downloading';
+
+  @override
+  String get trashStillCounting =>
+      'These files still use your quota — space returns only after deleting them permanently';
 }

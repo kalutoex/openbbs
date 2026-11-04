@@ -1,6 +1,8 @@
 /// 下载落点相关的公共定义。平台差异在 downloads_io / downloads_web。
 library;
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 /// 存好之后的落点。[display] 是给用户看的一段，[uri]/[path] 用来打开。
 class SavedFile {
   const SavedFile({required this.display, this.uri, this.path});
@@ -55,4 +57,19 @@ String sizeText(int bytes) {
   }
   if (bytes >= 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
   return '$bytes B';
+}
+
+/// 「已保存到哪儿」只在第一次下载时说一次。
+///
+/// 每下一个文件弹一遍就成了噪音；落点随时能在 设置 → 云服务设置 里看。
+class DownloadHint {
+  static const _k = 'download_hint_shown';
+
+  /// 第一次调用返回 true，之后都 false。
+  static Future<bool> firstTime() async {
+    final p = await SharedPreferences.getInstance();
+    if (p.getBool(_k) == true) return false;
+    await p.setBool(_k, true);
+    return true;
+  }
 }

@@ -130,7 +130,7 @@ class CloudApi {
     );
   }
 
-  /// 删进回收站。空间立刻还回来。
+  /// 删进回收站。空间还占着，彻底删除才还。
   static Future<Map> remove(int id) async =>
       await Api.delete('/cloud/files/$id') as Map;
 
@@ -145,5 +145,10 @@ class CloudApi {
 
   static Future<void> restore(int id) async {
     await Api.post('/cloud/files/$id/restore', const {});
+  }
+
+  /// 回收站里彻底删掉，物理文件一起走，找不回来。
+  static Future<void> purge(int id) async {
+    await Api.delete('/cloud/trash/$id');
   }
 }

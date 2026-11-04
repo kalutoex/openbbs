@@ -3913,6 +3913,48 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'网页版的下载位置由浏览器决定，在浏览器自己的设置里改。'**
   String get downloadByBrowser;
+
+  /// No description provided for @deleteForever.
+  ///
+  /// In zh, this message translates to:
+  /// **'彻底删除'**
+  String get deleteForever;
+
+  /// No description provided for @deleteForeverHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'彻底删除后找不回来，回收站里也不会再有。'**
+  String get deleteForeverHint;
+
+  /// No description provided for @deletedForever.
+  ///
+  /// In zh, this message translates to:
+  /// **'已彻底删除'**
+  String get deletedForever;
+
+  /// No description provided for @downloadedBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'已下载'**
+  String get downloadedBadge;
+
+  /// No description provided for @trashTakesSpace.
+  ///
+  /// In zh, this message translates to:
+  /// **'回收站 {v1} 个文件占 {v2}，彻底删除才还空间'**
+  String trashTakesSpace(String v1, String v2);
+
+  /// No description provided for @downloadingShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载中'**
+  String get downloadingShort;
+
+  /// No description provided for @trashStillCounting.
+  ///
+  /// In zh, this message translates to:
+  /// **'这些文件还占着额度，彻底删除才还空间'**
+  String get trashStillCounting;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {
