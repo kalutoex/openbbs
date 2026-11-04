@@ -1949,6 +1949,20 @@ class LEn extends L {
   String get dmSend => 'Message';
 
   @override
+  String get pickFromDevice => 'From device';
+
+  @override
+  String get pickFromCloud => 'From cloud drive';
+
+  @override
+  String get cloudPickEmpty => 'Nothing in the cloud drive yet';
+
+  @override
+  String cloudPickDone(String v1) {
+    return 'Done ($v1)';
+  }
+
+  @override
   String get attachFile => 'Attach file';
 
   @override

@@ -1912,6 +1912,20 @@ class LZh extends L {
   String get dmSend => '发私信';
 
   @override
+  String get pickFromDevice => '从设备选';
+
+  @override
+  String get pickFromCloud => '从云盘选';
+
+  @override
+  String get cloudPickEmpty => '云盘里还没有文件';
+
+  @override
+  String cloudPickDone(String v1) {
+    return '完成（$v1）';
+  }
+
+  @override
   String get attachFile => '附件';
 
   @override

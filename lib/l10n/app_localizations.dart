@@ -3530,6 +3530,30 @@ abstract class L {
   /// **'发私信'**
   String get dmSend;
 
+  /// No description provided for @pickFromDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'从设备选'**
+  String get pickFromDevice;
+
+  /// No description provided for @pickFromCloud.
+  ///
+  /// In zh, this message translates to:
+  /// **'从云盘选'**
+  String get pickFromCloud;
+
+  /// No description provided for @cloudPickEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'云盘里还没有文件'**
+  String get cloudPickEmpty;
+
+  /// No description provided for @cloudPickDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成（{v1}）'**
+  String cloudPickDone(String v1);
+
   /// No description provided for @attachFile.
   ///
   /// In zh, this message translates to:

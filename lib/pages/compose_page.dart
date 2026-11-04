@@ -19,6 +19,8 @@ import 'gallery_picker_page.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../widgets/toast.dart';
+import '../cloud.dart';
+import 'cloud_pick_page.dart';
 
 /// 发主题帖。
 ///
@@ -233,6 +235,12 @@ class _ComposePageState extends State<ComposePage> {
       _snack(Lc.current.attachMax('5'));
       return;
     }
+    final src = await _fileSource();
+    if (!mounted || src == null) return;
+    if (src == 'cloud') {
+      await _addFromCloud(5 - _files.length);
+      return;
+    }
     final f = await pickFile();
     if (f == null) return;
     if (f.size > 500 * 1024 * 1024) {
@@ -268,6 +276,44 @@ class _ComposePageState extends State<ComposePage> {
         });
       }
     }
+  }
+
+  /// 附件从哪来：云盘里现成的，还是设备上挑一个新的。
+  /// 云盘的不用再传一遍，地址直接能用。
+  Future<String?> _fileSource() {
+    return showModalBottomSheet<String>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.cloud_outlined),
+              title: Text(Lc.current.pickFromCloud),
+              onTap: () => Navigator.of(c).pop('cloud'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.smartphone),
+              title: Text(Lc.current.pickFromDevice),
+              onTap: () => Navigator.of(c).pop('device'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addFromCloud(int left) async {
+    final picked = await Navigator.of(context).push<List<CloudFile>>(
+      MaterialPageRoute(builder: (_) => CloudPickPage(maxCount: left)),
+    );
+    if (picked == null || picked.isEmpty || !mounted) return;
+    setState(() {
+      for (final f in picked.take(left)) {
+        _files.add(PostFile(url: f.url, name: f.name, size: f.size));
+      }
+    });
   }
 
   Future<void> _pickSystem() async {
