@@ -812,6 +812,24 @@ class AppState extends ChangeNotifier {
     return (d['items'] as List).cast<Map<String, dynamic>>();
   }
 
+  /// 管理员：所有人的云盘用量。只给数字，看不到文件内容。
+  Future<List<Map<String, dynamic>>> adminCloudUsage({int page = 1}) async {
+    final d = await Api.get(
+      '/admin/cloud/usage',
+      query: {'page': '$page', 'per_page': '100'},
+    );
+    return (d['items'] as List).cast<Map<String, dynamic>>();
+  }
+
+  /// 管理员：改某个人的云盘额度。quotaMb <= 0 = 回到全站默认。
+  Future<Map<String, dynamic>> adminSetCloudQuota(int uid, int quotaMb) async {
+    final d = await Api.post('/admin/cloud/quota', {
+      'user_id': uid,
+      'quota_mb': quotaMb,
+    });
+    return (d as Map).cast<String, dynamic>();
+  }
+
   /// 管理员：把某个账号的密码重置成随机临时密码，返回一次，只显示这一回。
   Future<Map<String, dynamic>> adminResetPw(int uid) async {
     final d = await Api.post('/admin/user/$uid/reset_pw', {});

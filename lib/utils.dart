@@ -33,6 +33,23 @@ String bigNum(int n) {
       : Lc.current.bigNumSuffix('${w.toStringAsFixed(1)}');
 }
 
+/// 容量卡片用的短写法：1.2G / 500M / 12K。
+///
+/// GB 保留 1 位，整数就不带小数点（5G 而不是 5.0G）。
+String bytesShort(int size) {
+  if (size < 0) size = 0;
+  double n = size.toDouble();
+  const units = ['B', 'K', 'M', 'G', 'T'];
+  var i = 0;
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024;
+    i++;
+  }
+  if (i == 0) return '${n.toStringAsFixed(0)}B';
+  final s = n.toStringAsFixed(1);
+  return '${s.endsWith('.0') ? s.substring(0, s.length - 2) : s}${units[i]}';
+}
+
 /// 帖子详情里的时间写法：26年10月16日, 4:43 下午
 String postTime(int ts) {
   final t = DateTime.fromMillisecondsSinceEpoch(ts * 1000);

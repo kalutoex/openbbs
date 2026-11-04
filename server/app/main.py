@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """论坛主程序。服务端渲染，不依赖 Node。"""
-import math, os, time
+import asyncio, math, os, time
 from fastapi import FastAPI, Request, Form, Depends, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import api, auth, blacklist, config, db, sites, thumbs
+from . import api, auth, blacklist, config, db, files as filesvc, sites, thumbs
 
 ROOT = config.ROOT
 PER_PAGE = config.get("limits", "per_page", 20)
@@ -84,6 +84,10 @@ def entry_page():
 async def body_limit(request: Request, call_next):
     # 图片是 base64 上来的，10MB 的图算上编码差不多 13.3MB；
     # 再大的请求体直接挡掉，别等它全读进内存。
+    # 附件上传（/api/file）是流式落盘的，不读进内存，有多大收多大；
+    # 单文件上限由云盘剩余空间决定，这里不拦。
+    if request.url.path == "/api/file" and request.method == "POST":
+        return await call_next(request)
     cl = request.headers.get("content-length", "")
     if cl.isdigit() and int(cl) > 16 * 1024 * 1024:
         return JSONResponse({"detail": "请求体太大"}, status_code=413)
@@ -291,3 +295,26 @@ def logout():
 # 没放网页包也照样能起——只跑接口的部署不需要 web 目录。
 if os.path.isdir(_WEB_DIR):
     app.mount("/", StaticFiles(directory=_WEB_DIR, html=True), name="web")
+
+
+# ---------------------------------------------------------------- 回收站清理任务
+
+async def _trash_loop():
+    """每小时扫一遍回收站。整段兜住异常，别让一次清理把服务带下去。"""
+    while True:
+        try:
+            c = db.conn()
+            try:
+                n = filesvc.purge_trash(c)
+            finally:
+                c.close()
+            if n:
+                print("[cloud] 回收站清理 %d 条" % n, flush=True)
+        except Exception as e:  # noqa: BLE001 清理失败也要继续下一轮
+            print("[cloud] 回收站清理出错：%r" % (e,), flush=True)
+        await asyncio.sleep(3600)
+
+
+@app.on_event("startup")
+async def _start_trash_loop():
+    asyncio.create_task(_trash_loop())

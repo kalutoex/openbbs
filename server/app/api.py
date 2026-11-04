@@ -2484,3 +2484,85 @@ def cloud_restore(fid: int, c=Depends(get_conn), user=Depends(require_user)):
     c.execute("UPDATE user_files SET deleted_at=NULL WHERE id=?", (fid,))
     c.commit()
     return {"ok": True}
+
+
+# ---------------------------------------------------------------- 云盘后台（管理员）
+
+class CloudQuota(BaseModel):
+    user_id: int
+    # <= 0 表示清掉个人额度，回落到全局默认（site.json 的 limits.cloud_quota_mb）
+    quota_mb: int = 0
+
+
+@router.get("/admin/cloud/usage")
+def admin_cloud_usage(page: int = 1, per_page: int = 20,
+                      user=Depends(optional_user), c=Depends(get_conn)):
+    """每个人的用量。只给数字，不给文件名——管理员看不到内容。"""
+    _need_admin(user)
+    page = max(1, int(page or 1))
+    per_page = min(100, max(1, int(per_page or 20)))
+    total = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    rows = c.execute(
+        "SELECT id, name, nickname, uid, quota_bytes FROM users "
+        "ORDER BY id LIMIT ? OFFSET ?", (per_page, (page - 1) * per_page)).fetchall()
+    items = []
+    for r in rows:
+        t = c.execute(
+            "SELECT COALESCE(SUM(size),0) AS s, COUNT(*) AS n FROM user_files "
+            "WHERE user_id=? AND deleted_at IS NOT NULL", (r["id"],)).fetchone()
+        items.append({
+            "user_id": r["id"],
+            "name": r["nickname"] or r["name"],
+            "uid": r["uid"],
+            "used": filesvc.used(c, r["id"]),
+            "quota": filesvc.quota_of(r),
+            "quota_bytes": r["quota_bytes"],
+            "count": c.execute(
+                "SELECT COUNT(*) FROM user_files WHERE user_id=? AND deleted_at IS NULL",
+                (r["id"],)).fetchone()[0],
+            "trash": t["s"],
+            "trash_count": t["n"],
+        })
+    return {"items": items, "page": page, "total": total}
+
+
+@router.post("/admin/cloud/quota")
+def admin_cloud_quota(p: CloudQuota, user=Depends(optional_user), c=Depends(get_conn)):
+    """改额度。以后 VIP 就是把这个数字调大。"""
+    _need_admin(user)
+    row = c.execute("SELECT id, name, nickname, quota_bytes FROM users WHERE id=?",
+                    (p.user_id,)).fetchone()
+    if not row:
+        raise HTTPException(404, "没这个账号")
+    mb = int(p.quota_mb or 0)
+    val = mb * 1024 * 1024 if mb > 0 else None
+    c.execute("UPDATE users SET quota_bytes=? WHERE id=?", (val, p.user_id))
+    c.commit()
+    row = c.execute("SELECT id, name, nickname, quota_bytes FROM users WHERE id=?",
+                    (p.user_id,)).fetchone()
+    return {
+        "user_id": row["id"],
+        "name": row["nickname"] or row["name"],
+        "quota": filesvc.quota_of(row),
+        "used": filesvc.used(c, row["id"]),
+    }
+
+
+@router.delete("/admin/cloud/file/{fid}")
+def admin_cloud_del(fid: int, user=Depends(optional_user), c=Depends(get_conn)):
+    """管理员删某条记录。删完没人引用就连物理文件一起清。"""
+    _need_admin(user)
+    r = c.execute("SELECT id, digest FROM user_files WHERE id=?", (fid,)).fetchone()
+    if not r:
+        raise HTTPException(404, "文件不在了")
+    c.execute("DELETE FROM user_files WHERE id=?", (fid,))
+    c.commit()
+    if not c.execute("SELECT 1 FROM user_files WHERE digest=? LIMIT 1",
+                     (r["digest"],)).fetchone():
+        c.execute("DELETE FROM files WHERE digest=?", (r["digest"],))
+        c.commit()
+        try:
+            os.unlink(filesvc.path_of(r["digest"]))
+        except OSError:
+            pass
+    return {"ok": True}

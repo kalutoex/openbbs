@@ -72,6 +72,16 @@ cp server/config/site.json.example server/config/site.json
 | `password_min` | 8 | 密码最短 |
 | `title_max` | 120 | 标题字数 |
 | `body_max` | 20000 | 正文和回复字数 |
+| `file_mb` | 0 | 附件单文件上限（MB），0 = 不限。真到不了上限是因为云盘空间会先卡住 |
+| `files_per_post` | 5 | 一帖最多几个附件，只管排版，**不管云盘额度** |
+| `files_per_day` / `files_mb_per_day` | 0 / 0 | 每人每天附件个数 / 总大小，0 = 不限 |
+| `cloud_quota_mb` | 5120 | 云盘默认额度（MB，注册送的那 5GB）。个人额度在 `users.quota_bytes` 里，有值就压过这里 |
+| `cloud_trash_days` | 7 | 删掉的文件在回收站留几天，超时由后台任务真删 |
+| `cloud_full_msg` | `空间不足，还差 {need}` | 空间不够时的提示，`{need}` 会换成还差多少，比如 `1.0 MB` |
+
+云盘额度怎么算：`users.quota_bytes` 有值就用它（后台改的就是这个字段，以后 VIP 靠它），
+为空回落到 `cloud_quota_mb`；`cloud_quota_mb` 也配 0 就是这个人不限量。
+后台接口 `POST /api/admin/cloud/quota` 传 `quota_mb: 0` 等于把个人额度清掉、回落到默认。
 
 ### safety —— 内容过滤
 

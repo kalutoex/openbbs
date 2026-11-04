@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../api.dart';
+import '../cloud.dart' hide CloudPage;
 import '../site_config.dart';
 import '../store.dart';
+import '../utils.dart';
 import '../widgets/name_tag.dart';
+import 'cloud_page.dart';
 import 'login_page.dart';
 import 'follow_page.dart';
 import 'settings_page.dart';
@@ -170,6 +173,10 @@ class MeTab extends StatelessWidget {
                       ),
               ),
               if (u != null) ...[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(12, 10, 12, 4),
+                  child: _CloudCard(),
+                ),
                 ListTile(
                   leading: const Icon(Icons.people_outline),
                   title: Text(Lc.current.follow),
@@ -248,6 +255,107 @@ class _VersionFooter extends StatelessWidget {
             : '${SiteConfig.brand} · ${p.version} (${p.buildNumber})';
         return Text(text, style: TextStyle(fontSize: 11, color: color));
       },
+    );
+  }
+}
+
+/// 云盘容量卡：进度条 + 「已用 / 总量」。
+///
+/// 自己拉一次 /cloud/usage，不拖累整页；拿不到就显示 -- / --，不弹错误。
+class _CloudCard extends StatefulWidget {
+  const _CloudCard();
+
+  @override
+  State<_CloudCard> createState() => _CloudCardState();
+}
+
+class _CloudCardState extends State<_CloudCard> {
+  CloudUsage? _usage;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final u = await CloudApi.usage();
+      if (!mounted) return;
+      setState(() {
+        _usage = u;
+        _failed = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _failed = true);
+    }
+  }
+
+  Future<void> _open() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const CloudPage()));
+    if (mounted) _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final u = _usage;
+    final ok = u != null && !_failed;
+    final usedText = ok ? bytesShort(u.used) : '--';
+    final totalText = !ok
+        ? '--'
+        : u.unlimited
+        ? '∞'
+        : bytesShort(u.quota!);
+
+    return Material(
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: _open,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.cloud_outlined, size: 18, color: cs.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    Lc.current.cloudDisk,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '$usedText / $totalText',
+                    style: TextStyle(fontSize: 12, color: cs.outline),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.chevron_right, size: 16, color: cs.outline),
+                ],
+              ),
+              const SizedBox(height: 9),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: u?.ratio ?? 0,
+                  minHeight: 5,
+                  backgroundColor: cs.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

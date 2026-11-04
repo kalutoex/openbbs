@@ -545,3 +545,10 @@ $usedText / $quotaText	usedOfTotal	{v1} / {v2}
 正在上传 $name	uploadingFile2	Uploading {v1}
 传好了	uploadedDone	Uploaded
 单个文件别超过 500MB	fileTooBigHint	Keep each file under 500MB
+有 $n 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。	cloudRefsWarn	Used by {v1} posts. Deleting it makes those places show that the file is gone.
+恢复了	restoredDone	Restored
+云盘用量	cloudUsage	Cloud storage
+调整额度	changeQuota	Change quota
+额度（MB，留空 = 跟全站默认）	quotaMbHint	Quota in MB (empty = site default)
+额度已更新	quotaSaved	Quota updated
+全站默认	cloudQuotaDefault	site default

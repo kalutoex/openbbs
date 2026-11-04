@@ -2061,4 +2061,27 @@ class LZh extends L {
 
   @override
   String get fileTooBigHint => '单个文件别超过 500MB';
+
+  @override
+  String cloudRefsWarn(String v1) {
+    return '有 $v1 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。';
+  }
+
+  @override
+  String get restoredDone => '恢复了';
+
+  @override
+  String get cloudUsage => '云盘用量';
+
+  @override
+  String get changeQuota => '调整额度';
+
+  @override
+  String get quotaMbHint => '额度（MB，留空 = 跟全站默认）';
+
+  @override
+  String get quotaSaved => '额度已更新';
+
+  @override
+  String get cloudQuotaDefault => '全站默认';
 }

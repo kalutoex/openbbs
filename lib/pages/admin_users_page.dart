@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../store.dart';
+import '../utils.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
@@ -20,6 +21,8 @@ class AdminUsersPage extends StatefulWidget {
 class _AdminUsersPageState extends State<AdminUsersPage> {
   final _q = TextEditingController();
   List<Map<String, dynamic>> _items = const [];
+  /// user_id -> 云盘用量，跟 _items 一起拉回来拼着显示。
+  Map<int, Map<String, dynamic>> _cloud = const {};
   bool _loading = true;
   String? _err;
 
@@ -42,9 +45,20 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     });
     try {
       final items = await AppState.instance.adminUsers(_q.text.trim());
+      var cloud = <int, Map<String, dynamic>>{};
+      try {
+        final rows = await AppState.instance.adminCloudUsage();
+        cloud = {
+          for (final r in rows)
+            if (r['user_id'] is int) r['user_id'] as int: r,
+        };
+      } catch (_) {
+        // 用量拿不到不影响查账号，列表照给。
+      }
       if (!mounted) return;
       setState(() {
         _items = items;
+        _cloud = cloud;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -125,6 +139,85 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     }
   }
 
+  /// 改云盘额度。留空 / 0 = 回落到全站默认。
+  Future<void> _quota(Map<String, dynamic> u) async {
+    final uid = u['id'] as int;
+    final info = _cloud[uid];
+    final curBytes = info?['quota_bytes'];
+    final curMb = curBytes is int ? (curBytes / 1024 / 1024).round() : 0;
+    final ed = TextEditingController(text: curMb > 0 ? '$curMb' : '');
+    final name = '${u['nickname'] ?? u['name'] ?? ''}';
+    final saved = await showDialog<int>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(Lc.current.changeQuota),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(name, style: const TextStyle(fontSize: 13)),
+            if (info != null)
+              Text(
+                '${Lc.current.cloudUsage}：'
+                '${bytesShort(info['used'] as int? ?? 0)} / '
+                '${info['quota'] is int ? bytesShort(info['quota'] as int) : Lc.current.cloudQuotaDefault}',
+                style: const TextStyle(fontSize: 12),
+              ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ed,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: Lc.current.quotaMbHint,
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: Text(Lc.current.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final mb = int.tryParse(ed.text.trim()) ?? 0;
+              Navigator.pop(c, mb);
+            },
+            child: Text(Lc.current.save),
+          ),
+        ],
+      ),
+    );
+    ed.dispose();
+    if (saved == null || !mounted) return;
+    try {
+      await AppState.instance.adminSetCloudQuota(uid, saved);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(Lc.current.quotaSaved)),
+      );
+      _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorText(context, e))));
+    }
+  }
+
+  /// 一行用量文字：1.2G / 5G。拿不到就 --。
+  String _cloudText(int uid) {
+    final info = _cloud[uid];
+    if (info == null) return '-- / --';
+    final used = info['used'] is int ? bytesShort(info['used'] as int) : '--';
+    final q = info['quota'];
+    final total = q is int ? bytesShort(q) : Lc.current.cloudQuotaDefault;
+    return '$used / $total';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -187,11 +280,35 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       ],
                     ],
                   ),
-                  subtitle: Text(
-                    mail.isEmpty ? Lc.current.noEmail : mail,
-                    style: mail.isEmpty
-                        ? TextStyle(color: cs.error, fontSize: 12)
-                        : const TextStyle(fontSize: 12),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        mail.isEmpty ? Lc.current.noEmail : mail,
+                        style: mail.isEmpty
+                            ? TextStyle(color: cs.error, fontSize: 12)
+                            : const TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 3),
+                      InkWell(
+                        onTap: () => _quota(u),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.cloud_outlined,
+                              size: 13,
+                              color: cs.outline,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              _cloudText(u['id'] as int),
+                              style: TextStyle(fontSize: 12, color: cs.outline),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   trailing: TextButton(
                     onPressed: () => _reset(u),

@@ -819,5 +819,19 @@
   "upload": "Upload",
   "uploadingFile2": "Uploading {v1}",
   "uploadedDone": "Uploaded",
-  "fileTooBigHint": "Keep each file under 500MB"
+  "fileTooBigHint": "Keep each file under 500MB",
+  "cloudRefsWarn": "Used by {v1} posts. Deleting it makes those places show that the file is gone.",
+  "@cloudRefsWarn": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "restoredDone": "Restored",
+  "cloudUsage": "Cloud storage",
+  "changeQuota": "Change quota",
+  "quotaMbHint": "Quota in MB (empty = site default)",
+  "quotaSaved": "Quota updated",
+  "cloudQuotaDefault": "site default"
 }

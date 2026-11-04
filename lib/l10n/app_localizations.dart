@@ -3775,6 +3775,48 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'单个文件别超过 500MB'**
   String get fileTooBigHint;
+
+  /// No description provided for @cloudRefsWarn.
+  ///
+  /// In zh, this message translates to:
+  /// **'有 {v1} 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。'**
+  String cloudRefsWarn(String v1);
+
+  /// No description provided for @restoredDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复了'**
+  String get restoredDone;
+
+  /// No description provided for @cloudUsage.
+  ///
+  /// In zh, this message translates to:
+  /// **'云盘用量'**
+  String get cloudUsage;
+
+  /// No description provided for @changeQuota.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整额度'**
+  String get changeQuota;
+
+  /// No description provided for @quotaMbHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'额度（MB，留空 = 跟全站默认）'**
+  String get quotaMbHint;
+
+  /// No description provided for @quotaSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'额度已更新'**
+  String get quotaSaved;
+
+  /// No description provided for @cloudQuotaDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'全站默认'**
+  String get cloudQuotaDefault;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

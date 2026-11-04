@@ -131,7 +131,7 @@ class _CloudPageState extends State<CloudPage> {
       builder: (ctx) => AlertDialog(
         title: Text(Lc.current.deleteThisFile),
         content: Text(used > 0
-            ? '有 $used 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。\n\n$trashHint'
+            ? '${Lc.current.cloudRefsWarn('$used')}\n\n$trashHint'
             : trashHint),
         actions: [
           TextButton(
@@ -191,12 +191,9 @@ class _CloudPageState extends State<CloudPage> {
     if (_uploading) return;
     final f = await pickFile();
     if (f == null) return;
-    if (f.size > 500 * 1024 * 1024) {
-      _toast(Lc.current.fileTooBigHint);
-      return;
-    }
+    // 单文件不设死上限，能不能传看剩余空间——服务端会按额度掐断。
     setState(() => _uploading = true);
-    _toast('正在上传 $f.name');
+    _toast(Lc.current.uploadingFile2(f.name));
     try {
       await Api.uploadFile(f);
       if (!mounted) return;
@@ -528,7 +525,7 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
       if (!mounted) return;
       setState(() => _items?.removeWhere((x) => x.id == f.id));
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('恢复了')));
+          .showSnackBar(SnackBar(content: Text(Lc.current.restoredDone)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

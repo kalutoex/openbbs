@@ -2101,4 +2101,27 @@ class LEn extends L {
 
   @override
   String get fileTooBigHint => 'Keep each file under 500MB';
+
+  @override
+  String cloudRefsWarn(String v1) {
+    return 'Used by $v1 posts. Deleting it makes those places show that the file is gone.';
+  }
+
+  @override
+  String get restoredDone => 'Restored';
+
+  @override
+  String get cloudUsage => 'Cloud storage';
+
+  @override
+  String get changeQuota => 'Change quota';
+
+  @override
+  String get quotaMbHint => 'Quota in MB (empty = site default)';
+
+  @override
+  String get quotaSaved => 'Quota updated';
+
+  @override
+  String get cloudQuotaDefault => 'site default';
 }

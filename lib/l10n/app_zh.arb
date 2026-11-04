@@ -1402,5 +1402,19 @@
     }
   },
   "uploadedDone": "传好了",
-  "fileTooBigHint": "单个文件别超过 500MB"
+  "fileTooBigHint": "单个文件别超过 500MB",
+  "cloudRefsWarn": "有 {v1} 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。",
+  "@cloudRefsWarn": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "restoredDone": "恢复了",
+  "cloudUsage": "云盘用量",
+  "changeQuota": "调整额度",
+  "quotaMbHint": "额度（MB，留空 = 跟全站默认）",
+  "quotaSaved": "额度已更新",
+  "cloudQuotaDefault": "全站默认"
 }
