@@ -96,11 +96,12 @@ class _FileBrowserPageState extends State<FileBrowserPage>
 
   Future<void> _check({required bool ask}) async {
     if (!Platform.isAndroid) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _noAccess = true;
           _loading = false;
         });
+      }
       return;
     }
     var st = await Permission.manageExternalStorage.status;
@@ -347,8 +348,9 @@ class _FileBrowserPageState extends State<FileBrowserPage>
 
   String _titleText() {
     if (_path.isEmpty) return Lc.current.storageRoot;
-    if (_roots.isNotEmpty && _path == _roots.first)
+    if (_roots.isNotEmpty && _path == _roots.first) {
       return Lc.current.storageRoot;
+    }
     return _base(_path);
   }
 

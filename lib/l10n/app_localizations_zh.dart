@@ -2208,4 +2208,22 @@ class LZh extends L {
 
   @override
   String get systemFolderHidden => '系统目录（看不到内容）';
+
+  @override
+  String get dmWaitReply => '对方还没回关，等他回一句你就能接着发';
+
+  @override
+  String get dmNewMessages => '有新消息';
+
+  @override
+  String get dmTapToProfile => '点开看资料';
+
+  @override
+  String get dmNoChat => '还没聊过，说点什么吧';
+
+  @override
+  String get quote => '引用';
+
+  @override
+  String get replyImage => '[图片]';
 }

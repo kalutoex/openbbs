@@ -2253,4 +2253,22 @@ class LEn extends L {
 
   @override
   String get systemFolderHidden => 'System folder (contents hidden)';
+
+  @override
+  String get dmWaitReply => 'You can send again once they reply';
+
+  @override
+  String get dmNewMessages => 'New messages';
+
+  @override
+  String get dmTapToProfile => 'Tap for profile';
+
+  @override
+  String get dmNoChat => 'No messages yet — say hi';
+
+  @override
+  String get quote => 'Quote';
+
+  @override
+  String get replyImage => '[image]';
 }

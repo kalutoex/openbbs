@@ -894,5 +894,12 @@
       "v1": {"type": "String"},
       "v2": {"type": "String"}
     }
-  }
+  },
+  "dmWaitReply": "You can send again once they reply",
+  "dmNewMessages": "New messages",
+  "dmTapToProfile": "Tap for profile",
+  "dmNoChat": "No messages yet — say hi",
+  "quote": "Quote",
+  "replyTo": "Reply to {v1}",
+  "replyImage": "[image]"
 }

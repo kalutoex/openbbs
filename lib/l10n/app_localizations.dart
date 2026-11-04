@@ -4045,6 +4045,42 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'系统目录（看不到内容）'**
   String get systemFolderHidden;
+
+  /// No description provided for @dmWaitReply.
+  ///
+  /// In zh, this message translates to:
+  /// **'对方还没回关，等他回一句你就能接着发'**
+  String get dmWaitReply;
+
+  /// No description provided for @dmNewMessages.
+  ///
+  /// In zh, this message translates to:
+  /// **'有新消息'**
+  String get dmNewMessages;
+
+  /// No description provided for @dmTapToProfile.
+  ///
+  /// In zh, this message translates to:
+  /// **'点开看资料'**
+  String get dmTapToProfile;
+
+  /// No description provided for @dmNoChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没聊过，说点什么吧'**
+  String get dmNoChat;
+
+  /// No description provided for @quote.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用'**
+  String get quote;
+
+  /// No description provided for @replyImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'[图片]'**
+  String get replyImage;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

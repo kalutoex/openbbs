@@ -1488,5 +1488,17 @@
       "v1": {"type": "String"},
       "v2": {"type": "String"}
     }
+  },
+  "dmWaitReply": "对方还没回关，等他回一句你就能接着发",
+  "dmNewMessages": "有新消息",
+  "dmTapToProfile": "点开看资料",
+  "dmNoChat": "还没聊过，说点什么吧",
+  "quote": "引用",
+  "replyTo": "回复 {v1}",
+  "replyImage": "[图片]",
+  "@replyTo": {
+    "placeholders": {
+      "v1": {"type": "String"}
+    }
   }
 }
