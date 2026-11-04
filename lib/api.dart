@@ -268,6 +268,15 @@ class Api {
     return '$b$path';
   }
 
+  /// 缩略图地址。一屏里几张图，没必要每张都拉整图，服务端按宽度切好存着。
+  /// 拿不到本地路径（远端站点的图、空路径）就退回原图地址。
+  static String thumb(String path, int width) {
+    if (path.startsWith('/img/')) {
+      return img('/img/t/$width/${path.substring(5)}');
+    }
+    return img(path);
+  }
+
   /// 上传一张图，返回服务端的相对路径。
   static Future<String> uploadImage(
     Uint8List bytes, {

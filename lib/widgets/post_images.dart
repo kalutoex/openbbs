@@ -51,7 +51,8 @@ class PostImages extends StatelessWidget {
     final dpr = MediaQuery.devicePixelRatioOf(context);
     if (urls.length == 1) {
       final px = (320 * dpr).round().clamp(320, 1080);
-      final url = Api.img(urls.first);
+      // 单图最宽显示 320 逻辑像素，给到 720 宽足够 retina 用。
+      final url = Api.thumb(urls.first, 720);
       // 比例来自服务端的文件头，加载前就把位置留准：不裁、不跳。
       // 只有比现存最竖的图还长的（真实截图那种）才裁，裁掉的部分点开能看全。
       final raw = _ratioAt(0) ?? 4 / 3;
@@ -105,7 +106,7 @@ class PostImages extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: _RetryImage(
-                url: Api.img(urls[i]),
+                url: Api.thumb(urls[i], 320),
                 fit: BoxFit.cover,
                 memCacheWidth: cellPx,
                 probeSize: i >= sizes.length || sizes[i] is! List,

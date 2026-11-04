@@ -308,7 +308,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
           img = CachedNetworkImage(
             cacheManager: ImgCache.manager,
             imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
-            imageUrl: Api.img(_remote[i]),
+            imageUrl: Api.thumb(_remote[i], 320),
             fit: BoxFit.cover,
             placeholder: (_, _) => Container(color: cs.surfaceContainerHighest),
             errorWidget: (_, _, _) => Container(

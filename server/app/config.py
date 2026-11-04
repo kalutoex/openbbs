@@ -46,6 +46,7 @@ DEFAULTS = {
         "data": "",
         "db": "",
         "uploads": "",
+        "thumbs": "",
         "apk": "",
         "secret": "",
         "mail_config": "",
@@ -145,6 +146,7 @@ _ENV_MAP = {
     "OPENBBS_DB": ("paths", "db"),
     "OPENBBS_UPLOAD_DIR": ("paths", "uploads"),
     "OPENBBS_APK_DIR": ("paths", "apk"),
+    "OPENBBS_THUMB_DIR": ("paths", "thumbs"),
     "OPENBBS_SECRET_FILE": ("paths", "secret"),
     "OPENBBS_MAIL_CONFIG": ("paths", "mail_config"),
     "OPENBBS_LOG_DIR": ("paths", "logs"),
@@ -248,6 +250,7 @@ def path(name):
         "data": data,
         "db": os.path.join(data, "forum.db"),
         "uploads": os.path.join(data, "uploads"),
+        "thumbs": os.path.join(data, "thumbs"),
         "apk": os.path.join(data, "apk"),
         "secret": os.path.join(data, "secret"),
         "logs": os.path.join(ROOT, "logs"),
@@ -260,7 +263,7 @@ def path(name):
 
 
 def ensure_dirs():
-    for k in ("data", "uploads", "apk", "logs"):
+    for k in ("data", "uploads", "thumbs", "apk", "logs"):
         os.makedirs(path(k), exist_ok=True)
 
 

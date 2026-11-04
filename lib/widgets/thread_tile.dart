@@ -197,7 +197,7 @@ class ThreadTile extends StatelessWidget {
                       child: CachedNetworkImage(
                         cacheManager: ImgCache.manager,
                         imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
-                        imageUrl: Api.img(cover),
+                        imageUrl: Api.thumb(cover, 320),
                         fit: BoxFit.cover,
                         alignment: Alignment.topCenter,
                         memCacheWidth: (208 *

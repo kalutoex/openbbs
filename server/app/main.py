@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import api, auth, blacklist, config, db, sites
+from . import api, auth, blacklist, config, db, sites, thumbs
 
 ROOT = config.ROOT
 PER_PAGE = config.get("limits", "per_page", 20)
@@ -24,6 +24,8 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR, check_dir=False), name="s
 # 上传目录：容器里一般挂到外部卷，由 config 决定。
 UPLOADS = config.path("uploads")
 os.makedirs(UPLOADS, exist_ok=True)
+# 缩略图得排在 mount 前面，否则 /img/t/... 会被静态目录先吃掉变 404。
+app.add_api_route("/img/t/{w:int}/{path:path}", thumbs.thumb, methods=["GET"])
 app.mount("/img", StaticFiles(directory=UPLOADS), name="img")
 APK_DIR = config.path("apk")
 os.makedirs(APK_DIR, exist_ok=True)
