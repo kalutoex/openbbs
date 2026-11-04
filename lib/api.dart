@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 import 'disk_cache.dart';
+import 'file_pick.dart';
 import 'site_config.dart';
 import 'site_meta.dart';
 import 'sites.dart';
@@ -298,6 +299,28 @@ class Api {
       rethrow;
     } catch (e) {
       throw ApiException(Lc.current.uploadFailedWith('${e}'), code: 'uploadFailed', detail: '$e');
+    }
+  }
+
+  /// 传附件。手机上边读盘边发，网页版交给浏览器，都不整个进内存。
+  /// 名字和大小以服务端回来为准——客户端报的不可信。
+  static Future<Map<String, dynamic>> uploadFile(PickedFile f) async {
+    if (!configured) throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
+    try {
+      final d = await _withFailover(
+        () => postFile(_uri('/file').toString(), _headers, f),
+      );
+      final url = '${d['url'] ?? ''}';
+      if (url.isEmpty) throw ApiException('upload returned no url', code: 'uploadNoUrl');
+      return {
+        'url': url,
+        'name': '${d['name'] ?? f.name}',
+        'size': d['size'] is int ? d['size'] : f.size,
+      };
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException(Lc.current.uploadFailedWith('$e'), code: 'uploadFailed', detail: '$e');
     }
   }
 

@@ -7,9 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api.dart';
+import '../file_pick.dart';
 import '../img_cache.dart';
 import '../plat.dart';
 import '../img_compress.dart';
+import '../widgets/file_card.dart';
 import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
@@ -24,12 +26,16 @@ class EditThreadPage extends StatefulWidget {
   final String body;
   final List<String> images;
 
+  /// 已有的附件，改帖时可以摘掉。
+  final List<PostFile> files;
+
   const EditThreadPage({
     super.key,
     required this.tid,
     required this.title,
     required this.body,
     required this.images,
+    this.files = const [],
   });
 
   @override
@@ -41,6 +47,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
   late final _body = TextEditingController(text: widget.body);
   late final List<String> _remote = [...widget.images];
   final List<Uint8List> _added = [];
+  late final List<PostFile> _files = [...widget.files];
 
   final _picker = ImagePicker();
   bool _busy = false;
@@ -61,13 +68,50 @@ class _EditThreadPageState extends State<EditThreadPage> {
       _title.text != widget.title ||
       _body.text != widget.body ||
       _remote.length != widget.images.length ||
-      _added.isNotEmpty;
+      _added.isNotEmpty ||
+      _files.length != widget.files.length;
 
   void _snack(String m) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(m)));
+  }
+
+  /// 选一个附件直接传上去。传完列表里多一行，保存时才随 PATCH 提交。
+  Future<void> _addFile() async {
+    if (_files.length >= 5) {
+      _snack(Lc.current.attachMax('5'));
+      return;
+    }
+    final f = await pickFile();
+    if (f == null) return;
+    if (f.size > 500 * 1024 * 1024) {
+      _snack(Lc.current.attachTooBig('500MB'));
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _status = Lc.current.attachUploading(f.name);
+    });
+    try {
+      final r = await Api.uploadFile(f);
+      if (!mounted) return;
+      setState(() => _files.add(PostFile(
+            url: '${r['url']}',
+            name: '${r['name']}',
+            size: r['size'] is int ? r['size'] as int : f.size,
+          )));
+    } catch (e) {
+      _snack(errorText(context, e));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _status = '';
+        });
+      }
+    }
   }
 
   Future<void> _addImages() async {
@@ -109,7 +153,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
       _snack(Lc.current.titleEmpty);
       return;
     }
-    if (b.isEmpty && _count == 0) {
+    if (b.isEmpty && _count == 0 && _files.isEmpty) {
       _snack(Lc.current.bodyOrImageRequired);
       return;
     }
@@ -130,6 +174,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
         'title': t,
         'body': b,
         'images': urls,
+        'files': _files.map((f) => f.toJson()).toList(),
       });
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -249,6 +294,21 @@ class _EditThreadPageState extends State<EditThreadPage> {
             ),
             const SizedBox(height: 6),
             _imgsGrid(cs),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _busy || _files.length >= 5 ? null : _addFile,
+                  icon: const Icon(Icons.attach_file, size: 18),
+                  label: Text(Lc.current.attachFile),
+                ),
+              ],
+            ),
+            EditableFileCards(
+              files: _files,
+              busy: _busy,
+              onRemove: (f) => setState(() => _files.remove(f)),
+            ),
             if (_busy) ...[
               const SizedBox(height: 16),
               Row(

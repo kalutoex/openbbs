@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../api.dart';
+import '../file_pick.dart';
 import '../plat.dart';
 import '../widgets/mention.dart';
 import '../store.dart';
@@ -13,6 +14,7 @@ import 'edit_thread_page.dart';
 import '../utils.dart';
 import '../widgets/avatar.dart';
 import '../widgets/name_tag.dart';
+import '../widgets/file_card.dart';
 import '../widgets/post_images.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/user_link.dart';
@@ -71,6 +73,7 @@ class _ThreadPageState extends State<ThreadPage> {
 
   final ImagePicker _picker = ImagePicker();
   final List<Uint8List> _imgs = [];
+  final List<PostFile> _files = [];
   bool _compressing = false;
 
   @override
@@ -322,7 +325,7 @@ class _ThreadPageState extends State<ThreadPage> {
       return;
     }
     final body = _input.text.trim();
-    if ((body.isEmpty && _imgs.isEmpty) || _sending) return;
+    if ((body.isEmpty && _imgs.isEmpty && _files.isEmpty) || _sending) return;
     setState(() => _sending = true);
     try {
       final urls = <String>[];
@@ -333,6 +336,7 @@ class _ThreadPageState extends State<ThreadPage> {
         'body': body,
         'parent_id': _replyTo?['id'],
         'images': urls,
+        'files': _files.map((f) => f.toJson()).toList(),
       });
       _input.clear();
       if (mounted) {
@@ -340,6 +344,7 @@ class _ThreadPageState extends State<ThreadPage> {
           _replyTo = null;
           _sending = false;
           _imgs.clear();
+          _files.clear();
         });
       }
       await _refreshTail();
@@ -483,6 +488,7 @@ class _ThreadPageState extends State<ThreadPage> {
       }
     }
     final imgs = ((op['images'] as List?) ?? const []).cast<String>();
+    final files = PostFile.listOf(op['files']);
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => EditThreadPage(
@@ -490,6 +496,7 @@ class _ThreadPageState extends State<ThreadPage> {
           title: (t['title'] ?? widget.title) as String,
           body: (op['body'] ?? '') as String,
           images: imgs,
+          files: files,
         ),
       ),
     );
@@ -867,6 +874,7 @@ class _ThreadPageState extends State<ThreadPage> {
     final body = (op['body'] ?? '') as String;
     final title = ((t['title'] ?? widget.title) as String).trim();
     final imgs = ((op['images'] as List?) ?? const []).cast<String>();
+    final files = PostFile.listOf(op['files']);
     final sizes = (op['img_sizes'] as List?) ?? const [];
     final created = (t['created_at'] ?? 0) as int;
     final views = (t['view_count'] ?? 0) as int;
@@ -937,6 +945,7 @@ class _ThreadPageState extends State<ThreadPage> {
                 const SizedBox(height: 10),
                 PostImages(urls: imgs, sizes: sizes),
               ],
+              if (files.isNotEmpty) FileCards(files: files),
               const SizedBox(height: 10),
               Text(
                 [
@@ -1099,6 +1108,12 @@ class _ThreadPageState extends State<ThreadPage> {
               _replyThumbs(cs),
               const SizedBox(height: 8),
             ],
+            if (_files.isNotEmpty)
+              EditableFileCards(
+                files: _files,
+                busy: _sending,
+                onRemove: (f) => setState(() => _files.remove(f)),
+              ),
             if (_replyTo != null)
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 6),
@@ -1148,6 +1163,12 @@ class _ThreadPageState extends State<ThreadPage> {
                       ),
                     ),
                   ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _sending ? null : _pickFile,
+                  icon: const Icon(Icons.attach_file, size: 20),
+                  tooltip: Lc.current.attachFile,
                 ),
                 IconButton(
                   visualDensity: VisualDensity.compact,
@@ -1218,6 +1239,34 @@ class _ThreadPageState extends State<ThreadPage> {
         ),
       ),
     );
+  }
+
+  /// 传附件。大包传得慢，这中间发送按钮是锁着的，传完解锁。
+  Future<void> _pickFile() async {
+    if (_files.length >= 5) {
+      _toast(Lc.current.attachMax('5'));
+      return;
+    }
+    final f = await pickFile();
+    if (f == null) return;
+    if (f.size > 500 * 1024 * 1024) {
+      _toast(Lc.current.attachTooBig('500MB'));
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      final r = await Api.uploadFile(f);
+      if (!mounted) return;
+      setState(() => _files.add(PostFile(
+            url: '${r['url']}',
+            name: '${r['name']}',
+            size: r['size'] is int ? r['size'] as int : f.size,
+          )));
+    } catch (e) {
+      _toast(e);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   Future<void> _pickImages() async {
@@ -1327,6 +1376,7 @@ class _PostCardState extends State<_PostCard> {
     final avatar = (post['author_avatar'] ?? '') as String;
     final bodyText = (post['body'] ?? '') as String;
     final imgs = ((post['images'] as List?) ?? const []).cast<String>();
+    final files = PostFile.listOf(post['files']);
     final sizes = (post['img_sizes'] as List?) ?? const [];
     final subs = ((post['subs'] as List?) ?? const [])
         .cast<Map<String, dynamic>>();
@@ -1433,6 +1483,7 @@ class _PostCardState extends State<_PostCard> {
                       ),
                       if (imgs.isNotEmpty)
                         PostImages(urls: imgs, sizes: sizes),
+                      if (files.isNotEmpty) FileCards(files: files),
                       if (subs.isNotEmpty) _subThread(cs, subs),
                       if (subs.length > 3)
                         GestureDetector(

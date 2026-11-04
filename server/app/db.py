@@ -39,6 +39,18 @@ CREATE TABLE IF NOT EXISTS replies (
   created_at  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_replies_thread ON replies(thread_id, id);
+
+-- 附件：文件本身在 data/files 里，这里只记名字、大小、谁传的。
+CREATE TABLE IF NOT EXISTS files (
+  digest     TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  size       INTEGER NOT NULL,
+  mime       TEXT NOT NULL DEFAULT '',
+  uploader   INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  downloads  INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_files_uploader ON files(uploader, created_at);
 CREATE INDEX IF NOT EXISTS idx_threads_updated ON threads(updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS likes (
@@ -197,6 +209,8 @@ EXTRA_COLUMNS = [
     ("threads", "agree_count", "INTEGER NOT NULL DEFAULT 0"),
     ("threads", "images", "TEXT NOT NULL DEFAULT '[]'"),
     ("replies", "images", "TEXT NOT NULL DEFAULT '[]'"),
+    ("threads", "files", "TEXT NOT NULL DEFAULT '[]'"),
+    ("replies", "files", "TEXT NOT NULL DEFAULT '[]'"),
     ("replies", "floor_no", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "handle", "TEXT"),
     ("users", "cover", "TEXT NOT NULL DEFAULT ''"),

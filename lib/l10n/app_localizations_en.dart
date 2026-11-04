@@ -1947,4 +1947,22 @@ class LEn extends L {
 
   @override
   String get dmSend => 'Message';
+
+  @override
+  String get attachFile => 'Attach file';
+
+  @override
+  String attachMax(String v1) {
+    return 'Up to $v1 files';
+  }
+
+  @override
+  String attachTooBig(String v1) {
+    return 'File must be under $v1';
+  }
+
+  @override
+  String attachUploading(String v1) {
+    return 'Uploading $v1';
+  }
 }

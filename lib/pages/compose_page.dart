@@ -10,7 +10,9 @@ import '../plat.dart';
 import '../sites.dart';
 import '../store.dart';
 import '../draft_images.dart';
+import '../file_pick.dart';
 import '../img_compress.dart';
+import '../widgets/file_card.dart';
 import '../widgets/mention.dart';
 import 'gallery_picker_page.dart';
 
@@ -46,6 +48,7 @@ class _ComposePageState extends State<ComposePage> {
   final _bodyFocus = FocusNode();
   final _picker = ImagePicker();
   final List<_PendingImg> _imgs = [];
+  final List<PostFile> _files = [];
   Timer? _draftTimer;
   String _savedImgSig = '';
 
@@ -222,6 +225,45 @@ class _ComposePageState extends State<ComposePage> {
     await _ingest(chosen);
   }
 
+  /// 挑一个附件，选中就传。传完只留服务端给的地址/名字/大小。
+  Future<void> _pickFile() async {
+    if (_files.length >= 5) {
+      _snack(Lc.current.attachMax('5'));
+      return;
+    }
+    final f = await pickFile();
+    if (f == null) return;
+    if (f.size > 500 * 1024 * 1024) {
+      _snack(Lc.current.attachTooBig('500MB'));
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _status = Lc.current.attachUploading(f.name);
+      _progress = 0;
+    });
+    try {
+      final r = await Api.uploadFile(f);
+      if (!mounted) return;
+      setState(() => _files.add(PostFile(
+            url: '${r['url']}',
+            name: '${r['name']}',
+            size: r['size'] is int ? r['size'] as int : f.size,
+          )));
+    } catch (e) {
+      _fail(e);
+      return;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _status = '';
+          _progress = 0;
+        });
+      }
+    }
+  }
+
   Future<void> _pickSystem() async {
     try {
       final picked = await _picker.pickMultiImage();
@@ -378,11 +420,12 @@ class _ComposePageState extends State<ComposePage> {
   bool get _hasContent =>
       _title.text.trim().isNotEmpty ||
       _body.text.trim().isNotEmpty ||
-      _imgs.isNotEmpty;
+      _imgs.isNotEmpty ||
+      _files.isNotEmpty;
 
   bool get _canSubmit =>
       _title.text.trim().isNotEmpty &&
-      (_body.text.trim().isNotEmpty || _imgs.isNotEmpty);
+      (_body.text.trim().isNotEmpty || _imgs.isNotEmpty || _files.isNotEmpty);
 
   Future<void> _submit() async {
     if (_busy || !_canSubmit) return;
@@ -430,6 +473,7 @@ class _ComposePageState extends State<ComposePage> {
         'title': t,
         'body': b,
         'images': urls,
+        'files': _files.map((f) => f.toJson()).toList(),
       });
       _draftTimer?.cancel();
       await Draft.clear(_draftKey);
@@ -551,6 +595,14 @@ class _ComposePageState extends State<ComposePage> {
                 _imagesHeader(cs),
                 const SizedBox(height: 10),
                 _imagesStrip(cs),
+              ],
+              if (_files.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                EditableFileCards(
+                  files: _files,
+                  busy: _busy,
+                  onRemove: (f) => setState(() => _files.remove(f)),
+                ),
               ],
             ],
           ),
@@ -823,6 +875,12 @@ class _ComposePageState extends State<ComposePage> {
                       onPressed: (_busy || _compressing) ? null : _pickSheet,
                       icon: const Icon(Icons.add_photo_alternate_outlined),
                       tooltip: Lc.current.addImageShort,
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton.filledTonal(
+                      onPressed: (_busy || _compressing) ? null : _pickFile,
+                      icon: const Icon(Icons.attach_file),
+                      tooltip: Lc.current.attachFile,
                     ),
                     const SizedBox(width: 10),
                     Expanded(

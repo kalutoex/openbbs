@@ -11,10 +11,11 @@
 import base64, hashlib, hmac, json, os, random, re, secrets, shutil, struct, time
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from . import auth, blacklist, config, db, mailer, sites
+from . import auth, blacklist, config, db, files as filesvc, mailer, sites
 
 router = APIRouter(prefix="/api")
 
@@ -237,23 +238,27 @@ class NewThread(BaseModel):
     title: str
     body: str
     images: Optional[list] = None
+    files: Optional[list] = None
 
 
 class NewReply(BaseModel):
     body: str
     parent_id: Optional[int] = None
     images: Optional[list] = None
+    files: Optional[list] = None
 
 
 class PatchThread(BaseModel):
     title: Optional[str] = None
     body: Optional[str] = None
     images: Optional[List[str]] = None
+    files: Optional[list] = None
 
 
 class PatchReply(BaseModel):
     body: Optional[str] = None
     images: Optional[List[str]] = None
+    files: Optional[list] = None
 
 
 class NewImage(BaseModel):
@@ -293,6 +298,52 @@ def _load_imgs(raw):
 
 def _save_imgs(v):
     return json.dumps(_norm_imgs(v), ensure_ascii=False)
+
+
+# ---------------------------------------------------------------- 附件
+
+
+_F_URL = re.compile(r"^(?:/f/)?([0-9a-f]{20})$")
+
+
+def _load_files(raw):
+    try:
+        v = json.loads(raw or "[]")
+    except Exception:
+        return []
+    return [x for x in v if isinstance(x, dict) and x.get("url")]
+
+
+def _save_files(v):
+    return json.dumps(v or [], ensure_ascii=False)
+
+
+def _files_payload(raw):
+    return {"files": _load_files(raw)}
+
+
+def _norm_files(v, c, user, cap=0):
+    """客户端只报地址，名字和大小一律从库里取——别信客户端报的数。
+
+    只认自己传的文件（管理员例外），一帖最多 cap 个。
+    """
+    cap = cap or filesvc.MAX_FILES
+    out, seen = [], set()
+    for item in (v or [])[:cap]:
+        raw = item.get("url") if isinstance(item, dict) else item
+        m = _F_URL.match(str(raw or "").strip())
+        if not m or m.group(1) in seen:
+            continue
+        d = m.group(1)
+        row = c.execute("SELECT digest, name, size, uploader FROM files WHERE digest=?",
+                        (d,)).fetchone()
+        if not row:
+            continue
+        if row["uploader"] != user["id"] and not user["is_admin"]:
+            continue
+        seen.add(d)
+        out.append({"url": "/f/" + d, "name": row["name"], "size": row["size"]})
+    return out
 
 
 def _read_size(path):
@@ -828,13 +879,14 @@ def me(user=Depends(optional_user)):
 @router.post("/threads")
 def create_thread(p: NewThread, c=Depends(get_conn), user=Depends(require_user)):
     title, body = p.title.strip()[:TITLE_MAX], p.body.strip()[:BODY_MAX]
-    if not title or (not body and not p.images):
-        raise HTTPException(400, "标题要填，正文或图片至少一样")
+    attach = _norm_files(p.files, c, user)
+    if not title or (not body and not p.images and not attach):
+        raise HTTPException(400, "标题要填，正文、图片、附件至少一样")
     now = int(time.time())
     cur = c.execute(
-        "INSERT INTO threads(title, body, user_id, created_at, updated_at, reply_count, images) "
-        "VALUES(?,?,?,?,?,0,?)",
-        (title, body, user["id"], now, now, _save_imgs(p.images)))
+        "INSERT INTO threads(title, body, user_id, created_at, updated_at, reply_count, images, files) "
+        "VALUES(?,?,?,?,?,0,?,?)",
+        (title, body, user["id"], now, now, _save_imgs(p.images), _save_files(attach)))
     tid = cur.lastrowid
     _notify_mentions(c, body, user["id"], tid, None, now)
     _refresh_level(c, user["id"])
@@ -945,6 +997,7 @@ def feed(page: int = 1, sort: str = "created", c=Depends(get_conn), user=Depends
         "updated_at": r["updated_at"],
         "edited_at": r["edited_at"] or 0,
         **_imgs_payload(r["images"] if "images" in r.keys() else None),
+        **_files_payload(r["files"] if "files" in r.keys() else None),
     } for r in rows], "page": page}
 
 
@@ -963,6 +1016,7 @@ def _reply_json(row):
         "agree_count": row["agree_count"],
         "edited_at": (row["edited_at"] or 0) if "edited_at" in row.keys() else 0,
         **_imgs_payload(row["images"]),
+        **_files_payload(row["files"]),
         "subs": [],
     }
 
@@ -1019,6 +1073,7 @@ def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depe
             "created_at": t["created_at"],
             "agree_count": 0,
             **_imgs_payload(t["images"]),
+            **_files_payload(t["files"]),
             "subs": [],
             "is_op": True,
             "edited_at": t["edited_at"] or 0,
@@ -1073,6 +1128,7 @@ def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depe
             "edited_at": s["edited_at"] or 0,
             "can_edit": bool(user and (user["id"] == s["user_id"] or user["is_admin"])),
             **_imgs_payload(s["images"]),
+            **_files_payload(s["files"]),
             "can_delete": _may_delete(user, s["user_id"]),
         } for s in subs]
         item["sub_count"] = sub_n.get(r["id"], 0)
@@ -1136,7 +1192,8 @@ def reply(tid: int, p: NewReply, c=Depends(get_conn), user=Depends(require_user)
     if not t:
         raise HTTPException(404, "帖子不存在")
     body = p.body.strip()[:BODY_MAX]
-    if not body and not p.images:
+    attach = _norm_files(p.files, c, user)
+    if not body and not p.images and not attach:
         raise HTTPException(400, "内容不能为空")
     parent = p.parent_id or 0
     if parent and not c.execute("SELECT 1 FROM replies WHERE id=? AND thread_id=?",
@@ -1150,9 +1207,9 @@ def reply(tid: int, p: NewReply, c=Depends(get_conn), user=Depends(require_user)
                        (tid,)).fetchone()["m"] or 1
         floor_no = int(mx) + 1
     cur = c.execute(
-        "INSERT INTO replies(thread_id, body, user_id, created_at, parent_id, images, floor_no) "
-        "VALUES(?,?,?,?,?,?,?)",
-        (tid, body, user["id"], now, parent, _save_imgs(p.images), floor_no))
+        "INSERT INTO replies(thread_id, body, user_id, created_at, parent_id, images, floor_no, files) "
+        "VALUES(?,?,?,?,?,?,?,?)",
+        (tid, body, user["id"], now, parent, _save_imgs(p.images), floor_no, _save_files(attach)))
     rid = cur.lastrowid
     if not parent:
         c.execute("UPDATE threads SET reply_count=reply_count+1, updated_at=? WHERE id=?", (now, tid))
@@ -1190,15 +1247,16 @@ def edit_thread(tid: int, p: PatchThread, c=Depends(get_conn), user=Depends(requ
     title = (t["title"] or "") if p.title is None else p.title.strip()[:TITLE_MAX]
     body = (t["body"] or "") if p.body is None else p.body.strip()[:BODY_MAX]
     images = _load_imgs(t["images"]) if p.images is None else _norm_imgs(p.images)
+    attach = _load_files(t["files"]) if p.files is None else _norm_files(p.files, c, user)
     if not title:
         raise HTTPException(400, "标题要填")
-    if not body and not images:
-        raise HTTPException(400, "正文或图片至少留一样")
+    if not body and not images and not attach:
+        raise HTTPException(400, "正文、图片、附件至少留一样")
 
     now = int(time.time())
     c.execute(
-        "UPDATE threads SET title=?, body=?, images=?, edited_at=? WHERE id=?",
-        (title, body, _save_imgs(images), now, tid))
+        "UPDATE threads SET title=?, body=?, images=?, files=?, edited_at=? WHERE id=?",
+        (title, body, _save_imgs(images), _save_files(attach), now, tid))
     c.commit()
     return {"ok": True, "edited_at": now, "title": title, "images": images}
 
@@ -1213,12 +1271,13 @@ def edit_reply(cid: int, p: PatchReply, c=Depends(get_conn), user=Depends(requir
 
     body = (r["body"] or "") if p.body is None else p.body.strip()[:BODY_MAX]
     images = _load_imgs(r["images"]) if p.images is None else _norm_imgs(p.images)
-    if not body and not images:
+    attach = _load_files(r["files"]) if p.files is None else _norm_files(p.files, c, user)
+    if not body and not images and not attach:
         raise HTTPException(400, "内容不能为空")
 
     now = int(time.time())
-    c.execute("UPDATE replies SET body=?, images=?, edited_at=? WHERE id=?",
-              (body, _save_imgs(images), now, cid))
+    c.execute("UPDATE replies SET body=?, images=?, files=?, edited_at=? WHERE id=?",
+              (body, _save_imgs(images), _save_files(attach), now, cid))
     c.commit()
     return {"ok": True, "edited_at": now}
 
@@ -1423,6 +1482,63 @@ def upload(p: NewImage, user=Depends(require_user)):
     return {"url": "/img/%s/%s" % (digest[:2], fn)}
 
 
+def _today_start():
+    """本地时区的今天零点。服务器按 CST 跑，别用 UTC 切天。"""
+    return int((time.time() + 8 * 3600) // 86400 * 86400 - 8 * 3600)
+
+
+@router.post("/file")
+async def upload_file(f: UploadFile = File(...), c=Depends(get_conn),
+                      user=Depends(require_user)):
+    """附件走 multipart 直接落盘。500MB 的包不能先 base64 再解码——那样内存先炸。"""
+    cap = filesvc.MAX_BYTES
+    if f.size is not None and f.size > cap:
+        raise HTTPException(413, "单个文件别超过 %dMB" % filesvc.MAX_MB)
+    n, used = filesvc.quota(c, user["id"], _today_start())
+    if n >= filesvc.PER_DAY:
+        raise HTTPException(429, "今天传够 %d 个了，明天再说" % filesvc.PER_DAY)
+    if used >= filesvc.PER_DAY_MB * 1024 * 1024:
+        raise HTTPException(429, "今天的附件额度用完了")
+
+    name = filesvc.clean_name(f.filename)
+    try:
+        digest, size, _ = await filesvc.ingest(f, cap)
+    except filesvc.TooBig:
+        raise HTTPException(413, "单个文件别超过 %dMB" % filesvc.MAX_MB)
+    except filesvc.Empty:
+        raise HTTPException(400, "空文件")
+
+    row = c.execute("SELECT name, size FROM files WHERE digest=?", (digest,)).fetchone()
+    if not row:
+        c.execute(
+            "INSERT INTO files(digest, name, size, mime, uploader, created_at) "
+            "VALUES(?,?,?,?,?,?)",
+            (digest, name, size, filesvc.guess_mime(name), user["id"], int(time.time())))
+        c.commit()
+        row = c.execute("SELECT name, size FROM files WHERE digest=?", (digest,)).fetchone()
+    return {"url": "/f/" + digest, "name": row["name"], "size": row["size"]}
+
+
+def serve_file(digest: str, c=Depends(get_conn)):
+    """下载。一律当附件给，不内联渲染——传个 html 上来也不会在本站跑脚本。"""
+    if not re.fullmatch(r"[0-9a-f]{20}", digest or ""):
+        raise HTTPException(404)
+    row = c.execute("SELECT name, mime FROM files WHERE digest=?", (digest,)).fetchone()
+    path = filesvc.path_of(digest)
+    if not row or not os.path.exists(path):
+        raise HTTPException(404, "文件不在了")
+    try:
+        c.execute("UPDATE files SET downloads=downloads+1 WHERE digest=?", (digest,))
+        c.commit()
+    except Exception:
+        pass
+    return FileResponse(
+        path, filename=row["name"],
+        media_type=row["mime"] or "application/octet-stream",
+        headers={"X-Content-Type-Options": "nosniff",
+                 "Cache-Control": "public, max-age=31536000, immutable"})
+
+
 # ---------------------------------------------------------------- 搜索 / 通知 / 收藏 / 历史
 
 
@@ -1441,6 +1557,7 @@ def _brief(r, user=None):
         "updated_at": r["updated_at"],
         "edited_at": r["edited_at"] or 0,
         **_imgs_payload(r["images"] if "images" in r.keys() else None),
+        **_files_payload(r["files"] if "files" in r.keys() else None),
     }
 
 

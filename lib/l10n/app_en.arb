@@ -788,5 +788,9 @@
   "deleteChat": "Delete chat",
   "dmEmptyHint": "Tap “Send message” on someone's profile",
   "dmEarlier": "Load earlier",
-  "dmSend": "Message"
+  "dmSend": "Message",
+  "attachFile": "Attach file",
+  "attachMax": "Up to {v1} files",
+  "attachTooBig": "File must be under {v1}",
+  "attachUploading": "Uploading {v1}"
 }

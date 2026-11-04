@@ -30,6 +30,8 @@ app.mount("/img", StaticFiles(directory=UPLOADS), name="img")
 APK_DIR = config.path("apk")
 os.makedirs(APK_DIR, exist_ok=True)
 app.mount("/apk", StaticFiles(directory=APK_DIR), name="apk")
+# 附件下载：和 /img 一样在根路径上，帖子里的地址才短。
+app.add_api_route("/f/{digest}", api.serve_file, methods=["GET", "HEAD"])
 tpl = Jinja2Templates(directory=TEMPLATE_DIR)
 
 

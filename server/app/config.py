@@ -47,6 +47,7 @@ DEFAULTS = {
         "db": "",
         "uploads": "",
         "thumbs": "",
+        "files": "",
         "apk": "",
         "secret": "",
         "mail_config": "",
@@ -58,6 +59,11 @@ DEFAULTS = {
         "max_image_mb": 5,
         "max_anim_mb": 10,
         "max_images": 9,
+        # 附件：单文件上限、一帖最多几个、每人每天几个 / 多少 MB
+        "file_mb": 500,
+        "files_per_post": 5,
+        "files_per_day": 10,
+        "files_mb_per_day": 3000,
         "max_level": 99,
         "username_min": 2,
         "username_max": 20,
@@ -147,6 +153,7 @@ _ENV_MAP = {
     "OPENBBS_UPLOAD_DIR": ("paths", "uploads"),
     "OPENBBS_APK_DIR": ("paths", "apk"),
     "OPENBBS_THUMB_DIR": ("paths", "thumbs"),
+    "OPENBBS_FILE_DIR": ("paths", "files"),
     "OPENBBS_SECRET_FILE": ("paths", "secret"),
     "OPENBBS_MAIL_CONFIG": ("paths", "mail_config"),
     "OPENBBS_LOG_DIR": ("paths", "logs"),
@@ -251,6 +258,7 @@ def path(name):
         "db": os.path.join(data, "forum.db"),
         "uploads": os.path.join(data, "uploads"),
         "thumbs": os.path.join(data, "thumbs"),
+        "files": os.path.join(data, "files"),
         "apk": os.path.join(data, "apk"),
         "secret": os.path.join(data, "secret"),
         "logs": os.path.join(ROOT, "logs"),
@@ -263,7 +271,7 @@ def path(name):
 
 
 def ensure_dirs():
-    for k in ("data", "uploads", "thumbs", "apk", "logs"):
+    for k in ("data", "uploads", "thumbs", "files", "apk", "logs"):
         os.makedirs(path(k), exist_ok=True)
 
 

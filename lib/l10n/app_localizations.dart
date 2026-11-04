@@ -3529,6 +3529,30 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'发私信'**
   String get dmSend;
+
+  /// No description provided for @attachFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'附件'**
+  String get attachFile;
+
+  /// No description provided for @attachMax.
+  ///
+  /// In zh, this message translates to:
+  /// **'最多 {v1} 个附件'**
+  String attachMax(String v1);
+
+  /// No description provided for @attachTooBig.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件不能超过 {v1}'**
+  String attachTooBig(String v1);
+
+  /// No description provided for @attachUploading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在上传 {v1}'**
+  String attachUploading(String v1);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

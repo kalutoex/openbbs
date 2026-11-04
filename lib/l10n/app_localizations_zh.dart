@@ -1910,4 +1910,22 @@ class LZh extends L {
 
   @override
   String get dmSend => '发私信';
+
+  @override
+  String get attachFile => '附件';
+
+  @override
+  String attachMax(String v1) {
+    return '最多 $v1 个附件';
+  }
+
+  @override
+  String attachTooBig(String v1) {
+    return '文件不能超过 $v1';
+  }
+
+  @override
+  String attachUploading(String v1) {
+    return '正在上传 $v1';
+  }
 }

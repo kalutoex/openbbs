@@ -1267,5 +1267,30 @@
   "deleteChat": "删除该聊天",
   "dmEmptyHint": "在别人主页点「发私信」",
   "dmEarlier": "加载更早",
-  "dmSend": "发私信"
+  "dmSend": "发私信",
+  "attachFile": "附件",
+  "attachMax": "最多 {v1} 个附件",
+  "@attachMax": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "attachTooBig": "文件不能超过 {v1}",
+  "@attachTooBig": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "attachUploading": "正在上传 {v1}",
+  "@attachUploading": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  }
 }
