@@ -230,7 +230,8 @@ class _FileCardState extends State<_FileCard> {
 
 /// 主页列表里的附件：一张小卡片，点一下直接下载。
 ///
-/// 尺寸固定 220x80，多了会换行——列表上摆太大就把正文挤没了。
+/// 高 80，宽度铺满可用宽度（桌面上限 420）——固定宽度会把文件名压窄，
+/// 长文件名全被截断，反而看不清。
 class CompactFiles extends StatefulWidget {
   const CompactFiles({super.key, required this.files});
 
@@ -245,7 +246,7 @@ class _CompactFilesState extends State<CompactFiles> {
   double _progress = 0;
 
   static const _maxShown = 2;
-  static const _w = 220.0;
+  static const _maxW = 420.0;
   static const _h = 80.0;
 
   Future<void> _open(PostFile f, int i) async {
@@ -281,36 +282,47 @@ class _CompactFilesState extends State<CompactFiles> {
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (var i = 0; i < shown.length; i++)
-            _card(context, shown[i], i, scheme, tt),
-          if (rest > 0)
-            Container(
-              width: _w,
-              height: _h,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '+$rest',
-                style: tt.labelLarge?.copyWith(color: scheme.outline),
-              ),
-            ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, cons) {
+          final w = cons.maxWidth.isFinite && cons.maxWidth < _maxW
+              ? cons.maxWidth
+              : _maxW;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < shown.length; i++) ...[
+                if (i > 0) const SizedBox(height: 8),
+                _card(context, shown[i], i, w, scheme, tt),
+              ],
+              if (rest > 0) ...[
+                if (shown.isNotEmpty) const SizedBox(height: 8),
+                Container(
+                  width: w,
+                  height: _h,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color:
+                        scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '+$rest',
+                    style: tt.labelLarge?.copyWith(color: scheme.outline),
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _card(BuildContext context, PostFile f, int i, ColorScheme scheme,
-      TextTheme tt) {
+  Widget _card(BuildContext context, PostFile f, int i, double w,
+      ColorScheme scheme, TextTheme tt) {
     final busy = _busy == i;
     return SizedBox(
-      width: _w,
+      width: w,
       height: _h,
       child: Material(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
