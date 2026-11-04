@@ -8,6 +8,7 @@ import '../img_cache.dart';
 import '../img_size_store.dart';
 import '../store.dart';
 import '../utils.dart';
+import 'file_card.dart';
 import 'name_tag.dart';
 import 'user_link.dart';
 
@@ -77,6 +78,7 @@ class ThreadTile extends StatelessWidget {
     final ts = (item['updated_at'] ?? item['created_at'] ?? 0) as int;
 
     final imgs = ((item['images'] as List?) ?? const []).cast<String>();
+    final files = PostFile.listOf(item['files']);
     final coverSizes = (item['img_sizes'] as List?) ?? const [];
     final cover = thumbs && imgs.isNotEmpty ? imgs.first : '';
 
@@ -221,6 +223,7 @@ class ThreadTile extends StatelessWidget {
                 ),
               ),
             ],
+            if (files.isNotEmpty) CompactFiles(files: files),
             SizedBox(height: gap),
             Row(
               children: [

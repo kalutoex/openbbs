@@ -227,3 +227,128 @@ class _FileCardState extends State<_FileCard> {
     );
   }
 }
+
+/// 主页列表里的附件：一行小条，点一下直接下载。
+///
+/// 列表上不能摆整块卡片——一个帖子带三四个附件就把屏幕吃满了。
+/// 多的收成 "+N"，点进去看详情页。
+class CompactFiles extends StatefulWidget {
+  const CompactFiles({super.key, required this.files});
+
+  final List<PostFile> files;
+
+  @override
+  State<CompactFiles> createState() => _CompactFilesState();
+}
+
+class _CompactFilesState extends State<CompactFiles> {
+  int _busy = -1;
+  double _progress = 0;
+
+  static const _maxShown = 2;
+
+  Future<void> _open(PostFile f, int i) async {
+    if (_busy >= 0) return;
+    setState(() {
+      _busy = i;
+      _progress = 0;
+    });
+    try {
+      final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
+      await openRemoteFile(url, f.name, onProgress: (p) {
+        if (mounted) setState(() => _progress = p);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorText(context, e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = -1);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final files = widget.files;
+    if (files.isEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final shown = files.take(_maxShown).toList();
+    final rest = files.length - shown.length;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (var i = 0; i < shown.length; i++)
+            _chip(context, shown[i], i, scheme, tt),
+          if (rest > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '+$rest',
+                style: tt.labelSmall?.copyWith(color: scheme.outline),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(BuildContext context, PostFile f, int i, ColorScheme scheme,
+      TextTheme tt) {
+    final busy = _busy == i;
+    final label = busy && _progress > 0
+        ? '${(_progress * 100).toStringAsFixed(0)}%'
+        : f.sizeText;
+    return Material(
+      color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: _busy >= 0 ? null : () => _open(f, i),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              busy
+                  ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: _progress > 0 ? _progress : null,
+                      ),
+                    )
+                  : Icon(_iconFor(f.name), size: 15, color: scheme.primary),
+              const SizedBox(width: 5),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 132),
+                child: Text(
+                  f.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: tt.labelMedium?.copyWith(color: scheme.onSurface),
+                ),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: tt.labelSmall?.copyWith(color: scheme.outline),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -978,7 +978,7 @@ def feed(page: int = 1, sort: str = "created", c=Depends(get_conn), user=Depends
     order = "t.created_at DESC" if sort == "created" else "t.updated_at DESC"
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.is_top, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "t.is_good, t.is_top, t.images, t.files, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
         "FROM threads t JOIN users u ON u.id=t.user_id "
         "ORDER BY t.is_top DESC, "
         "(CASE WHEN t.is_top=1 THEN t.created_at ELSE 0 END) ASC, " + order + " LIMIT ? OFFSET ?",
@@ -1574,7 +1574,7 @@ def search(q: str = "", page: int = 1, c=Depends(get_conn), user=Depends(optiona
         (like, like)).fetchone()["n"]
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "t.is_good, t.images, t.files, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
         "FROM threads t JOIN users u ON u.id=t.user_id "
         "WHERE " + where + " ORDER BY t.updated_at DESC LIMIT ? OFFSET ?",
         (like, like, PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
@@ -1896,7 +1896,7 @@ def favorites(page: int = 1, c=Depends(get_conn), user=Depends(require_user)):
     page = max(1, page)
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "t.is_good, t.images, t.files, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
         "FROM favorites fa JOIN threads t ON t.id=fa.thread_id "
         "JOIN users u ON u.id=t.user_id "
         "WHERE fa.user_id=? ORDER BY fa.created_at DESC LIMIT ? OFFSET ?",
@@ -1909,7 +1909,7 @@ def history(page: int = 1, c=Depends(get_conn), user=Depends(require_user)):
     page = max(1, page)
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "t.is_good, t.images, t.files, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
         "FROM history h JOIN threads t ON t.id=h.thread_id "
         "JOIN users u ON u.id=t.user_id "
         "WHERE h.user_id=? ORDER BY h.viewed_at DESC LIMIT ? OFFSET ?",
@@ -1947,7 +1947,7 @@ def user_page(name: str, page: int = 1, c=Depends(get_conn), user=Depends(option
         (user["id"], u["id"])).fetchone())
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "t.is_good, t.images, t.files, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
         "FROM threads t JOIN users u ON u.id=t.user_id "
         "WHERE t.user_id=? ORDER BY t.updated_at DESC LIMIT ? OFFSET ?",
         (u["id"], PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
