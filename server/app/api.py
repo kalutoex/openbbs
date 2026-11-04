@@ -1535,24 +1535,38 @@ async def upload_file(f: UploadFile = File(...), c=Depends(get_conn),
     return {"url": "/f/" + digest, "name": row["name"], "size": row["size"]}
 
 
-def serve_file(digest: str, c=Depends(get_conn)):
-    """下载。一律当附件给，不内联渲染——传个 html 上来也不会在本站跑脚本。"""
+def serve_file(digest: str, request: Request, c=Depends(get_conn)):
+    """下载。一律当附件给，不内联渲染——传个 html 上来也不会在本站跑脚本。
+
+    帖子附件（账本里 public=1）公开；云盘私人文件只有本人登录能下。
+    """
     if not re.fullmatch(r"[0-9a-f]{20}", digest or ""):
         raise HTTPException(404)
     row = c.execute("SELECT name, mime FROM files WHERE digest=?", (digest,)).fetchone()
     path = filesvc.path_of(digest)
     if not row or not os.path.exists(path):
         raise HTTPException(404, "文件不在了")
+
+    public = c.execute(
+        "SELECT 1 FROM user_files WHERE digest=? AND public=1 LIMIT 1", (digest,)).fetchone()
+    if not public:
+        uid = auth.read_token(_token(request))
+        mine = uid and c.execute(
+            "SELECT 1 FROM user_files WHERE digest=? AND user_id=? AND deleted_at IS NULL "
+            "LIMIT 1", (digest, uid)).fetchone()
+        if not mine:
+            raise HTTPException(403, "无权访问")
+
     try:
         c.execute("UPDATE files SET downloads=downloads+1 WHERE digest=?", (digest,))
         c.commit()
     except Exception:
         pass
+    cache = "public, max-age=31536000, immutable" if public else "private, no-store"
     return FileResponse(
         path, filename=row["name"],
         media_type=row["mime"] or "application/octet-stream",
-        headers={"X-Content-Type-Options": "nosniff",
-                 "Cache-Control": "public, max-age=31536000, immutable"})
+        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": cache})
 
 
 # ---------------------------------------------------------------- 搜索 / 通知 / 收藏 / 历史
