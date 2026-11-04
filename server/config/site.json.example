@@ -77,12 +77,28 @@
 
   "update": {
     "_说明": "客户端更新检查。enabled=false 时 /api/app/latest 返回 404，自动检查静默跳过。",
+    "_说明_站长自检": "check_url 给 check_update.sh 用，填官方的 /api/app/latest；留空 = 拿 master_url 拼。只提示，不自动升级。",
     "enabled": true,
+    "check_url": "",
     "check_hours": 24,
     "remind_hours": 24,
     "force_below": 0,
     "title": "发现新版本 {version}",
     "message": "当前版本 {current}，最新 {version}。\n\n{notes}"
+  },
+
+  "server": {
+    "_说明": "run.sh 和容器都读这里。改端口只改这个数，不用碰命令行，也不用改 compose。",
+    "host": "0.0.0.0",
+    "port": 8092,
+    "_说明_证书": "证书目录，里面放 fullchain.pem 和 privkey.pem。填了就自动开 HTTPS；留空 = 明文，交给前面的 nginx 终止 TLS。",
+    "tls_cert_dir": ""
+  },
+
+  "backup": {
+    "_说明": "backup.sh 用。dir 留空 = data/backups。keep 是保留份数，超出的从旧往新删。",
+    "dir": "",
+    "keep": 30
   },
 
   "admin": {

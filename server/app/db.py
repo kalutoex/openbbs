@@ -263,15 +263,7 @@ def init():
             # 关于页的致谢名单第一次建立：先把现有的人都挂上，之后由管理员增删。
             c.execute("INSERT OR IGNORE INTO friends (user_id, note, created_at) "
                       "SELECT id, '', CAST(strftime('%s','now') AS INTEGER) FROM users")
-        # 板块这一层已经取消：老库把表和列一起拆掉，留着的只有站。
-        for _t in ("forums", "forum_follows"):
-            c.execute("DROP TABLE IF EXISTS %s" % _t)
-        c.execute("DROP INDEX IF EXISTS idx_threads_forum")
-        if "forum_id" in _columns(c, "threads"):
-            try:
-                c.execute("ALTER TABLE threads DROP COLUMN forum_id")
-            except sqlite3.OperationalError:
-                pass
+        # 板块这一层已经拿掉：发帖只认站（主站/小站），不再有 forums 表。
         for table, col, decl in EXTRA_COLUMNS:
             if col not in _columns(c, table):
                 try:
@@ -280,6 +272,18 @@ def init():
                     # 另一个进程（IPv4/IPv6 各一个）同时补了同一列，忽略
                     pass
         c.executescript(LATE_SCHEMA)
+        # 板块这一层拿掉了：老库里的 forums / forum_follows 和 threads.forum_id
+        # 一并收走。帖子不再带归属字段，全部算主站的。新库上这三步都是空转。
+        if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='forums'").fetchone():
+            c.execute("DROP TABLE IF EXISTS forum_follows")
+            c.execute("DROP TABLE IF EXISTS forums")
+        if "forum_id" in _columns(c, "threads"):
+            try:
+                c.execute("DROP INDEX IF EXISTS idx_threads_forum")
+                c.execute("ALTER TABLE threads DROP COLUMN forum_id")
+            except sqlite3.OperationalError:
+                # SQLite 太老删不了列：留着也没人读，不碍事
+                pass
         # 老用户补 @标识：昵称/用户名揉一个，冲突自动加序号
         for r in c.execute("SELECT id, name, nickname FROM users WHERE handle IS NULL OR handle=''"):
             c.execute("UPDATE users SET handle=? WHERE id=?",

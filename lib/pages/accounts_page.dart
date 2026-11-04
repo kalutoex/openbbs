@@ -114,12 +114,6 @@ class AccountsPage extends StatelessWidget {
                 subtitle: Text(Lc.current.addAccountHint),
                 onTap: () => _add(context),
               ),
-              ListTile(
-                leading: const Icon(Icons.vpn_key_outlined),
-                title: Text(Lc.current.pasteCredential),
-                subtitle: Text(Lc.current.addFromDevice),
-                onTap: () => _add(context),
-              ),
             ],
           );
         },

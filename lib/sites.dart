@@ -6,6 +6,7 @@
 // 和服务端清单（`sites.validate()`）共用三条校验：id 去重、缺地址丢弃、
 // 版本过高禁入——在 `site_meta.dart` 的 `parseManifest` 里已经做完，
 // 这里只管本机合并、去重和排序。
+import 'site_config.dart';
 import 'site_meta.dart';
 
 /// 本机的一行站点。
@@ -23,8 +24,18 @@ class SiteEntry {
   /// 登录站。注册、登录、找回密码都发到这里，token 全局共用。
   bool master;
 
+  /// 本地屏蔽：站点目录里不再显示它，也不把它的帖子推到眼前。
+  /// 只在本地生效，不上报服务端——屏蔽是个人口味，不是站务决定。
+  bool blocked;
+
   /// 运行时状态，不落盘：true = 上次探测通了，false = 连不上，null = 还没探。
   bool? reachable;
+
+  /// 运行时状态：逐条入口通不通（站点管理页显示 v6 / v4 各自的结果）。
+  final Map<String, bool> epStatus;
+
+  /// 运行时状态：测速结果，地址 → 毫秒。没测过的入口不在里面。
+  final Map<String, int> epMs;
 
   /// 运行时状态：上次连通的地址，切站时先用它。
   String? lastOk;
@@ -37,12 +48,31 @@ class SiteEntry {
     this.icon = '',
     this.lang = '',
     this.master = false,
+    this.blocked = false,
     this.reachable,
     this.lastOk,
-  });
+    Map<String, bool>? epStatus,
+    Map<String, int>? epMs,
+  }) : epStatus = epStatus ?? <String, bool>{},
+       epMs = epMs ?? <String, int>{};
 
   /// 地址里什么都没有的行没有意义。
   bool get valid => urls.isNotEmpty;
+
+  /// 是不是主站（时间线）。
+  ///
+  /// 判据只有一条：这一行的入口里有出厂预置的地址。删了主站那一行，
+  /// 客户端就没法保证「至少有一座站能发帖」，所以界面拦着不让删。
+  bool get isHome {
+    for (final u in urls) {
+      final h = hostOf(u);
+      if (h.isEmpty) continue;
+      for (final v in SiteConfig.servers) {
+        if (hostOf(v) == h) return true;
+      }
+    }
+    return false;
+  }
 
   /// 稳定标识：有 id 用 id，没有就用首个地址。
   String get key => id.isNotEmpty ? id : (urls.isEmpty ? name : urls.first);
@@ -65,10 +95,14 @@ class SiteEntry {
   List<String> get orderedUrls => orderV6First(urls);
 
   /// 服务端自述回来后刷新这一行。
+  ///
+  /// 入口取并集，不是覆盖：人手里那条连得上的地址必须留着。
+  /// 之前这里是直接替换，服务端 base_url 少写个端口（`:26016`），
+  /// 客户端就被带着去连 443，看着就是「地址掉了、登录不上」。
   void applyMeta(SiteMeta m, {bool? master}) {
     if (m.id.isNotEmpty) id = m.id;
     if (m.name.trim().isNotEmpty) name = m.name.trim();
-    if (m.urls.isNotEmpty) urls = m.urls;
+    if (m.urls.isNotEmpty) urls = mergeUrls(urls, m.urls);
     if (m.api > 0) api = m.api;
     if (m.icon.isNotEmpty) icon = m.icon;
     if (m.lang.isNotEmpty) lang = m.lang;
@@ -85,6 +119,8 @@ class SiteEntry {
     master: master,
     reachable: reachable,
     lastOk: lastOk,
+    epStatus: Map<String, bool>.of(epStatus),
+    epMs: Map<String, int>.of(epMs),
   );
 
   Map<String, dynamic> toJson() => {
@@ -95,6 +131,7 @@ class SiteEntry {
     'icon': icon,
     'lang': lang,
     'master': master,
+    'blocked': blocked,
     'last_ok': lastOk ?? '',
   };
 
@@ -116,6 +153,7 @@ class SiteEntry {
       icon: '${j['icon'] ?? ''}',
       lang: '${j['lang'] ?? ''}',
       master: j['master'] == true,
+      blocked: j['blocked'] == true,
       lastOk: urls.contains(last) ? last : null,
     );
   }
@@ -158,6 +196,89 @@ String hostOf(String url) {
   return Uri.tryParse(normalizeUrl(url))?.host ?? '';
 }
 
+/// 地址里写明的端口；没写就是空字符串（443 / 80 都是「没写」）。
+String portOf(String url) {
+  if (url.isEmpty) return '';
+  final u = Uri.tryParse(normalizeUrl(url));
+  if (u == null || !u.hasPort) return '';
+  return '${u.port}';
+}
+
+/// 入口取并集：先留 [base] 的顺序，再把 [extra] 里没见过的补上。
+///
+/// 同一台主机、已有那条带端口、新来的这条没带，就不要新的那条——
+/// 没写端口就是 443，站往往不在那儿。服务端 `base_url` 漏端口时靠这条兜住。
+List<String> mergeUrls(List<String> base, List<String> extra) {
+  final out = <String>[];
+  for (final u in base) {
+    final v = normalizeUrl(u);
+    if (v.isNotEmpty && !out.contains(v)) out.add(v);
+  }
+  for (final u in extra) {
+    final v = normalizeUrl(u);
+    if (v.isEmpty || out.contains(v)) continue;
+    final host = hostOf(v);
+    final port = portOf(v);
+    if (port.isEmpty &&
+        out.any((x) => hostOf(x) == host && portOf(x).isNotEmpty)) {
+      continue;
+    }
+    out.add(v);
+  }
+  return out;
+}
+
+/// 出厂站点。开机就得有，用户不该先填地址再能看帖。
+///
+/// 入口来自构建参数 SERVERS（默认时间线的 v6 直连 + v4 中转）。
+/// `--dart-define=SERVERS=` 显式清空时返回空表。
+List<SiteEntry> builtinSites() {
+  final urls = <String>[];
+  for (final u in SiteConfig.servers) {
+    final v = normalizeUrl(u);
+    if (v.isNotEmpty && !urls.contains(v)) urls.add(v);
+  }
+  if (urls.isEmpty) return const [];
+  return [SiteEntry(name: SiteConfig.siteName, urls: urls, master: true)];
+}
+
+/// 把出厂站点并进本机表。
+///
+/// 同主机的行当作同一座站（老版本存下来的那条多半就是它）：
+/// 入口取并集，缺端口的旧地址剔掉，名字只在空着时补。
+List<SiteEntry> ensureBuiltin(List<SiteEntry> existing) {
+  final builtins = builtinSites();
+  if (builtins.isEmpty) return existing;
+  final out = existing.map((s) => s.copy()).toList();
+  for (final b in builtins) {
+    var hit = out.indexWhere((s) => s.id.isNotEmpty && s.id == b.id);
+    if (hit < 0) {
+      hit = out.indexWhere(
+        (s) => s.urls.any((u) => b.urls.any((v) => hostOf(u) == hostOf(v))),
+      );
+    }
+    if (hit < 0) {
+      out.add(b.copy());
+      continue;
+    }
+    final old = out[hit];
+    final urls = mergeUrls(b.urls, old.urls);
+    out[hit] = SiteEntry(
+      id: old.id.isNotEmpty ? old.id : b.id,
+      name: old.name.trim().isNotEmpty ? old.name : b.name,
+      urls: urls,
+      api: old.api > 0 ? old.api : b.api,
+      icon: old.icon.isNotEmpty ? old.icon : b.icon,
+      lang: old.lang.isNotEmpty ? old.lang : b.lang,
+      master: old.master || b.master,
+      reachable: old.reachable,
+      lastOk: urls.contains(old.lastOk ?? '') ? old.lastOk : null,
+      epStatus: Map<String, bool>.of(old.epStatus),
+    );
+  }
+  return _normalizeMasters(out);
+}
+
 /// 看起来是 IPv6 直连的入口。
 bool looksV6(String url) {
   final h = hostOf(url).toLowerCase();
@@ -196,10 +317,7 @@ List<SiteEntry> mergeSites(List<SiteEntry> existing, List<SiteEntry> incoming) {
       continue;
     }
     final old = out[hit];
-    final urls = List<String>.of(old.urls);
-    for (final u in it.urls) {
-      if (!urls.contains(u)) urls.add(u);
-    }
+    final urls = mergeUrls(old.urls, it.urls);
     out[hit] = SiteEntry(
       id: it.id.isNotEmpty ? it.id : old.id,
       name: it.name.trim().isNotEmpty ? it.name.trim() : old.name,
@@ -209,12 +327,16 @@ List<SiteEntry> mergeSites(List<SiteEntry> existing, List<SiteEntry> incoming) {
       lang: it.lang.isNotEmpty ? it.lang : old.lang,
       master: old.master || it.master,
       reachable: old.reachable,
-      lastOk: old.lastOk,
+      lastOk: urls.contains(old.lastOk ?? '') ? old.lastOk : null,
+      epStatus: Map<String, bool>.of(old.epStatus),
     );
   }
-  // 一座登录站都没有时，第一座顶上，不然登录没处发。
+  return _normalizeMasters(out);
+}
+
+/// 登录站唯一：一座都没有时第一座顶上，多出来的只留第一个。
+List<SiteEntry> _normalizeMasters(List<SiteEntry> out) {
   if (out.isNotEmpty && !out.any((s) => s.master)) out.first.master = true;
-  // 同一时间只留一个登录站。
   var seenMaster = false;
   for (final s in out) {
     if (!s.master) continue;

@@ -9,7 +9,6 @@ import 'api.dart';
 import 'l10n/app_localizations.dart';
 import 'pages/home_page.dart';
 import 'pages/banned_page.dart';
-import 'pages/setup_page.dart';
 import 'store.dart';
 import 'theme.dart';
 
@@ -17,7 +16,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 地址在 runApp 之前就定死，任何页面发请求都不会撞上空 base。
   // 先用出厂默认地址顶着（构建时 SERVERS 的第一个），等 _boot 探完再切到更好的那条。
-  // 一个都没配就是空，首页会落到设置页。
   Api.base = Api.defaultBase;
   // 先把界面放上来，再读设置。
   // 之前是 await 完再 runApp，读盘一旦卡住（或抛异常），首帧永远不画，
@@ -51,10 +49,17 @@ Future<void> _boot() async {
   // 站点自述：协议版本、站点名、可用入口。读不到就静默——
   // 老站没有 /.well-known，这不该挡住任何东西。
   try {
-    AppState.instance.setSiteMeta(await Api.loadMeta());
+    final m = await Api.loadMeta();
+    if (m != null) {
+      AppState.instance.setSiteMeta(m);
+      // 入口并进当前站，服务端加了新入口下次冷启动就不用再探。
+      await AppState.instance.applySiteMeta(m);
+    }
   } catch (e) {
     debugPrint('failed to read site meta: $e');
   }
+  // 入口状态实探：站点管理里那排 v6 / v4 一进去就该是准的。
+  unawaited(AppState.instance.probeSites());
   // 设置读完才有 Api.token。冷启动必须在这里补一次 /me，
   // 否则杀掉后台再进来，token 还在、user 却是空的，看着就是掉登录。
   unawaited(AppState.instance.init());
@@ -171,10 +176,10 @@ class _ShijianxianAppState extends State<ShijianxianApp>
   }
 }
 
-/// 最外层三选一：封禁页 / 首次引导 / 首页。
+/// 最外层两选一：封禁页 / 首页。
 ///
 /// 账号被封时整棵树换掉——点哪个页面都是这一页，直到退出登录。
-/// 站点表空了才出引导；出厂种子在就不会走到那儿。
+/// 站点表出厂就有一行「时间线」，所以不再有「首次启动先填地址」那一页。
 class _Root extends StatelessWidget {
   const _Root();
 
@@ -185,7 +190,6 @@ class _Root extends StatelessWidget {
       builder: (_, _) {
         final st = AppState.instance;
         if (st.banned) return const BannedPage();
-        if (st.ready && st.sites.isEmpty) return const SetupPage();
         return const HomePage();
       },
     );

@@ -43,7 +43,7 @@
   "accentColor": "主题色",
   "language": "语言",
   "languageSystem": "跟随系统",
-  "home": "首页",
+  "home": "主页",
   "notice": "通知",
   "me": "我的",
   "newThread": "发帖",
@@ -155,7 +155,6 @@
   "accountSecurity": "账号安全",
   "code": "验证码",
   "remove": "移除",
-  "pasteCredential": "粘贴登录凭证",
   "ignore": "忽略",
   "loadMore": "加载更多",
   "post": "帖子",
@@ -284,9 +283,6 @@
   "permSubtitle": "通知、相册",
   "currentAccount": "当前账号",
   "noEmailBoundHint": "还没绑邮箱，忘了密码只能找管理员",
-  "copyCredential": "复制登录凭证",
-  "copyCredentialHint": "重装或换机后，登录页可粘贴恢复",
-  "credentialCopied": "凭证已复制",
   "webAccessSection": "网页访问",
   "aboutBrand": "关于{v1}",
   "@aboutBrand": {
@@ -632,9 +628,6 @@
       }
     }
   },
-  "credentialHint": "在旧设备「设置 → 复制登录凭证」里复制",
-  "restore": "恢复",
-  "credentialInvalid": "凭证无效或已失效",
   "restoreFailed": "恢复失败：{v1}",
   "@restoreFailed": {
     "placeholders": {
@@ -681,7 +674,6 @@
   "haveAccountLogin": "已有账号，去登录",
   "noAccountRegister": "没有账号，去注册",
   "forgotPasswordQuestion": "忘记密码？",
-  "restoreWithCredential": "用登录凭证恢复",
   "accountCopied": "账号已复制",
   "coverUpdated": "封面已换",
   "coverFailed": "换封面失败：{v1}",
@@ -1041,7 +1033,6 @@
   "noAccounts": "还没有账号",
   "addAccount": "添加账号",
   "addAccountHint": "登录另一个账号，之后可以随时切回来",
-  "addFromDevice": "把别的设备上的账号加进这台机器",
   "friendSearchHint": "用户名 / @标识 / 昵称",
   "enterName": "写个名字",
   "add": "添加",
@@ -1216,6 +1207,30 @@
     }
   },
   "siteLoginSet": "登录站改成 {v1}",
+  "sites": "站点",
+  "siteMaster": "主站",
+  "siteSmall": "小站",
+  "sitePostTo": "发到",
+  "siteMasterFixed": "主站不能移除",
+  "siteSpeedTest": "测速",
+  "siteSpeedRunning": "测速中…",
+  "siteSpeedResult": "测速：{v1}",
+  "@siteSpeedResult": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "siteSpeedNone": "都不通",
+  "siteSwitching": "正在切到 {v1}",
+  "@siteSwitching": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
   "@siteLoginSet": {
     "placeholders": {
       "v1": {
@@ -1225,5 +1240,24 @@
   },
   "listSep": "、",
   "bannedTitle": "账号已被封禁",
-  "bannedBody": "这个账号被管理员封了，帖子也发不出去。换个号，或者找站长问原因。"
+  "bannedBody": "这个账号被管理员封了，帖子也发不出去。换个号，或者找站长问原因。",
+  "posts": "帖子",
+  "siteBlock": "屏蔽",
+  "siteUnblock": "取消屏蔽",
+  "siteBlocked": "已屏蔽",
+  "siteBlockedDone": "已屏蔽，目录里不再显示这座站",
+  "siteUnblockedDone": "已取消屏蔽",
+  "siteCatalogEmpty": "还没有别的站",
+  "siteCatalogEmptyHint": "在设置里的「站点管理」加一座，或者等主站收录。",
+  "siteNoPosts": "这座站还没有帖子",
+  "siteReadOnly": "只读浏览 · 回复请到这座站上说",
+  "searchThreads": "帖子",
+  "searchReplies": "回复",
+  "searchUsers": "用户",
+  "humanCheck": "答对了才能注册",
+  "dmTitle": "私信",
+  "dmEmpty": "还没有私信",
+  "dmEmptyHint": "在别人主页点「发私信」",
+  "dmEarlier": "加载更早",
+  "dmSend": "发私信"
 }

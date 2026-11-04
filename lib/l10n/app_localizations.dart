@@ -358,7 +358,7 @@ abstract class L {
   /// No description provided for @home.
   ///
   /// In zh, this message translates to:
-  /// **'首页'**
+  /// **'主页'**
   String get home;
 
   /// No description provided for @notice.
@@ -690,12 +690,6 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'移除'**
   String get remove;
-
-  /// No description provided for @pasteCredential.
-  ///
-  /// In zh, this message translates to:
-  /// **'粘贴登录凭证'**
-  String get pasteCredential;
 
   /// No description provided for @ignore.
   ///
@@ -1171,24 +1165,6 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'还没绑邮箱，忘了密码只能找管理员'**
   String get noEmailBoundHint;
-
-  /// No description provided for @copyCredential.
-  ///
-  /// In zh, this message translates to:
-  /// **'复制登录凭证'**
-  String get copyCredential;
-
-  /// No description provided for @copyCredentialHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'重装或换机后，登录页可粘贴恢复'**
-  String get copyCredentialHint;
-
-  /// No description provided for @credentialCopied.
-  ///
-  /// In zh, this message translates to:
-  /// **'凭证已复制'**
-  String get credentialCopied;
 
   /// No description provided for @webAccessSection.
   ///
@@ -1856,24 +1832,6 @@ abstract class L {
   /// **'{v1} 字'**
   String bodyLength(String v1);
 
-  /// No description provided for @credentialHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'在旧设备「设置 → 复制登录凭证」里复制'**
-  String get credentialHint;
-
-  /// No description provided for @restore.
-  ///
-  /// In zh, this message translates to:
-  /// **'恢复'**
-  String get restore;
-
-  /// No description provided for @credentialInvalid.
-  ///
-  /// In zh, this message translates to:
-  /// **'凭证无效或已失效'**
-  String get credentialInvalid;
-
   /// No description provided for @restoreFailed.
   ///
   /// In zh, this message translates to:
@@ -1981,12 +1939,6 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'忘记密码？'**
   String get forgotPasswordQuestion;
-
-  /// No description provided for @restoreWithCredential.
-  ///
-  /// In zh, this message translates to:
-  /// **'用登录凭证恢复'**
-  String get restoreWithCredential;
 
   /// No description provided for @accountCopied.
   ///
@@ -2894,12 +2846,6 @@ abstract class L {
   /// **'登录另一个账号，之后可以随时切回来'**
   String get addAccountHint;
 
-  /// No description provided for @addFromDevice.
-  ///
-  /// In zh, this message translates to:
-  /// **'把别的设备上的账号加进这台机器'**
-  String get addFromDevice;
-
   /// No description provided for @friendSearchHint.
   ///
   /// In zh, this message translates to:
@@ -3344,6 +3290,66 @@ abstract class L {
   /// **'登录站改成 {v1}'**
   String siteLoginSet(String v1);
 
+  /// No description provided for @sites.
+  ///
+  /// In zh, this message translates to:
+  /// **'站点'**
+  String get sites;
+
+  /// No description provided for @siteMaster.
+  ///
+  /// In zh, this message translates to:
+  /// **'主站'**
+  String get siteMaster;
+
+  /// No description provided for @siteSmall.
+  ///
+  /// In zh, this message translates to:
+  /// **'小站'**
+  String get siteSmall;
+
+  /// No description provided for @sitePostTo.
+  ///
+  /// In zh, this message translates to:
+  /// **'发到'**
+  String get sitePostTo;
+
+  /// No description provided for @siteMasterFixed.
+  ///
+  /// In zh, this message translates to:
+  /// **'主站不能移除'**
+  String get siteMasterFixed;
+
+  /// No description provided for @siteSpeedTest.
+  ///
+  /// In zh, this message translates to:
+  /// **'测速'**
+  String get siteSpeedTest;
+
+  /// No description provided for @siteSpeedRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'测速中…'**
+  String get siteSpeedRunning;
+
+  /// No description provided for @siteSpeedResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'测速：{v1}'**
+  String siteSpeedResult(String v1);
+
+  /// No description provided for @siteSpeedNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'都不通'**
+  String get siteSpeedNone;
+
+  /// No description provided for @siteSwitching.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在切到 {v1}'**
+  String siteSwitching(String v1);
+
   /// No description provided for @listSep.
   ///
   /// In zh, this message translates to:
@@ -3361,6 +3367,120 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'这个账号被管理员封了，帖子也发不出去。换个号，或者找站长问原因。'**
   String get bannedBody;
+
+  /// No description provided for @posts.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子'**
+  String get posts;
+
+  /// No description provided for @siteBlock.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏蔽'**
+  String get siteBlock;
+
+  /// No description provided for @siteUnblock.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消屏蔽'**
+  String get siteUnblock;
+
+  /// No description provided for @siteBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'已屏蔽'**
+  String get siteBlocked;
+
+  /// No description provided for @siteBlockedDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已屏蔽，目录里不再显示这座站'**
+  String get siteBlockedDone;
+
+  /// No description provided for @siteUnblockedDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消屏蔽'**
+  String get siteUnblockedDone;
+
+  /// No description provided for @siteCatalogEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有别的站'**
+  String get siteCatalogEmpty;
+
+  /// No description provided for @siteCatalogEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'在设置里的「站点管理」加一座，或者等主站收录。'**
+  String get siteCatalogEmptyHint;
+
+  /// No description provided for @siteNoPosts.
+  ///
+  /// In zh, this message translates to:
+  /// **'这座站还没有帖子'**
+  String get siteNoPosts;
+
+  /// No description provided for @siteReadOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'只读浏览 · 回复请到这座站上说'**
+  String get siteReadOnly;
+
+  /// No description provided for @searchThreads.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子'**
+  String get searchThreads;
+
+  /// No description provided for @searchReplies.
+  ///
+  /// In zh, this message translates to:
+  /// **'回复'**
+  String get searchReplies;
+
+  /// No description provided for @searchUsers.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户'**
+  String get searchUsers;
+
+  /// No description provided for @humanCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'答对了才能注册'**
+  String get humanCheck;
+
+  /// No description provided for @dmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'私信'**
+  String get dmTitle;
+
+  /// No description provided for @dmEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有私信'**
+  String get dmEmpty;
+
+  /// No description provided for @dmEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'在别人主页点「发私信」'**
+  String get dmEmptyHint;
+
+  /// No description provided for @dmEarlier.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载更早'**
+  String get dmEarlier;
+
+  /// No description provided for @dmSend.
+  ///
+  /// In zh, this message translates to:
+  /// **'发私信'**
+  String get dmSend;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

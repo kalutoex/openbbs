@@ -73,6 +73,13 @@ cp server/config/site.json.example server/config/site.json
 | `title_max` | 120 | 标题字数 |
 | `body_max` | 20000 | 正文和回复字数 |
 
+### safety —— 内容过滤
+
+| 键 | 默认 | 说明 |
+|---|---|---|
+| `sensitive` | true | 关掉后 `config/sensitive.txt` 整个不生效，发帖、回帖、改昵称都不再查词 |
+| `image_block` | true | 关掉后上传不查图片黑名单；`/admin/image/*` 照样能加能删，只是不拦 |
+
 ### auth —— 注册与登录
 
 | 键 | 默认 | 说明 |
@@ -95,6 +102,35 @@ cp server/config/site.json.example server/config/site.json
 | `cors_origins` | `[]` | 允许的完整来源，如 `["https://bbs.example.com"]`。网页和接口同域名不同端口也算跨源，要加进来 |
 | `cors_origin_regex` | `http://(localhost\|127\.0\.0\.1)(:\d+)?` | 正则兜底，默认放行本机调试 |
 
+### server —— 监听
+
+`run.sh` 和容器入口都读这里。改端口只改这一个地方，不用碰命令行，也不用改 compose。
+
+| 键 | 默认 | 说明 |
+|---|---|---|
+| `host` | `0.0.0.0` | 监听地址。放在 nginx 后面又想只走本机，改 `127.0.0.1` |
+| `port` | `8080` | 监听端口 |
+| `tls_cert_dir` | 空 | 证书目录，含 `fullchain.pem` + `privkey.pem`。填了自动开 HTTPS；留空 = 明文，交给前面的 nginx 终止 TLS |
+
+### backup —— 备份
+
+`backup.sh` 每天跑一次，SQLite 用 `.backup`（WAL 安全），uploads 一起打包。
+
+| 键 | 默认 | 说明 |
+|---|---|---|
+| `dir` | 空 = `data/backups` | 快照落地目录。建议放到另一个盘上 |
+| `keep` | `30` | 保留份数，超出的按时间从旧往新删 |
+| `mirror_dir` | 空 = 不镜像 | 第二份备份放哪（另一块盘）。留空就只留本地一份 |
+| `mirror_keep` | `14` | 镜像目录里保留几份 |
+
+主备份写完、旧份清完之后才做镜像：`cp -a` 复制 → 比对 sha256 → 一致才留，不一致就删掉镜像那份。
+镜像挂了**不影响**本地那份（本地已经写完了），只是脚本退出码为 `2`，方便 cron 报出来。
+`mirror_dir` 和 `dir` 在同一块盘时日志里会提醒一句 —— 盘坏了两份一起没，但配置照做。
+
+恢复用 `./restore.sh <备份文件>`，脚本会先给现有数据留底再覆盖，失败不会写坏旧库。
+本地那份坏了就用 `./restore.sh --from-mirror --yes`：从 `mirror_dir` 里挑最新的一份，
+找不到会把镜像目录里实际的文件列出来再退出。
+
 ### update —— 更新检查
 
 客户端启动时问一次 `/api/app/latest`，这里决定问多勤、弹什么。
@@ -107,6 +143,7 @@ cp server/config/site.json.example server/config/site.json
 | `force_below` | `0` | build 号低于它的客户端必须更新，弹窗关不掉。`0` = 不强制 |
 | `title` | `发现新版本 {version}` | 弹窗标题模板 |
 | `message` | `当前版本 {current}，最新 {version}。\n\n{notes}` | 正文模板 |
+| `check_url` | 空 | `check_update.sh` 问的地址，一般填官方的 `/api/app/latest`。留空就用 `site.master_url` 拼。只打印提示，不下载不升级 |
 
 模板可用 `{version}`（新版本号）、`{current}`（本机版本号和 build）、`{notes}`（`notes.txt` 最后一版说明）、`{size}`（包大小）。留空就走客户端自带文案。
 
@@ -163,9 +200,10 @@ cp server/config/site.json.example server/config/site.json
 | `OPENBBS_UPDATE_REMIND_HOURS` | `update.remind_hours` |
 | `OPENBBS_UPDATE_FORCE_BELOW` | `update.force_below` |
 | `OPENBBS_ADMIN_PASSWORD` | `admin.password` |
-| `OPENBBS_HOST` / `OPENBBS_PORT` | `run.sh` 监听地址 |
-| `OPENBBS_CERT_DIR` | `run.sh --tls` 的证书目录 |
-| `OPENBBS_KEEP` | `backup.sh` 保留几份 |
+| `OPENBBS_UPDATE_CHECK_URL` | `update.check_url` |
+| `OPENBBS_HOST` / `OPENBBS_PORT` | `server.host` / `server.port` |
+| `OPENBBS_CERT_DIR` | `server.tls_cert_dir` |
+| `OPENBBS_BACKUP_DIR` / `OPENBBS_BACKUP_KEEP` | `backup.dir` / `backup.keep`（也认老的 `OPENBBS_KEEP`） |
 
 ---
 
@@ -182,9 +220,12 @@ flutter build apk --release \
 |---|---|---|
 | `BRAND` | OpenBBS | 界面上显示的站名 |
 | `REPO` | 空 | 关于页的项目地址，空则不显示 |
-| `SERVERS` | 空 | 预置服务器，逗号分隔。第一个是主通道，第二个是备用。**全空则首次启动进设置页让用户自己填** |
+| `SERVERS` | 时间线的 v6/v4 两条 | 预置站点入口，逗号分隔。第一个是主通道，其余按顺序回落 |
+| `SITE_NAME` | 时间线 | 出厂站点的名字，连上后以服务端自述为准 |
 
-`SERVERS` 只给一个也能用，选路会自动退化成单通道。
+出厂就带一座「时间线」，开机直接能用，没有「先填地址」那一页。
+换自己的站就传 `SERVERS`；显式清空（`--dart-define=SERVERS=`）才会得到一张空表，
+那种包得从「站点管理」里手填地址。
 
 ---
 

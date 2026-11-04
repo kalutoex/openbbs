@@ -325,9 +325,6 @@ class LEn extends L {
   String get remove => 'Remove';
 
   @override
-  String get pasteCredential => 'Paste login credential';
-
-  @override
   String get ignore => 'Ignore';
 
   @override
@@ -581,16 +578,6 @@ class LEn extends L {
   @override
   String get noEmailBoundHint =>
       'No email bound yet — a forgotten password means asking an admin';
-
-  @override
-  String get copyCredential => 'Copy login credential';
-
-  @override
-  String get copyCredentialHint =>
-      'After a reinstall or a new device, paste it on the login page to restore';
-
-  @override
-  String get credentialCopied => 'Credential copied';
 
   @override
   String get webAccessSection => 'Web access';
@@ -993,16 +980,6 @@ class LEn extends L {
   }
 
   @override
-  String get credentialHint =>
-      'Copy it on the old device under Settings → Copy login credential';
-
-  @override
-  String get restore => 'Restore';
-
-  @override
-  String get credentialInvalid => 'Credential is invalid or expired';
-
-  @override
   String restoreFailed(String v1) {
     return 'Restore failed: $v1';
   }
@@ -1063,9 +1040,6 @@ class LEn extends L {
 
   @override
   String get forgotPasswordQuestion => 'Forgot your password?';
-
-  @override
-  String get restoreWithCredential => 'Restore with a login credential';
 
   @override
   String get accountCopied => 'Account copied';
@@ -1591,9 +1565,6 @@ class LEn extends L {
   String get addAccountHint => 'Log in to another account, switch back anytime';
 
   @override
-  String get addFromDevice => 'Bring an account from another device';
-
-  @override
   String get friendSearchHint => 'Username / @handle / nickname';
 
   @override
@@ -1852,6 +1823,40 @@ class LEn extends L {
   }
 
   @override
+  String get sites => 'Sites';
+
+  @override
+  String get siteMaster => 'Main site';
+
+  @override
+  String get siteSmall => 'Sub site';
+
+  @override
+  String get sitePostTo => 'Post to';
+
+  @override
+  String get siteMasterFixed => 'The main site can\'t be removed';
+
+  @override
+  String get siteSpeedTest => 'Speed test';
+
+  @override
+  String get siteSpeedRunning => 'Testing…';
+
+  @override
+  String siteSpeedResult(String v1) {
+    return 'Speed: $v1';
+  }
+
+  @override
+  String get siteSpeedNone => 'All entries failed';
+
+  @override
+  String siteSwitching(String v1) {
+    return 'Switching to $v1';
+  }
+
+  @override
   String get listSep => ', ';
 
   @override
@@ -1860,4 +1865,62 @@ class LEn extends L {
   @override
   String get bannedBody =>
       'An admin banned this account, so posts won\'t go through. Use another account or ask the site owner why.';
+
+  @override
+  String get posts => 'Posts';
+
+  @override
+  String get siteBlock => 'Block';
+
+  @override
+  String get siteUnblock => 'Unblock';
+
+  @override
+  String get siteBlocked => 'Blocked';
+
+  @override
+  String get siteBlockedDone => 'Blocked - hidden from the site list';
+
+  @override
+  String get siteUnblockedDone => 'Unblocked';
+
+  @override
+  String get siteCatalogEmpty => 'No other sites yet';
+
+  @override
+  String get siteCatalogEmptyHint =>
+      'Add one in Settings - Sites, or wait for the master site to list it.';
+
+  @override
+  String get siteNoPosts => 'No posts on this site yet';
+
+  @override
+  String get siteReadOnly => 'Read-only - reply on that site';
+
+  @override
+  String get searchThreads => 'Posts';
+
+  @override
+  String get searchReplies => 'Replies';
+
+  @override
+  String get searchUsers => 'Users';
+
+  @override
+  String get humanCheck => 'Answer to finish sign-up';
+
+  @override
+  String get dmTitle => 'Messages';
+
+  @override
+  String get dmEmpty => 'No messages yet';
+
+  @override
+  String get dmEmptyHint => 'Tap “Send message” on someone\'s profile';
+
+  @override
+  String get dmEarlier => 'Load earlier';
+
+  @override
+  String get dmSend => 'Message';
 }

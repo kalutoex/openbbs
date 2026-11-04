@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../pages/inbox_page.dart';
+
 import '../site_config.dart';
 import '../api.dart';
 import '../pages/admin_users_page.dart';
@@ -21,12 +23,14 @@ class AppDrawer extends StatefulWidget {
   /// 当前底部 tab，用来标出选中项。
   final int currentTab;
   final VoidCallback onTimeline;
+  final VoidCallback? onSites;
   final VoidCallback? onMe;
 
   const AppDrawer({
     super.key,
     this.currentTab = 0,
     required this.onTimeline,
+    this.onSites,
     this.onMe,
   });
 
@@ -44,6 +48,7 @@ class _AppDrawerState extends State<AppDrawer> {
   Future<void> _load() async {
     _loadReports();
     _loadFeatures();
+    AppState.instance.refreshDmUnread();
   }
 
   /// 管理员才有，未处理举报数，拿不到就当 0。
@@ -120,16 +125,35 @@ class _AppDrawerState extends State<AppDrawer> {
                         context,
                         icon: Icons.dynamic_feed_outlined,
                         activeIcon: Icons.dynamic_feed,
-                        label: Lc.current.timeline,
+                        label: Lc.current.home,
                         active: widget.currentTab == 0,
                         onTap: () {
                           _close();
                           widget.onTimeline();
                         },
                       ),
+                      _item(
+                        context,
+                        icon: Icons.grid_view_outlined,
+                        activeIcon: Icons.grid_view_rounded,
+                        label: Lc.current.sites,
+                        active: widget.currentTab == 1,
+                        onTap: () {
+                          _close();
+                          widget.onSites?.call();
+                        },
+                      ),
                       if (st.loggedIn) ...[
                         const SizedBox(height: 10),
                         _label(context, Lc.current.me),
+                        _item(
+                          context,
+                          icon: Icons.mail_outline_rounded,
+                          activeIcon: Icons.mail_rounded,
+                          label: Lc.current.dmTitle,
+                          badge: st.dmUnread,
+                          onTap: () => _push(const InboxPage()),
+                        ),
                         _item(
                           context,
                           icon: Icons.bookmark_border,
@@ -338,7 +362,6 @@ class _Top extends StatelessWidget {
                 SiteConfig.brand,
                 style: tt.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 4,
                 ),
               ),
             ],

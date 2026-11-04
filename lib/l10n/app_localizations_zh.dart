@@ -139,7 +139,7 @@ class LZh extends L {
   String get languageSystem => '跟随系统';
 
   @override
-  String get home => '首页';
+  String get home => '主页';
 
   @override
   String get notice => '通知';
@@ -321,9 +321,6 @@ class LZh extends L {
 
   @override
   String get remove => '移除';
-
-  @override
-  String get pasteCredential => '粘贴登录凭证';
 
   @override
   String get ignore => '忽略';
@@ -575,15 +572,6 @@ class LZh extends L {
 
   @override
   String get noEmailBoundHint => '还没绑邮箱，忘了密码只能找管理员';
-
-  @override
-  String get copyCredential => '复制登录凭证';
-
-  @override
-  String get copyCredentialHint => '重装或换机后，登录页可粘贴恢复';
-
-  @override
-  String get credentialCopied => '凭证已复制';
 
   @override
   String get webAccessSection => '网页访问';
@@ -979,15 +967,6 @@ class LZh extends L {
   }
 
   @override
-  String get credentialHint => '在旧设备「设置 → 复制登录凭证」里复制';
-
-  @override
-  String get restore => '恢复';
-
-  @override
-  String get credentialInvalid => '凭证无效或已失效';
-
-  @override
   String restoreFailed(String v1) {
     return '恢复失败：$v1';
   }
@@ -1048,9 +1027,6 @@ class LZh extends L {
 
   @override
   String get forgotPasswordQuestion => '忘记密码？';
-
-  @override
-  String get restoreWithCredential => '用登录凭证恢复';
 
   @override
   String get accountCopied => '账号已复制';
@@ -1562,9 +1538,6 @@ class LZh extends L {
   String get addAccountHint => '登录另一个账号，之后可以随时切回来';
 
   @override
-  String get addFromDevice => '把别的设备上的账号加进这台机器';
-
-  @override
   String get friendSearchHint => '用户名 / @标识 / 昵称';
 
   @override
@@ -1815,6 +1788,40 @@ class LZh extends L {
   }
 
   @override
+  String get sites => '站点';
+
+  @override
+  String get siteMaster => '主站';
+
+  @override
+  String get siteSmall => '小站';
+
+  @override
+  String get sitePostTo => '发到';
+
+  @override
+  String get siteMasterFixed => '主站不能移除';
+
+  @override
+  String get siteSpeedTest => '测速';
+
+  @override
+  String get siteSpeedRunning => '测速中…';
+
+  @override
+  String siteSpeedResult(String v1) {
+    return '测速：$v1';
+  }
+
+  @override
+  String get siteSpeedNone => '都不通';
+
+  @override
+  String siteSwitching(String v1) {
+    return '正在切到 $v1';
+  }
+
+  @override
   String get listSep => '、';
 
   @override
@@ -1822,4 +1829,61 @@ class LZh extends L {
 
   @override
   String get bannedBody => '这个账号被管理员封了，帖子也发不出去。换个号，或者找站长问原因。';
+
+  @override
+  String get posts => '帖子';
+
+  @override
+  String get siteBlock => '屏蔽';
+
+  @override
+  String get siteUnblock => '取消屏蔽';
+
+  @override
+  String get siteBlocked => '已屏蔽';
+
+  @override
+  String get siteBlockedDone => '已屏蔽，目录里不再显示这座站';
+
+  @override
+  String get siteUnblockedDone => '已取消屏蔽';
+
+  @override
+  String get siteCatalogEmpty => '还没有别的站';
+
+  @override
+  String get siteCatalogEmptyHint => '在设置里的「站点管理」加一座，或者等主站收录。';
+
+  @override
+  String get siteNoPosts => '这座站还没有帖子';
+
+  @override
+  String get siteReadOnly => '只读浏览 · 回复请到这座站上说';
+
+  @override
+  String get searchThreads => '帖子';
+
+  @override
+  String get searchReplies => '回复';
+
+  @override
+  String get searchUsers => '用户';
+
+  @override
+  String get humanCheck => '答对了才能注册';
+
+  @override
+  String get dmTitle => '私信';
+
+  @override
+  String get dmEmpty => '还没有私信';
+
+  @override
+  String get dmEmptyHint => '在别人主页点「发私信」';
+
+  @override
+  String get dmEarlier => '加载更早';
+
+  @override
+  String get dmSend => '发私信';
 }

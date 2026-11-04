@@ -68,3 +68,4 @@ server/config/mail.json
 server/BOT_API.md
 **/__pycache__/
 *.py[cod]
+server/config/site.json

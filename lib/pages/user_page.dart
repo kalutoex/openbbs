@@ -11,6 +11,7 @@ import '../store.dart';
 import '../widgets/avatar.dart';
 import '../widgets/thread_tile.dart';
 import 'edit_profile_page.dart';
+import 'chat_page.dart';
 import 'thread_page.dart';
 import 'gallery_picker_page.dart';
 
@@ -560,7 +561,7 @@ class _UserPageState extends State<UserPage> {
       );
     }
     final following = (_info ?? const {})['is_following'] == true;
-    return following
+    final follow = following
         ? OutlinedButton(
             onPressed: _acting ? null : _toggleFollow,
             style: _pill(cs),
@@ -578,6 +579,34 @@ class _UserPageState extends State<UserPage> {
             ),
             child: Text(Lc.current.follow),
           );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        follow,
+        const SizedBox(width: 8),
+        OutlinedButton.icon(
+          onPressed: _acting ? null : _openChat,
+          style: _pill(cs),
+          icon: const Icon(Icons.mail_outline_rounded, size: 16),
+          label: Text(Lc.current.dmSend),
+        ),
+      ],
+    );
+  }
+
+  void _openChat() {
+    final info = _info;
+    if (info == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatPage(peer: {
+          'id': info['id'],
+          'name': info['name'],
+          'nickname': info['nickname'],
+          'avatar': info['avatar'],
+        }),
+      ),
+    );
   }
 
   ButtonStyle _pill(ColorScheme cs) {

@@ -10,12 +10,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api.dart';
 import '../site_config.dart';
 import '../cache_clear.dart';
-import '../open_path.dart';
-import '../plat.dart';
 import '../store.dart';
-import '../l10n/app_localizations.dart';
 import 'account_security_page.dart';
 import '../update.dart';
+import '../update_prompt.dart';
 import 'about_page.dart';
 import 'accounts_page.dart';
 import 'permissions_page.dart';
@@ -24,6 +22,7 @@ import 'theme_color_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+
 /// 设置：外观、浏览、内容、账号、关于。
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -66,37 +65,6 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
               ),
-              ValueListenableBuilder<double>(
-                valueListenable: st.fontScale,
-                builder: (_, v, _) => _row(
-                  context,
-                  icon: Icons.format_size,
-                  title: Lc.current.fontSize,
-                  value: _fontName(v),
-                  onTap: () => _pickFont(context),
-                ),
-              ),
-              ValueListenableBuilder<int>(
-                valueListenable: st.density,
-                builder: (_, v, _) => _row(
-                  context,
-                  icon: Icons.view_agenda_outlined,
-                  title: Lc.current.listDensity,
-                  subtitle: Lc.current.threadSpacing,
-                  value: _densityName(v),
-                  onTap: () => _pickDensity(context),
-                ),
-              ),
-              ValueListenableBuilder<String>(
-                valueListenable: st.localeCode,
-                builder: (_, v, _) => _row(
-                  context,
-                  icon: Icons.translate,
-                  title: L.of(context).language,
-                  value: _localeName(context, v),
-                  onTap: () => _pickLocale(context),
-                ),
-              ),
               const Divider(height: 24),
               _label(context, Lc.current.browseSection),
               ValueListenableBuilder<String>(
@@ -105,7 +73,9 @@ class SettingsPage extends StatelessWidget {
                   context,
                   icon: Icons.sort,
                   title: Lc.current.feedSort,
-                  value: v == 'created' ? Lc.current.sortCreated : Lc.current.sortUpdated,
+                  value: v == 'created'
+                      ? Lc.current.sortCreated
+                      : Lc.current.sortUpdated,
                   onTap: () => _pickSort(context),
                 ),
               ),
@@ -148,8 +118,8 @@ class SettingsPage extends StatelessWidget {
                 title: Lc.current.sitesManage,
                 subtitle: st.sites.isEmpty
                     ? Lc.current.siteEmptyHint
-                    : '${st.activeSite?.display ?? ''} Â· ${st.sites.length}',
-                value: st.activeSite?.host ?? '',
+                    : '${st.activeSite?.display ?? ''} · ${st.sites.length}',
+                value: _siteSummary(st),
                 onTap: () => Navigator.of(
                   context,
                 ).push(MaterialPageRoute(builder: (_) => const SitesPage())),
@@ -157,17 +127,6 @@ class SettingsPage extends StatelessWidget {
               const Divider(height: 24),
               _label(context, Lc.current.contentSection),
               const _ClearCacheTile(),
-              ListTile(
-                leading: const Icon(Icons.manage_search),
-                title: Text(Lc.current.clearSearchHistory),
-                onTap: () async {
-                  final p = await SharedPreferences.getInstance();
-                  await p.remove('search_hist');
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text(Lc.current.searchHistoryCleared)));
-                },
-              ),
               ListTile(
                 leading: const Icon(Icons.verified_user_outlined),
                 title: Text(Lc.current.permissions),
@@ -187,8 +146,11 @@ class SettingsPage extends StatelessWidget {
                           u == null
                               ? Lc.current.notLoggedIn
                               : (u['nickname'] ?? u['name'] ?? ''),
-                          '${st.accounts.length}')
-                      : (u == null ? Lc.current.notLoggedIn : '${u['nickname'] ?? u['name']}'),
+                          '${st.accounts.length}',
+                        )
+                      : (u == null
+                            ? Lc.current.notLoggedIn
+                            : '${u['nickname'] ?? u['name']}'),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(
@@ -215,22 +177,11 @@ class SettingsPage extends StatelessWidget {
                 ),
               if (u != null)
                 ListTile(
-                  leading: const Icon(Icons.key_outlined),
-                  title: Text(Lc.current.copyCredential),
-                  subtitle: Text(Lc.current.copyCredentialHint),
-                  onTap: () async {
-                    final t = Api.token;
-                    if (t == null || t.isEmpty) return;
-                    await Clipboard.setData(ClipboardData(text: t));
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text(Lc.current.credentialCopied)));
-                  },
-                ),
-              if (u != null)
-                ListTile(
                   leading: Icon(Icons.logout, color: cs.error),
-                  title: Text(Lc.current.logout, style: TextStyle(color: cs.error)),
+                  title: Text(
+                    Lc.current.logout,
+                    style: TextStyle(color: cs.error),
+                  ),
                   onTap: () => _logout(context),
                 ),
               const Divider(height: 24),
@@ -245,9 +196,8 @@ class SettingsPage extends StatelessWidget {
                 title: Text(Lc.current.aboutBrand('${SiteConfig.brand}')),
                 subtitle: Text(Lc.current.aboutSubtitle),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AboutPage()),
-                ),
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const AboutPage())),
               ),
             ],
           );
@@ -311,43 +261,20 @@ class SettingsPage extends StatelessWidget {
     ThemeMode.dark => Lc.current.themeDark,
   };
 
-  static String _fontName(double v) =>
-      v < 0.95 ? Lc.current.sizeSmall : (v > 1.25 ? Lc.current.sizeHuge : (v > 1.05 ? Lc.current.sizeLarge : Lc.current.densityNormal));
-
-  static String _densityName(int v) => switch (v) {
-    0 => Lc.current.densityCompact,
-    2 => Lc.current.densityLoose,
-    _ => Lc.current.densityNormal,
-  };
-
   static String _tabName(int v) => switch (v) {
-    1 => Lc.current.notice,
-    2 => Lc.current.me,
-    _ => Lc.current.timeline,
+    1 => Lc.current.sites,
+    2 => Lc.current.notice,
+    3 => Lc.current.me,
+    _ => Lc.current.home,
   };
 
-  String _localeName(BuildContext c, String code) => switch (code) {
-    'zh' => Lc.current.chinese,
-    'en' => 'English',
-    _ => L.of(c).languageSystem,
-  };
-
-  Future<void> _pickLocale(BuildContext ctx) async {
-    final st = AppState.instance;
-    final cur = st.localeCode.value;
-    final v = await showDialog<String>(
-      context: ctx,
-      builder: (c) => _pickDialog<String>(
-        title: L.of(c).language,
-        current: cur,
-        options: [
-          ('', L.of(c).languageSystem),
-          ('zh', Lc.current.chinese),
-          ('en', 'English'),
-        ],
-      ),
-    );
-    if (v != null) await st.setLocale(v);
+  /// 站点管理这一行只交代「用哪座站」。地址那一串在列表里看得到，
+  /// 摆在这儿又长又没信息量。
+  static String _siteSummary(AppState st) {
+    final m = st.masterSite;
+    final name = (m ?? st.activeSite)?.display ?? '';
+    if (name.isEmpty) return '';
+    return m == null ? name : '${Lc.current.siteMaster}（$name）';
   }
 
   Future<void> _pickTheme(BuildContext ctx) async {
@@ -364,34 +291,6 @@ class SettingsPage extends StatelessWidget {
     if (v != null) await st.setThemeMode(v);
   }
 
-  Future<void> _pickFont(BuildContext ctx) async {
-    final st = AppState.instance;
-    final cur = st.fontScale.value;
-    final v = await showDialog<double>(
-      context: ctx,
-      builder: (c) => _pickDialog<double>(
-        title: Lc.current.fontSize,
-        current: cur,
-        options: [(0.9, Lc.current.sizeSmall), (1.0, Lc.current.densityNormal), (1.15, Lc.current.sizeLarge), (1.3, Lc.current.sizeHuge)],
-      ),
-    );
-    if (v != null) await st.setFontScale(v);
-  }
-
-  Future<void> _pickDensity(BuildContext ctx) async {
-    final st = AppState.instance;
-    final cur = st.density.value;
-    final v = await showDialog<int>(
-      context: ctx,
-      builder: (c) => _pickDialog<int>(
-        title: Lc.current.listDensity,
-        current: cur,
-        options: [(0, Lc.current.densityCompact), (1, Lc.current.densityNormal), (2, Lc.current.densityLoose)],
-      ),
-    );
-    if (v != null) await st.setDensity(v);
-  }
-
   Future<void> _pickSort(BuildContext ctx) async {
     final st = AppState.instance;
     final cur = st.feedSort.value;
@@ -400,7 +299,10 @@ class SettingsPage extends StatelessWidget {
       builder: (c) => _pickDialog<String>(
         title: Lc.current.feedSort,
         current: cur,
-        options: [('updated', Lc.current.sortUpdated), ('created', Lc.current.sortCreated)],
+        options: [
+          ('updated', Lc.current.sortUpdated),
+          ('created', Lc.current.sortCreated),
+        ],
       ),
     );
     if (v != null) await st.setFeedSort(v);
@@ -414,7 +316,12 @@ class SettingsPage extends StatelessWidget {
       builder: (c) => _pickDialog<int>(
         title: Lc.current.startTab,
         current: cur,
-        options: [(0, Lc.current.timeline), (1, Lc.current.notice), (2, Lc.current.me)],
+        options: [
+          (0, Lc.current.home),
+          (1, Lc.current.sites),
+          (2, Lc.current.notice),
+          (3, Lc.current.me),
+        ],
       ),
     );
     if (v != null) await st.setStartTab(v);
@@ -527,7 +434,11 @@ class _VersionRowState extends State<_VersionRow> {
         ListTile(
           leading: const Icon(Icons.science_outlined),
           title: Text(Lc.current.updateChannel),
-          subtitle: Text(_useBeta ? Lc.current.betaChannelHint : Lc.current.stableChannelHint),
+          subtitle: Text(
+            _useBeta
+                ? Lc.current.betaChannelHint
+                : Lc.current.stableChannelHint,
+          ),
           trailing: const Icon(Icons.chevron_right, size: 20),
           onTap: _pickChannel,
         ),
@@ -580,7 +491,10 @@ class _VersionRowState extends State<_VersionRow> {
     }
     final r = rel!;
     if (r.build == _localBuild) {
-      await _tell(Lc.current.checkUpdate, Lc.current.upToDate('${_pkg?.version ?? ''}'));
+      await _tell(
+        Lc.current.checkUpdate,
+        Lc.current.upToDate('${_pkg?.version ?? ''}'),
+      );
       return;
     }
     if (r.build < _localBuild) {
@@ -595,37 +509,9 @@ class _VersionRowState extends State<_VersionRow> {
       return;
     }
 
-    final go = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text(r.channel == 'beta' ? Lc.current.betaVersion('${r.version}') : Lc.current.newVersion('${r.version}')),
-        content: ConstrainedBox(
-          // 小屏（手表）上不加这层，正文会把按钮顶出可视区。
-          constraints: BoxConstraints(
-            maxHeight:
-                (MediaQuery.of(context).size.height * 0.5).clamp(96.0, 340.0),
-          ),
-          child: SingleChildScrollView(
-            child: Text(
-              r.notes.isEmpty
-                  ? Lc.current.installOverwrite('${r.sizeText}')
-                  : Lc.current.releaseNotes('${r.notes}', '${r.sizeText}'),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: Text(Lc.current.later),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: Text(Lc.current.downloadAndInstall),
-          ),
-        ],
-      ),
-    );
-    if (go == true && mounted) await _install(r);
+    if (!mounted) return;
+    final go = await showUpdatePrompt(context, r, current: _pkg);
+    if (go && mounted) await installApk(context, r);
   }
 
   Future<void> _tell(String title, String body) {
@@ -635,57 +521,15 @@ class _VersionRowState extends State<_VersionRow> {
         title: Text(title),
         content: Text(body),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: Text(Lc.current.ok)),
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: Text(Lc.current.ok),
+          ),
         ],
       ),
     );
   }
-
-  Future<void> _install(AppRelease r) async {
-    // 用 ValueNotifier 推进度：弹窗里的 StatefulBuilder 拿不到外面的 setState。
-    final prog = ValueNotifier<double>(0);
-    final nav = Navigator.of(context);
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (c) => AlertDialog(
-          title: Text(Lc.current.downloading),
-          content: ValueListenableBuilder<double>(
-            valueListenable: prog,
-            builder: (_, v, _) => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                LinearProgressIndicator(value: v <= 0 ? null : v),
-                const SizedBox(height: 14),
-                Text('${(v * 100).toStringAsFixed(0)}%'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    try {
-      final file = await downloadApk(r, (v) => prog.value = v);
-      if (mounted) nav.pop();
-      await openLocalFile(file.path);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(
-          isDesktop ? Lc.current.handedToSystem : Lc.current.handedToInstaller,
-        ),
-      ));
-    } catch (e) {
-      if (mounted) nav.pop();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(Lc.current.downloadFailedWith('${e}'))));
-    }
-  }
 }
-
 
 /// 网页端的两个入口：当前地址和另一个端口，都能一键复制。
 class _WebEntryRow extends StatelessWidget {
@@ -733,7 +577,10 @@ class _WebEntryRow extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: Text(
               Lc.current.endpointHint,
-              style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).hintColor,
+              ),
             ),
           ),
         ],
@@ -743,9 +590,8 @@ class _WebEntryRow extends StatelessWidget {
 
   void _copy(BuildContext context, String s) {
     Clipboard.setData(ClipboardData(text: s));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(Lc.current.addressCopied)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(Lc.current.addressCopied)));
   }
 }
 
@@ -802,7 +648,13 @@ class _ClearCacheTileState extends State<_ClearCacheTile> {
       _size = 0;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(before > 0 ? Lc.current.clearedAmount('${AppCache.human(before)}') : Lc.current.cleared)),
+      SnackBar(
+        content: Text(
+          before > 0
+              ? Lc.current.clearedAmount('${AppCache.human(before)}')
+              : Lc.current.cleared,
+        ),
+      ),
     );
   }
 
@@ -811,10 +663,10 @@ class _ClearCacheTileState extends State<_ClearCacheTile> {
     final sub = _busy
         ? Lc.current.clearing
         : _size == null
-            ? Lc.current.calculating
-            : _size == 0
-                ? Lc.current.cacheEmpty
-                : Lc.current.cacheSize('${AppCache.human(_size!)}');
+        ? Lc.current.calculating
+        : _size == 0
+        ? Lc.current.cacheEmpty
+        : Lc.current.cacheSize('${AppCache.human(_size!)}');
     return ListTile(
       leading: const Icon(Icons.cleaning_services_outlined),
       title: Text(Lc.current.clearCache),

@@ -146,8 +146,76 @@ void main() {
       );
       expect(s.id, 's1');
       expect(s.name, '一号站');
-      expect(s.urls, ['https://bbs.example']);
+      // 手里的地址留着，自述的入口排在后面。
+      expect(s.urls, ['http://1.2.3.4:8080', 'https://bbs.example']);
       expect(s.api, 2);
+    });
+
+    test('自述不冲掉连得上的地址', () {
+      final s = e('', ['https://ipv6bbs.kalutoex.dpdns.org:26016']);
+      s.applyMeta(
+        const SiteMeta(
+          name: '时间线',
+          url: 'https://ipv4bbs.kalutoex.dpdns.org:24016',
+        ),
+      );
+      expect(s.urls, [
+        'https://ipv6bbs.kalutoex.dpdns.org:26016',
+        'https://ipv4bbs.kalutoex.dpdns.org:24016',
+      ]);
+    });
+
+    test('同主机少端口的自述地址不并进来', () {
+      final s = e('', ['https://ipv6bbs.kalutoex.dpdns.org:26016']);
+      s.applyMeta(const SiteMeta(url: 'https://ipv6bbs.kalutoex.dpdns.org'));
+      expect(s.urls, ['https://ipv6bbs.kalutoex.dpdns.org:26016']);
+    });
+  });
+
+  group('出厂站点', () {
+    test('开机就有一行时间线，v6 在前', () {
+      final b = builtinSites();
+      expect(b, hasLength(1));
+      expect(b.single.name, '时间线');
+      expect(b.single.master, isTrue);
+      expect(b.single.orderedUrls.first, contains('ipv6bbs'));
+      expect(b.single.urls.any((u) => u.contains('ipv4bbs')), isTrue);
+    });
+
+    test('老版本存下的缺端口地址换成出厂入口', () {
+      final out = ensureBuiltin([
+        e('', ['https://ipv6bbs.kalutoex.dpdns.org'], name: '时间线'),
+      ]);
+      expect(out, hasLength(1));
+      expect(out.single.urls, isNot(contains('https://ipv6bbs.kalutoex.dpdns.org')));
+      expect(
+        out.single.urls,
+        containsAll([
+          'https://ipv6bbs.kalutoex.dpdns.org:26016',
+          'https://ipv4bbs.kalutoex.dpdns.org:24016',
+        ]),
+      );
+      expect(out.single.master, isTrue);
+    });
+
+    test('用户自己加的地址留着，出厂入口补上', () {
+      final out = ensureBuiltin([
+        e('', ['https://ipv6bbs.kalutoex.dpdns.org:26016'], name: '时间线'),
+      ]);
+      expect(out, hasLength(1));
+      expect(out.single.urls.first, 'https://ipv6bbs.kalutoex.dpdns.org:26016');
+      expect(
+        out.single.urls,
+        contains('https://ipv4bbs.kalutoex.dpdns.org:24016'),
+      );
+    });
+
+    test('别的站不动，时间线追加在后面', () {
+      final out = ensureBuiltin([e('other', ['https://z.example'])]);
+      expect(out, hasLength(2));
+      expect(out.first.id, 'other');
+      expect(out.last.name, '时间线');
+      expect(out.where((s) => s.master).length, 1);
     });
   });
 }

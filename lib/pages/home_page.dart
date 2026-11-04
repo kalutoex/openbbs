@@ -11,9 +11,12 @@ import 'feed_tab.dart';
 import 'login_page.dart';
 import 'me_tab.dart';
 import 'notice_tab.dart';
+import 'site_catalog_page.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n.dart';
+import '../update_prompt.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -24,7 +27,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _sk = GlobalKey<ScaffoldState>();
 
-  /// 0 = 时间线，1 = 通知，2 = 我的
+  /// 0 = 时间线，1 = 站点，2 = 通知，3 = 我的
   late int _index = _tabOf(AppState.instance.startTab.value);
 
   /// IndexedStack 会把四个 tab 全部建出来、initState 一起发请求，
@@ -32,12 +35,8 @@ class _HomePageState extends State<HomePage> {
   /// 这里只建访问过的那个。
   late final Set<int> _started = {_index};
 
-  /// 老版本存过 0..3（1 是板块），读出来按新表重排。
-  static int _tabOf(int v) => switch (v) {
-        2 => 1,
-        3 => 2,
-        _ => 0,
-      };
+  /// 历史版本存过 0..3（1 是站点），语义和现在这张表一致，越界就回首页。
+  static int _tabOf(int v) => v >= 0 && v <= 3 ? v : 0;
 
   void _go(int i) {
     if (i == _index) return;
@@ -54,6 +53,10 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     // 第一次装完问一遍通知和相册；问过就不再提。
     WidgetsBinding.instance.addPostFrameCallback((_) => AppPerms.firstRun());
+    // 启动后问一次有没有新版本。节流在 checkOnStart 里，失败静默。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(checkOnStart(context));
+    });
     AppState.instance.refreshUnread();
     AppState.instance.autoUnread.addListener(_syncTick);
     _syncTick();
@@ -86,9 +89,8 @@ class _HomePageState extends State<HomePage> {
       if (!mounted || AppState.instance.user == null) return;
     }
 
-    final ok = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const ComposePage()),
-    );
+    final ok = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => const ComposePage()));
     if (ok == true) AppState.instance.bumpFeed();
   }
 
@@ -129,7 +131,8 @@ class _HomePageState extends State<HomePage> {
       drawer: AppDrawer(
         currentTab: _index,
         onTimeline: () => _go(0),
-        onMe: () => _go(2),
+        onSites: () => _go(1),
+        onMe: () => _go(3),
       ),
       // 站点比客户端新就顶一条提示。只提示，不拦着用——
       // 拦了人也没别的客户端可选，不如让人自己看到原因。
@@ -146,10 +149,14 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     FeedTab(onMenu: _menu),
                     if (_started.contains(1))
-                      NoticeTab(onMenu: _menu)
+                      SiteCatalogPage(onMenu: _menu)
                     else
                       const SizedBox.shrink(),
                     if (_started.contains(2))
+                      NoticeTab(onMenu: _menu)
+                    else
+                      const SizedBox.shrink(),
+                    if (_started.contains(3))
                       MeTab(onMenu: _menu)
                     else
                       const SizedBox.shrink(),
@@ -172,7 +179,7 @@ class _HomePageState extends State<HomePage> {
         animation: AppState.instance,
         builder: (context, _) {
           final cs = Theme.of(context).colorScheme;
-          final unread = AppState.instance.unread;
+          final unread = AppState.instance.unread + AppState.instance.dmUnread;
           return DecoratedBox(
             decoration: BoxDecoration(
               color: cs.surfaceContainer,
@@ -195,6 +202,11 @@ class _HomePageState extends State<HomePage> {
                   icon: Icon(Icons.home_outlined),
                   selectedIcon: Icon(Icons.home_rounded),
                   label: Lc.current.home,
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.grid_view_outlined),
+                  selectedIcon: Icon(Icons.grid_view_rounded),
+                  label: Lc.current.sites,
                 ),
                 NavigationDestination(
                   icon: Badge(

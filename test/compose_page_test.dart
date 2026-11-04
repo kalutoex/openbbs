@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openbbs/pages/compose_page.dart';
+import 'package:openbbs/sites.dart';
+import 'package:openbbs/store.dart';
 
 Future<void> _pumpPage(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;
@@ -55,9 +57,52 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
+  testWidgets('发帖只能选主站或小站，默认落在当前站', (tester) async {
+    final st = AppState.instance;
+    final keepSites = st.sites;
+    final keepKey = st.activeKey;
+    addTearDown(() {
+      st.sites = keepSites;
+      st.activeKey = keepKey;
+    });
+    st.sites = [
+      SiteEntry(
+        id: 'home',
+        name: '时间线',
+        urls: ['https://ipv6bbs.kalutoex.dpdns.org:26016'],
+        master: true,
+      ),
+      SiteEntry(id: 'sub', name: '二号站', urls: ['http://1.2.3.4:8080']),
+    ];
+    st.activeKey = 'home';
+
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const MaterialApp(home: ComposePage()));
+    await tester.pumpAndSettle();
+
+    // 一层：发到哪儿，只有主站和小站两个选项，没有板块。
+    expect(find.text('发到'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '主站'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, '小站'), findsOneWidget);
+
+    ChoiceChip chip(String label) =>
+        tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, label));
+
+    // 没选过就跟着当前站走。
+    expect(chip('主站').selected, isTrue);
+    expect(chip('小站').selected, isFalse);
+
+    // 点小站就换过去，一次只选一个。
+    await tester.tap(find.widgetWithText(ChoiceChip, '小站'));
+    await tester.pump();
+    expect(chip('小站').selected, isTrue);
+    expect(chip('主站').selected, isFalse);
+
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   // 小屏 + 键盘弹出时最容易挤爆
-  for (final size in const [Size(320, 568), Size(360, 640), Size(412, 915)]) {
-    testWidgets('小屏不溢出：${size.width.toInt()}x${size.height.toInt()}', (
+  for (final size in const [Size(320, 568), Size(360, 640), Size(412, 915)]) {    testWidgets('小屏不溢出：${size.width.toInt()}x${size.height.toInt()}', (
       tester,
     ) async {
       await _pumpPage(tester, size);

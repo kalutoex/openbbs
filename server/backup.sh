@@ -1,19 +1,26 @@
 #!/bin/bash
 # OpenBBS 每日备份：SQLite 走 .backup（WAL 安全），uploads 打包，只留最近 N 份。
 #
-#   ./backup.sh            备份到 data/backups
-#   OPENBBS_KEEP=7 ./backup.sh
+#   ./backup.sh                        备份到 data/backups，留 30 份
+#   OPENBBS_KEEP=7 ./backup.sh         临时改保留份数
 #
+# 目录和份数默认读 config/site.json 的 backup.dir / backup.keep，环境变量优先。
 # 建议挂 cron：0 4 * * * /path/to/server/backup.sh
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEST="${OPENBBS_BACKUP_DIR:-$ROOT/data/backups}"
-LOG="${OPENBBS_LOG_DIR:-$ROOT/logs}/backup.log"
-KEEP="${OPENBBS_KEEP:-30}"
-STAMP=$(date +%Y%m%d_%H%M)
-DB="${OPENBBS_DB:-$ROOT/data/forum.db}"
-UP="${OPENBBS_UPLOAD_DIR:-$ROOT/data/uploads}"
+cd "$ROOT" || exit 1
+. "$ROOT/_cfg.sh"
+
+DEST="${OPENBBS_BACKUP_DIR:-$(cfg backup dir "$ROOT/data/backups")}"
+KEEP="${OPENBBS_BACKUP_KEEP:-${OPENBBS_KEEP:-$(cfg backup keep 30)}}"
+LOG="${OPENBBS_LOG_DIR:-$(cfg paths logs "$ROOT/logs")}/backup.log"
+DB="${OPENBBS_DB:-$(cfg paths db "$ROOT/data/forum.db")}"
+UP="${OPENBBS_UPLOAD_DIR:-$(cfg paths uploads "$ROOT/data/uploads")}"
+STAMP=$(date +%Y%m%d_%H%M%S)
+
+PY="$(command -v python3)"
+[ -n "$PY" ] || { echo "没有 python3，备份做不了"; exit 1; }
 
 mkdir -p "$DEST" "$(dirname "$LOG")"
 
@@ -23,11 +30,11 @@ echo "== $(date '+%F %T') 开始"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-if ! python3 "$ROOT/db_snapshot.py" "$DB" "$tmp/forum.db"; then
+if ! "$PY" "$ROOT/db_snapshot.py" "$DB" "$tmp/forum.db"; then
   echo "数据库备份失败"; exit 1
 fi
 
-if ! python3 "$ROOT/db_snapshot.py" --check "$tmp/forum.db"; then
+if ! "$PY" "$ROOT/db_snapshot.py" --check "$tmp/forum.db"; then
   echo "快照自检失败，本次不写备份"; exit 1
 fi
 

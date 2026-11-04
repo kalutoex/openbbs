@@ -99,6 +99,50 @@ class Api {
   /// 探当前站点。
   static Future<String?> probe() => probeAt(endpoints);
 
+  /// 逐条入口各探一次，回 `{地址: 通不通}`。
+  ///
+  /// 并发跑，站点管理页要一眼看出 v6 和 v4 各自的结果；
+  /// 不写 lastGood——这不是选路，只是报告。
+  static Future<Map<String, bool>> probeReport(List<String> urls) async {
+    final out = <String, bool>{};
+    await Future.wait(
+      urls.where((u) => u.isNotEmpty).map((c) async {
+        final ms = looksV6(c) ? 3000 : 10000;
+        try {
+          final r = await http
+              .get(Uri.parse('$c/api/feed'))
+              .timeout(Duration(milliseconds: ms));
+          out[c] = r.statusCode == 200;
+        } catch (_) {
+          out[c] = false;
+        }
+      }),
+    );
+    return out;
+  }
+
+  /// 测速：每条入口真发一次请求，回 `{地址: 毫秒}`；不通的入口不会出现在结果里。
+  ///
+  /// 和 [probeReport] 的区别是这里要的是耗时，所以不并发——同一条路上排队发，
+  /// 数字才有比较的意义。超时口径跟探路一致。
+  static Future<Map<String, int>> speedTest(List<String> urls) async {
+    final out = <String, int>{};
+    for (final c in urls) {
+      if (c.isEmpty) continue;
+      final ms = looksV6(c) ? 3000 : 10000;
+      final sw = Stopwatch()..start();
+      try {
+        final r = await http
+            .get(Uri.parse('$c/api/feed'))
+            .timeout(Duration(milliseconds: ms));
+        if (r.statusCode == 200) out[c] = sw.elapsedMilliseconds;
+      } catch (_) {
+        // 不通就是没结果，界面按「✗」显示
+      }
+    }
+    return out;
+  }
+
   /// 站点自述。启动时读一次，界面拿它判断协议版本和能力位。
   ///
   /// 先读 `/.well-known/bbs.json`（客户端认站的标准入口，一圈就能拿到），

@@ -16,6 +16,19 @@ class AppRelease {
   /// stable 或 beta。服务端决定，客户端只用来显示。
   final String channel;
 
+  /// 低于这个 build 就必须更新，弹窗关不掉。0 = 不强制。
+  final int forceBelow;
+
+  /// 客户端自动检查的间隔（小时）。0 = 每次启动都查。
+  final int checkHours;
+
+  /// 点过「以后再说」之后隔多久再弹（小时）。0 = 每次启动都弹。
+  final int remindHours;
+
+  /// 弹窗文案模板，服务端下发；空就由本地文案兜底。
+  final String title;
+  final String message;
+
   const AppRelease({
     required this.version,
     required this.build,
@@ -23,16 +36,36 @@ class AppRelease {
     required this.url,
     required this.notes,
     required this.channel,
+    this.forceBelow = 0,
+    this.checkHours = 24,
+    this.remindHours = 24,
+    this.title = '',
+    this.message = '',
   });
 
   factory AppRelease.fromJson(Map<String, dynamic> j) => AppRelease(
     version: '${j['version'] ?? ''}',
-    build: (j['build'] ?? 0) as int,
-    size: (j['size'] ?? 0) as int,
+    build: (j['build'] as num?)?.toInt() ?? 0,
+    size: (j['size'] as num?)?.toInt() ?? 0,
     url: '${j['url'] ?? ''}',
     notes: '${j['notes'] ?? ''}',
     channel: '${j['channel'] ?? 'stable'}',
+    forceBelow: (j['force_below'] as num?)?.toInt() ?? 0,
+    checkHours: (j['check_hours'] as num?)?.toInt() ?? 24,
+    remindHours: (j['remind_hours'] as num?)?.toInt() ?? 24,
+    title: '${j['title'] ?? ''}',
+    message: '${j['message'] ?? ''}',
   );
+
+  /// [localBuild] 这一版还能不能跳过更新。
+  bool isForcedFor(int localBuild) => forceBelow > 0 && localBuild < forceBelow;
+
+  /// 填服务端模板里的 {version} {current} {notes} {size}。
+  String fill(String tpl, {required String current}) => tpl
+      .replaceAll('{version}', version)
+      .replaceAll('{current}', current)
+      .replaceAll('{notes}', notes)
+      .replaceAll('{size}', sizeText);
 
   String get sizeText => size >= 1024 * 1024
       ? '${(size / 1024 / 1024).toStringAsFixed(1)} MB'

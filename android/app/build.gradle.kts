@@ -24,7 +24,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "org.openbbs.app"
+        // 包名决定老用户能不能覆盖升级，不能让新包各走各的。
+        // 1.3.1 起全部用户都在 com.kalutoex.shijianxian，默认就用它；
+        // 1.2.x / 1.3.0 那批旧包 com.kalutoex.tieba 已废弃，只留构建能力。
+        applicationId =
+            (project.findProperty("appId") as String?) ?: "com.kalutoex.shijianxian"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -43,6 +47,17 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    // 只出 32 位包时用：插件自带的 .so 会按依赖把 64 位目录也带进来，
+    // 那些目录里没有 libapp.so / libflutter.so，64 位设备误装会直接崩。
+    // 用 -PonlyArm32 打，versionCode 仍是 pubspec 里的，不会像 split-per-abi 那样被加 1000。
+    packaging {
+        if (project.hasProperty("onlyArm32")) {
+            jniLibs {
+                excludes += setOf("lib/arm64-v8a/**", "lib/x86_64/**", "lib/x86/**")
+            }
         }
     }
 }

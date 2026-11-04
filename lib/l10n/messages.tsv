@@ -5,7 +5,6 @@
 取消	cancel	Cancel
 刷新	refresh	Refresh
 重试	retry	Retry
-板块	forums	Forums
 关注	follow	Follow
 还没设置服务器地址	errNotConfigured	Server address is not set yet
 通知	notice	Notifications
@@ -241,7 +240,6 @@ ${bigNum(replies)} 条回复	repliesCount	{v1} replies
 扔掉这篇	discardPost	Throw this away
 再改改	keepEditing	Keep editing
 发新帖	composeTitle	New post
-吧	forumSuffix	 
 说点什么…（@ 找人）	composeHint	Say something… (@ to mention)
 图片 ${_imgs.length}/$_maxImgs	imageCount	Images {v1}/{v2}
 长按拖动换顺序	dragToReorder	Press and drag to reorder
@@ -390,15 +388,11 @@ ${_mine.length} 条	requestCount	{v1}
 正文	body	Body
 图片 $_count/$_maxImgs	imageCountShort	Images {v1}/{v2}
 还没有图	noImagesYet	No images yet
-搜吧	searchForumsHint	Search forums
 没搜到「$_query」	noSearchResult	Nothing for “{v1}”
 搜到 ${items.length} 个	searchResultCount	{v1} found
 我关注的 ${mine.length}	myFollowedForums	Following ({v1})
 全部 ${all.length}	allForums	All ({v1})
-还没有建板块	noForums	No forums yet
-登录后能看到关注过的吧	loginToSeeFollowed	Log in to see the forums you follow
 去登录	goLogin	Log in
-还没关注吧，进一个点关注	noFollowedForums	No forums followed yet — open one and tap follow
 还没有简介	noIntro	No description
 $threads 帖 · $followers 关注	forumStats	{v1} posts · {v2} followers
 回复了你的帖	nRepliedPost	replied to your post
@@ -457,7 +451,6 @@ ${a.nickname} 的登录已失效，已移除	accountExpiredRemoved	{v1}'s login 
 最近搜索	recentSearches	Recent
 共 $_total 条	totalCount	{v1} in total
 到底了，共 $_total 条	endTotalCount	That's all — {v1} in total
-还没建板块	noForums	No forums yet
 还没收藏过帖子	noFavoritesYet	Nothing saved yet
 举报处理	reportHandling	Reports
 需求处理	requestHandling	Requests
@@ -474,7 +467,6 @@ ${a.nickname} 的登录已失效，已移除	accountExpiredRemoved	{v1}'s login 
 还没收藏过帖	noFavoritesYet	Nothing saved yet
 还没有浏览记录	noHistoryYet	No history yet
 热门	hot	Hot
-这个吧还没有帖	forumEmpty	Nothing posted in this forum yet
 ${f['thread_count'] ?? 0} 帖 · ${f['follow_count'] ?? 0} 关注	forumStats	{v1} posts · {v2} followers
 联网权限安装时已经给了，这里只剩通知和相册需要你点头。	permIntro	Network permission is granted at install — only notifications and photos need a yes here.
 联网	network	Network
@@ -485,7 +477,6 @@ ${f['thread_count'] ?? 0} 帖 · ${f['follow_count'] ?? 0} 关注	forumStats	{v1
 回到顶部	backToTop	Back to top
 连不上服务器，这是上次的缓存	offlineCacheFeed	Can't reach the server — this is the last cached copy
 还没有人发帖	noPostsYet	Nothing posted yet
-发到哪个板块	chooseForum	Post to which forum?
 发帖	newThread	New post
 首页	home	Home
 填一下地址	fillAddress	Enter an address

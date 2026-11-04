@@ -1,11 +1,13 @@
 #!/bin/bash
 # OpenBBS 启动脚本。
 #
-#   ./run.sh              明文起在 0.0.0.0:8080
-#   ./run.sh --tls        带 HTTPS，证书路径用下面两个环境变量给
-#   OPENBBS_HOST / OPENBBS_PORT / OPENBBS_CERT_DIR 都可以覆盖
+#   ./run.sh              默认明文起在 0.0.0.0:8092（可用 site.json 改）
+#   ./run.sh --tls        强制 HTTPS，证书目录见 server.tls_cert_dir
+#   ./run.sh --stop       停
 #
-# 不传 --tls 又没配证书，就当纯 HTTP 跑。放在 nginx 后面的部署走这个模式。
+# 端口、监听地址、证书目录都从 config/site.json 的 server 段读；
+# 环境变量 OPENBBS_HOST / OPENBBS_PORT / OPENBBS_CERT_DIR 覆盖它。
+# 配了 tls_cert_dir 就自动开 TLS，不用再传 --tls。
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,16 +21,21 @@ if [ -z "$PY" ]; then
   exit 1
 fi
 
+. "$ROOT/_cfg.sh"
+
 LOG_DIR="${OPENBBS_LOG_DIR:-$ROOT/logs}"
 mkdir -p "$LOG_DIR" "$ROOT/data"
 LOG="$LOG_DIR/forum.log"
 
-HOST="${OPENBBS_HOST:-0.0.0.0}"
-PORT="${OPENBBS_PORT:-8080}"
-CERT_DIR="${OPENBBS_CERT_DIR:-}"
+HOST="${OPENBBS_HOST:-$(cfg server host)}"
+HOST="${HOST:-0.0.0.0}"
+PORT="${OPENBBS_PORT:-$(cfg server port)}"
+PORT="${PORT:-8092}"
+CERT_DIR="${OPENBBS_CERT_DIR:-$(cfg server tls_cert_dir)}"
 PIDFILE="$ROOT/data/forum.pid"
 
 TLS=0
+[ -n "$CERT_DIR" ] && TLS=1
 for arg in "$@"; do
   if [ "$arg" = "--stop" ]; then
     if [ -f "$PIDFILE" ]; then

@@ -404,9 +404,16 @@ def _imgs_payload(raw):
 
 
 
+_HTML_TAG_RE = re.compile(r"<!--.*?-->|</?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?/?>", re.S)
+_HTML_ENT = {"&lt;": "<", "&gt;": ">", "&amp;": "&", "&quot;": '"', "&#39;": "'", "&nbsp;": " "}
+
+
 def _excerpt(body, n=240):
-    """列表页用的正文预览：压掉换行和多余空白，截到 n 字。"""
-    text = re.sub(r"\s+", " ", (body or "")).strip()
+    """列表页用的正文预览：剥掉 HTML 标签、还原常见实体，压掉空白再截到 n 字。"""
+    text = _HTML_TAG_RE.sub("", body or "")
+    for k, v in _HTML_ENT.items():
+        text = text.replace(k, v)
+    text = re.sub(r"\s+", " ", text).strip()
     return text[:n]
 
 
@@ -471,7 +478,7 @@ def _ip(request: Request) -> str:
 
 
 def _code_hash(email: str, code: str) -> str:
-    return hmac.new(auth.SECRET, ("%s|%s" % (email, code)).encode(), hashlib.sha256).hexdigest()
+    return auth.hmac_hex(("%s|%s" % (email, code)).encode())
 
 
 def _norm_email(raw: str) -> str:
@@ -802,6 +809,9 @@ def login(p: Credentials, request: Request, c=Depends(get_conn)):
         if ip:
             _LOGIN_FAIL.setdefault(ip, []).append(now)
         raise HTTPException(401, "用户名或密码不对")
+    # 封号之后连登录这一步都不给过，别让人拿着新 token 到处试。
+    if blacklist.is_banned(c, row["id"]):
+        raise HTTPException(403, blacklist.BANNED_MSG)
     if ip:
         _LOGIN_FAIL.pop(ip, None)
     return {"token": auth.make_token(row["id"]), "user": user_json(_load_user(c, row["id"]))}
@@ -1385,6 +1395,9 @@ def replace_images(tid: int, c=Depends(get_conn), user=Depends(require_user)):
 @router.post("/upload")
 def upload(p: NewImage, user=Depends(require_user)):
     data = p.data.split(",", 1)[-1]
+    # 先按 base64 长度兜一道：不然一串几百 MB 的 data 会先被整个读进内存再解码。
+    if len(data) > (MAX_ANIM // 3) * 4 + 256:
+        raise HTTPException(413, "单张图别超过 %dMB" % (MAX_ANIM // 1024 // 1024))
     try:
         raw = base64.b64decode(data, validate=False)
     except Exception:

@@ -213,6 +213,11 @@ def _read_legacy_token(tok: str):
 # ---------------------------------------------------------------- 通用签名
 # 黑名单清单等数据用同一套密钥签名，小站验签即可。
 
+def hmac_hex(data: bytes) -> str:
+    """固定密钥的 HMAC-SHA256 十六进制摘要。验证码等短哈希用它，不参与对外签名。"""
+    return hmac.new(_legacy_secret(), data, hashlib.sha256).hexdigest()
+
+
 def sign_bytes(data: bytes) -> str:
     k = _ensure_key()
     if k is None:

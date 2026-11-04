@@ -19,6 +19,11 @@ class _LoginPageState extends State<LoginPage> {
   final _pw = TextEditingController();
   final _email = TextEditingController();
   final _code = TextEditingController();
+  // 人机校验：服务端开了才出题，没开就是空串，界面上不显示。
+  final _chAns = TextEditingController();
+  String _chId = '';
+  String _chSig = '';
+  String _chQ = '';
   bool _register = false;
   bool _reset = false;
   bool _busy = false;
@@ -34,53 +39,8 @@ class _LoginPageState extends State<LoginPage> {
     _pw.dispose();
     _email.dispose();
     _code.dispose();
+    _chAns.dispose();
     super.dispose();
-  }
-
-  Future<void> _useToken() async {
-    final ctl = TextEditingController();
-    final tok = await showDialog<String>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: Text(Lc.current.pasteCredential),
-        content: TextField(
-          controller: ctl,
-          autofocus: true,
-          maxLines: 3,
-          minLines: 1,
-          decoration: InputDecoration(hintText: Lc.current.credentialHint),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c),
-            child: Text(Lc.current.forgetIt),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, ctl.text),
-            child: Text(Lc.current.restore),
-          ),
-        ],
-      ),
-    );
-    ctl.dispose();
-    if (tok == null || tok.trim().isEmpty) return;
-    setState(() {
-      _busy = true;
-      _err = null;
-    });
-    try {
-      final ok = await AppState.instance.useToken(tok);
-      if (!mounted) return;
-      if (ok) {
-        Navigator.of(context).pop(true);
-      } else {
-        setState(() => _err = Lc.current.credentialInvalid);
-      }
-    } catch (e) {
-      if (mounted) setState(() => _err = Lc.current.restoreFailed('${e}'));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
   }
 
   void _startCooldown(int secs) {
@@ -93,6 +53,17 @@ class _LoginPageState extends State<LoginPage> {
       }
       setState(() => _cooldown = _cooldown > 0 ? _cooldown - 1 : 0);
       if (_cooldown == 0) t.cancel();
+    });
+  }
+
+  Future<void> _loadChallenge() async {
+    final d = await AppState.instance.fetchChallenge();
+    if (!mounted) return;
+    setState(() {
+      _chQ = (d?['question'] ?? '') as String;
+      _chId = (d?['id'] ?? '') as String;
+      _chSig = (d?['sig'] ?? '') as String;
+      _chAns.clear();
     });
   }
 
@@ -170,7 +141,12 @@ class _LoginPageState extends State<LoginPage> {
     });
     try {
       if (_register) {
-        await AppState.instance.register(n, p, e, code);
+        await AppState.instance.register(
+          n, p, e, code,
+          challengeId: _chId,
+          challengeAnswer: _chAns.text.trim(),
+          challengeSig: _chSig,
+        );
       } else {
         await AppState.instance.login(n, p);
       }
@@ -179,6 +155,7 @@ class _LoginPageState extends State<LoginPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _err = errorText(context, e));
+      if (_register && _chQ.isNotEmpty && e.message.contains('题')) _loadChallenge();
     } catch (e) {
       // 不是 ApiException 的意外（解析、存储写入失败之类）以前会漏出去，
       // _busy 停在 true，看着就是登录页一直转圈。
@@ -255,6 +232,18 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
+              if (_register && _chQ.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _chAns,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: _chQ,
+                    helperText: Lc.current.humanCheck,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ],
             if (_err != null) ...[
               const SizedBox(height: 12),
@@ -286,10 +275,13 @@ class _LoginPageState extends State<LoginPage> {
               TextButton(
                 onPressed: _busy
                     ? null
-                    : () => setState(() {
-                        _register = !_register;
-                        _err = null;
-                      }),
+                    : () {
+                        setState(() {
+                          _register = !_register;
+                          _err = null;
+                        });
+                        if (_register) _loadChallenge();
+                      },
                 child: Text(_register ? Lc.current.haveAccountLogin : Lc.current.noAccountRegister),
               ),
               if (!_register)
@@ -303,15 +295,6 @@ class _LoginPageState extends State<LoginPage> {
                   child: Text(Lc.current.forgotPasswordQuestion),
                 ),
             ],
-            if (!_register && !_reset)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: TextButton.icon(
-                  onPressed: _busy ? null : _useToken,
-                  icon: const Icon(Icons.key_outlined, size: 16),
-                  label: Text(Lc.current.restoreWithCredential),
-                ),
-              ),
           ],
         ),
       ),

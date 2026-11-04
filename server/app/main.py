@@ -2,7 +2,7 @@
 """论坛主程序。服务端渲染，不依赖 Node。"""
 import math, os, time
 from fastapi import FastAPI, Request, Form, Depends, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -51,6 +51,18 @@ app.add_middleware(
 )
 
 
+@app.get("/", response_class=HTMLResponse)
+def root_page():
+    # 网页前端没部署时给个落点，免得一进来就是 404。
+    idx = os.path.join(_WEB_DIR, "index.html")
+    if os.path.exists(idx):
+        return FileResponse(idx, media_type="text/html")
+    return HTMLResponse(
+        "<h1>OpenBBS</h1><p>接口正常，网页前端还没部署。</p>"
+        "<p><a href=\"/go\">接口自检</a> · <a href=\"/meta\">站点信息</a></p>"
+    )
+
+
 @app.get("/go", response_class=HTMLResponse)
 def entry_page():
     # 兜底入口页：纯静态，不依赖 Flutter，任何端口都能开。
@@ -62,6 +74,16 @@ def entry_page():
     return HTMLResponse("<h1>OpenBBS</h1><p>接口正常，前端还没放上去。</p>")
 
 
+
+
+@app.middleware("http")
+async def body_limit(request: Request, call_next):
+    # 图片是 base64 上来的，10MB 的图算上编码差不多 13.3MB；
+    # 再大的请求体直接挡掉，别等它全读进内存。
+    cl = request.headers.get("content-length", "")
+    if cl.isdigit() and int(cl) > 16 * 1024 * 1024:
+        return JSONResponse({"detail": "请求体太大"}, status_code=413)
+    return await call_next(request)
 
 
 @app.middleware("http")

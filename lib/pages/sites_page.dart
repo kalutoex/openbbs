@@ -13,11 +13,19 @@ import '../l10n/l10n.dart';
 /// 站点管理：本机站点表。加、删、切、设登录站，以及清单导入。
 ///
 /// 这里的规矩：
+/// - 主站（时间线）是兜底，不给删；发帖只能发到主站或小站；
+/// - 不对外露网址：用户只需要知道 v6 / v4 哪条通、多少毫秒；
 /// - 连不上的站标灰，不弹窗骂人——地址多、网络乱是常态；
 /// - 删除只删本机这一行，账号和帖子在对方服务器上；
 /// - 注册/登录/找回密码只发登录站，所以在哪座站上都标得出来。
 class SitesPage extends StatefulWidget {
-  const SitesPage({super.key});
+  /// 当底部 tab 用时把抽屉按钮挂上；从设置页进来是 null，走默认返回键。
+  final VoidCallback? onMenu;
+
+  /// 切站成功后回调，底部 tab 用它跳回时间线。
+  final VoidCallback? onSwitched;
+
+  const SitesPage({super.key, this.onMenu, this.onSwitched});
 
   @override
   State<SitesPage> createState() => _SitesPageState();
@@ -30,11 +38,49 @@ class _SitesPageState extends State<SitesPage> {
   /// 批量探测进行中。和 [_busy] 分开：导入完成时会顺手探一遍，两者会重叠。
   bool _probing = false;
 
+  /// 测速进行中。只挡那条路线上的重复点击，不冻整个列表。
+  final Set<String> _testing = <String>{};
+
   AppState get _st => AppState.instance;
 
   void _toast(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// 测速：长按某座站就跑一遍，回每条入口的毫秒数。
+  ///
+  /// 结果顺手写回 epStatus，测完这一行的 v6 / v4 通不通也一起刷新了。
+  Future<void> _speedTest(SiteEntry s) async {
+    if (_testing.contains(s.key)) return;
+    _testing.add(s.key);
+    _toast(Lc.current.siteSpeedRunning);
+    if (mounted) setState(() {});
+    try {
+      final ms = await Api.speedTest(s.orderedUrls);
+      s.epMs
+        ..clear()
+        ..addAll(ms);
+      for (final u in s.orderedUrls) {
+        s.epStatus[u] = ms.containsKey(u);
+      }
+      final ok = ms.isNotEmpty;
+      s.reachable = ok;
+      if (ok) {
+        s.lastOk = ms.keys.first;
+      }
+      if (!mounted) return;
+      setState(() {});
+      final parts = <String>[
+        for (final e in ms.entries) '${looksV6(e.key) ? 'IPv6' : 'IPv4'} ${e.value}ms',
+      ];
+      _toast(
+        Lc.current.siteSpeedResult(parts.isEmpty ? Lc.current.siteSpeedNone : parts.join(' · ')),
+      );
+    } finally {
+      _testing.remove(s.key);
+      if (mounted) setState(() {});
+    }
   }
 
   /// 逐座站探一遍，只更新标灰状态，不动当前出口。
@@ -44,7 +90,18 @@ class _SitesPageState extends State<SitesPage> {
     if (mounted) setState(() {});
     try {
       for (final s in List<SiteEntry>.of(_st.sites)) {
-        final ok = await Api.probeAt(s.orderedUrls, mark: false);
+        final rep = await Api.probeReport(s.orderedUrls);
+        s.epStatus
+          ..clear()
+          ..addAll(rep);
+        s.epMs.clear();
+        String? ok;
+        for (final e in rep.entries) {
+          if (e.value) {
+            ok = e.key;
+            break;
+          }
+        }
         s.reachable = ok != null;
         if (ok != null) s.lastOk = ok;
         if (!mounted) return;
@@ -61,8 +118,12 @@ class _SitesPageState extends State<SitesPage> {
     setState(() => _busy = true);
     final ok = await _st.switchSite(s);
     if (!mounted) return;
+    // 切完把每条入口各自的结果补上：v6 通、v4 不通这种事得看得见。
+    await _probeOne(s);
+    if (!mounted) return;
     setState(() => _busy = false);
     _toast(ok ? Lc.current.switchedTo(s.display) : Lc.current.connectFailedBody(s.display));
+    if (ok) widget.onSwitched?.call();
   }
 
   Future<void> _setLogin(SiteEntry s) async {
@@ -71,6 +132,11 @@ class _SitesPageState extends State<SitesPage> {
   }
 
   Future<void> _remove(SiteEntry s) async {
+    // 主站不给删：删完就只剩小站，发帖的兜底没了。
+    if (s.isHome) {
+      _toast(Lc.current.siteMasterFixed);
+      return;
+    }
     final yes = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -144,8 +210,21 @@ class _SitesPageState extends State<SitesPage> {
   }
 
   Future<void> _probeOne(SiteEntry s) async {
-    final ok = await Api.probeAt(s.orderedUrls, mark: false);
+    final rep = await Api.probeReport(s.orderedUrls);
+    s.epStatus
+      ..clear()
+      ..addAll(rep);
+    // 探路不带耗时，旧数字留着会骗人。
+    s.epMs.clear();
+    String? ok;
+    for (final e in rep.entries) {
+      if (e.value) {
+        ok = e.key;
+        break;
+      }
+    }
     s.reachable = ok != null;
+    if (ok != null) s.lastOk = ok;
     if (mounted) setState(() {});
   }
 
@@ -273,7 +352,18 @@ class _SitesPageState extends State<SitesPage> {
         final sites = _st.sites;
         return Scaffold(
           appBar: AppBar(
-            title: Text(Lc.current.sitesManage),
+            leading: widget.onMenu == null
+                ? null
+                : IconButton(
+                    onPressed: widget.onMenu,
+                    icon: const Icon(Icons.menu),
+                    tooltip: Lc.current.menu,
+                  ),
+            title: Text(
+              widget.onMenu == null
+                  ? Lc.current.sitesManage
+                  : Lc.current.sites,
+            ),
             actions: [
               if (_busy || _probing)
                 const Padding(
@@ -390,19 +480,56 @@ class _SitesPageState extends State<SitesPage> {
     ),
   );
 
+  /// 这一行能做的事：切过去、设成登录站、删掉。
+  ///
+  /// 主站不出删除项——删完就只剩小站，发帖的兜底没了。
+  List<PopupMenuEntry<String>> _actions(
+    SiteEntry s, {
+    required bool active,
+    required bool home,
+    required ColorScheme cs,
+  }) => [
+    if (!active)
+      PopupMenuItem(value: 'switch', child: Text(Lc.current.siteSwitch)),
+    if (!s.master)
+      PopupMenuItem(value: 'login', child: Text(Lc.current.siteSetLogin)),
+    if (!home)
+      PopupMenuItem(
+        value: 'block',
+        child: Text(
+          s.blocked ? Lc.current.siteUnblock : Lc.current.siteBlock,
+        ),
+      ),
+    if (!home)
+      PopupMenuItem(
+        value: 'remove',
+        child: Text(Lc.current.delete, style: TextStyle(color: cs.error)),
+      ),
+  ];
+
+  Future<void> _toggleBlock(SiteEntry s) async {
+    await AppState.instance.toggleBlocked(s);
+    if (!mounted) return;
+    _toast(
+      s.blocked ? Lc.current.siteBlockedDone : Lc.current.siteUnblockedDone,
+    );
+  }
+
   Widget _tile(SiteEntry s, ColorScheme cs) {
     final active = s.key == _st.activeKey;
+    final home = s.isHome;
     final down = s.reachable == false;
-    // 三种状态：没探过是空心灰，通了是主色，连不上是暗色加一行字。
+    // 三种状态：没探过是空心灰，通了是主色，连不上是暗色。
     final dot = switch (s.reachable) {
       true => cs.primary,
       false => cs.outline,
       null => cs.outlineVariant,
     };
-    final host = s.host.isEmpty ? s.primary : s.host;
     return ListTile(
-      enabled: !down,
+      // 点一下：当前站就重探，别的站就切过去。
       onTap: _busy ? null : () => active ? _probeOne(s) : _switchTo(s),
+      // 长按测速。主站也好小站也好，测的都是这座站的入口。
+      onLongPress: _testing.contains(s.key) ? null : () => _speedTest(s),
       leading: Container(
         width: 12,
         height: 12,
@@ -421,6 +548,11 @@ class _SitesPageState extends State<SitesPage> {
               ),
             ),
           ),
+          const SizedBox(width: 6),
+          // 主站 / 小站：发帖时只能选这两类，列表上先标清楚。
+          home
+              ? _tag(Lc.current.siteMaster, cs.tertiaryContainer, cs.onTertiaryContainer)
+              : _tag(Lc.current.siteSmall, cs.surfaceContainerHighest, cs.onSurfaceVariant),
           if (s.master) ...[
             const SizedBox(width: 6),
             _tag(Lc.current.siteLoginSite, cs.secondaryContainer, cs.onSecondaryContainer),
@@ -429,46 +561,80 @@ class _SitesPageState extends State<SitesPage> {
             const SizedBox(width: 6),
             _tag(Lc.current.siteCurrentNow, cs.primaryContainer, cs.onPrimaryContainer),
           ],
+          if (s.blocked) ...[
+            const SizedBox(width: 6),
+            _tag(Lc.current.siteBlocked, cs.errorContainer, cs.onErrorContainer),
+          ],
         ],
       ),
-      subtitle: Text(
-        down ? '$host · ${Lc.current.siteUnreachable}' : host,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: down ? cs.error : cs.onSurfaceVariant, fontSize: 12),
-      ),
-      trailing: PopupMenuButton<String>(
-        enabled: !_busy,
-        onSelected: (v) async {
-          switch (v) {
-            case 'switch':
-              await _switchTo(s);
-            case 'login':
-              await _setLogin(s);
-            case 'remove':
-              await _remove(s);
-          }
-        },
-        itemBuilder: (_) => [
-          if (!active)
-            PopupMenuItem(
-              value: 'switch',
-              child: Text(Lc.current.siteSwitch),
+      subtitle: Wrap(
+        spacing: 6,
+        runSpacing: 2,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          // 只报通不通：网址是给运维看的，用户只需要知道哪条路走着。
+          for (final u in s.orderedUrls) _epChip(u, s.epStatus[u], s.epMs[u], cs),
+          if (down)
+            Text(
+              Lc.current.siteUnreachable,
+              style: TextStyle(color: cs.error, fontSize: 12),
             ),
-          if (!s.master)
-            PopupMenuItem(
-              value: 'login',
-              child: Text(Lc.current.siteSetLogin),
+          if (_testing.contains(s.key))
+            Text(
+              Lc.current.siteSpeedRunning,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
             ),
-          PopupMenuItem(
-            value: 'remove',
-            child: Text(
-              Lc.current.delete,
-              style: TextStyle(color: cs.error),
-            ),
-          ),
         ],
       ),
+      // 主站既是当前站又是登录站时三项全被过滤，那就别挂按钮——
+      // 点开一个空菜单比没有按钮更让人犯嘀咕。
+      trailing: _actions(s, active: active, home: home, cs: cs).isEmpty
+          ? null
+          : PopupMenuButton<String>(
+              enabled: !_busy,
+              onSelected: (v) async {
+                switch (v) {
+                  case 'switch':
+                    await _switchTo(s);
+                  case 'login':
+                    await _setLogin(s);
+                  case 'block':
+                    await _toggleBlock(s);
+                  case 'remove':
+                    await _remove(s);
+                }
+              },
+              itemBuilder: (_) =>
+                  _actions(s, active: active, home: home, cs: cs),
+            ),
+    );
+  }
+
+  /// 单条入口的状态标记：`IPv6 ✓ 32ms` / `IPv4 ✗`，没探过只显示名字。
+  Widget _epChip(String url, bool? ok, int? ms, ColorScheme cs) {
+    final label = looksV6(url) ? 'IPv6' : 'IPv4';
+    final text = switch (ok) {
+      true => ms == null ? '$label ✓' : '$label ✓ ${ms}ms',
+      false => '$label ✗',
+      null => label,
+    };
+    final bg = switch (ok) {
+      true => cs.primaryContainer,
+      false => cs.errorContainer,
+      null => cs.surfaceContainerHighest,
+    };
+    final fg = switch (ok) {
+      true => cs.onPrimaryContainer,
+      false => cs.onErrorContainer,
+      null => cs.onSurfaceVariant,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(text, style: TextStyle(fontSize: 11, color: fg)),
     );
   }
 

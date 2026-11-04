@@ -85,9 +85,24 @@ DEFAULTS = {
         "cors_origins": [],
         "cors_origin_regex": r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     },
+    "server": {
+        # 监听地址和端口。run.sh / 容器都读这里，改端口不用碰命令行。
+        "host": "0.0.0.0",
+        "port": 8080,
+        # 证书目录，里面有 fullchain.pem 和 privkey.pem。空 = 明文 HTTP。
+        "tls_cert_dir": "",
+    },
+    "backup": {
+        # 快照落地目录，空 = data/backups。
+        "dir": "",
+        # 保留几份，超出的按时间从旧往新删。
+        "keep": 30,
+    },
     "update": {
         # 关掉后 /app/latest 直接 404，客户端自动检查会静默跳过。
         "enabled": True,
+        # check_update.sh 问的地址。留空 = 用 master_url 拼 /api/app/latest。
+        "check_url": "",
         # 客户端多久自动查一次（小时）。0 = 每次启动都查。
         "check_hours": 24,
         # 点过「以后再说」之后隔多久再弹（小时）。0 = 每次启动都弹。
@@ -134,9 +149,15 @@ _ENV_MAP = {
     "OPENBBS_MAIL_CONFIG": ("paths", "mail_config"),
     "OPENBBS_LOG_DIR": ("paths", "logs"),
     "OPENBBS_CORS_ORIGINS": ("http", "cors_origins"),
+    "OPENBBS_HOST": ("server", "host"),
+    "OPENBBS_PORT": ("server", "port"),
+    "OPENBBS_CERT_DIR": ("server", "tls_cert_dir"),
+    "OPENBBS_BACKUP_DIR": ("backup", "dir"),
+    "OPENBBS_BACKUP_KEEP": ("backup", "keep"),
     "OPENBBS_REGISTER_OPEN": ("auth", "register_open"),
     "OPENBBS_REQUIRE_EMAIL": ("auth", "require_email"),
     "OPENBBS_UPDATE_ENABLED": ("update", "enabled"),
+    "OPENBBS_UPDATE_CHECK_URL": ("update", "check_url"),
     "OPENBBS_UPDATE_CHECK_HOURS": ("update", "check_hours"),
     "OPENBBS_UPDATE_REMIND_HOURS": ("update", "remind_hours"),
     "OPENBBS_UPDATE_FORCE_BELOW": ("update", "force_below"),
@@ -221,7 +242,7 @@ def get(section, key=None, default=None):
 
 
 def path(name):
-    """name: data / db / uploads / apk / secret / mail_config / logs"""
+    """name: data / db / uploads / apk / secret / mail_config / logs / backups"""
     data = get("paths", "data") or os.path.join(ROOT, "data")
     defaults = {
         "data": data,
@@ -231,7 +252,10 @@ def path(name):
         "secret": os.path.join(data, "secret"),
         "logs": os.path.join(ROOT, "logs"),
         "mail_config": os.path.join(ROOT, "config", "mail.json"),
+        "backups": os.path.join(data, "backups"),
     }
+    if name == "backups":
+        return get("backup", "dir") or defaults[name]
     return get("paths", name) or defaults[name]
 
 

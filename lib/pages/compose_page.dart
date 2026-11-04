@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
 import '../plat.dart';
+import '../sites.dart';
+import '../store.dart';
 import '../draft_images.dart';
 import '../img_compress.dart';
 import '../widgets/mention.dart';
@@ -15,7 +17,9 @@ import 'gallery_picker_page.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 /// 发主题帖。
-/// 站内已经不分层，草稿只留一份。
+///
+/// 站内只有一层：发到主站还是小站，选完就直接发，没有板块可选。
+/// 草稿只留一份，跟选哪座站无关。
 const String _draftKey = 'site';
 
 class ComposePage extends StatefulWidget {
@@ -54,6 +58,9 @@ class _ComposePageState extends State<ComposePage> {
   int _compressTotal = 0;
   String _status = '';
 
+  /// 发到哪座站：null = 跟着当前站走。
+  String? _targetKey;
+
   static const _maxImgs = 9;
   static const _titleMax = 120;
 
@@ -64,6 +71,37 @@ class _ComposePageState extends State<ComposePage> {
     _body.addListener(_onEdit);
     _body.addListener(_onMention);
     _loadDraft();
+  }
+
+  /// 可选的去处：主站排最前，小站跟在后面。
+  ///
+  /// 一张站点表都没有（自编译的空表、或者还没配站）就只发到当前站，
+  /// 界面不显示这排选择，别让发帖跟着卡住。
+  List<SiteEntry> get _targets {
+    final home = <SiteEntry>[];
+    final rest = <SiteEntry>[];
+    for (final s in AppState.instance.sites) {
+      if (!s.valid) continue;
+      (s.isHome ? home : rest).add(s);
+    }
+    return [...home, ...rest];
+  }
+
+  /// 选中的那座站。没选过就跟着当前站，再不行落到第一座。
+  SiteEntry? get _target {
+    final list = _targets;
+    if (list.isEmpty) return null;
+    final key = _targetKey;
+    if (key != null) {
+      for (final s in list) {
+        if (s.key == key) return s;
+      }
+    }
+    final active = AppState.instance.activeSite;
+    for (final s in list) {
+      if (s.key == active?.key) return s;
+    }
+    return list.first;
   }
 
   @override
@@ -350,6 +388,21 @@ class _ComposePageState extends State<ComposePage> {
     if (_busy || !_canSubmit) return;
     final t = _title.text.trim();
     final b = _body.text.trim();
+    // 选了别的站就先切过去再发：图和帖子都落在同一座站上，
+    // 不会出现「图片传在这边、帖子在那边」。
+    final target = _target;
+    if (target != null && target.key != AppState.instance.activeKey) {
+      setState(() {
+        _busy = true;
+        _status = Lc.current.siteSwitching(target.display);
+      });
+      final ok = await AppState.instance.switchSite(target);
+      if (!mounted) return;
+      if (!ok) {
+        _fail(Lc.current.connectFailed(target.display));
+        return;
+      }
+    }
     final total = _imgs.length + 1;
     setState(() {
       _busy = true;
@@ -486,6 +539,10 @@ class _ComposePageState extends State<ComposePage> {
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             children: [
+              if (_targets.isNotEmpty) ...[
+                _siteRow(cs),
+                const SizedBox(height: 12),
+              ],
               _titleBox(cs),
               const SizedBox(height: 12),
               _bodyBox(cs),
@@ -499,6 +556,45 @@ class _ComposePageState extends State<ComposePage> {
           ),
         ),
         bottomNavigationBar: _bottomBar(cs),
+      ),
+    );
+  }
+
+  /// 发到哪座站。横着排，点一下换一个：主站 / 小站，就这两类。
+  Widget _siteRow(ColorScheme cs) {
+    final l = Lc.current;
+    final list = _targets;
+    final small = list.where((s) => !s.isHome).length;
+    final picked = _target;
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8, left: 2),
+            child: Center(
+              child: Text(
+                l.sitePostTo,
+                style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
+              ),
+            ),
+          ),
+          for (final s in list)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(
+                  s.isHome
+                      ? l.siteMaster
+                      // 小站多于一座时得带上名字，否则分不出是哪个
+                      : (small > 1 ? '${l.siteSmall} · ${s.display}' : l.siteSmall),
+                ),
+                selected: picked?.key == s.key,
+                onSelected: (_) => setState(() => _targetKey = s.key),
+              ),
+            ),
+        ],
       ),
     );
   }

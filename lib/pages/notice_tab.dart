@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../store.dart';
 import '../utils.dart';
+import 'inbox_page.dart';
 import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
@@ -117,6 +118,31 @@ class _NoticeTabState extends State<NoticeTab> {
           style: Theme.of(context).textTheme.titleLarge
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
+        actions: [
+          AnimatedBuilder(
+            animation: AppState.instance,
+            builder: (context, _) {
+              final n = AppState.instance.dmUnread;
+              return IconButton(
+                tooltip: Lc.current.dmTitle,
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const InboxPage()),
+                  );
+                  if (mounted) {
+                    setState(() {});
+                    AppState.instance.refreshDmUnread();
+                  }
+                },
+                icon: Badge(
+                  isLabelVisible: n > 0,
+                  label: Text(n > 99 ? '99+' : '$n'),
+                  child: const Icon(Icons.mail_outline_rounded),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: _buildBody(context),
     );
