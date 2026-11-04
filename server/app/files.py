@@ -15,11 +15,12 @@ import tempfile
 
 from . import config
 
-MAX_MB = int(config.get("limits", "file_mb", 500) or 500)
-MAX_BYTES = MAX_MB * 1024 * 1024
+# 0 = 不限。单文件上限可以放开，因为 ingest 是流式写盘的，多大都不进内存。
+MAX_MB = int(config.get("limits", "file_mb", 0) or 0)
+MAX_BYTES = MAX_MB * 1024 * 1024 if MAX_MB > 0 else 0
 MAX_FILES = int(config.get("limits", "files_per_post", 5) or 5)
-PER_DAY = int(config.get("limits", "files_per_day", 10) or 10)
-PER_DAY_MB = int(config.get("limits", "files_mb_per_day", 3000) or 3000)
+PER_DAY = int(config.get("limits", "files_per_day", 0) or 0)
+PER_DAY_MB = int(config.get("limits", "files_mb_per_day", 0) or 0)
 
 CHUNK = 1 << 20
 
@@ -69,7 +70,7 @@ async def ingest(upload, limit):
                 if not chunk:
                     break
                 size += len(chunk)
-                if size > limit:
+                if limit and size > limit:
                     raise TooBig()
                 h.update(chunk)
                 out.write(chunk)

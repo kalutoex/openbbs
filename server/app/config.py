@@ -60,10 +60,11 @@ DEFAULTS = {
         "max_anim_mb": 10,
         "max_images": 9,
         # 附件：单文件上限、一帖最多几个、每人每天几个 / 多少 MB
-        "file_mb": 500,
+        # 0 = 不限（单文件上限取消后，靠 ingest 流式写盘，不会吃内存）
+        "file_mb": 0,
         "files_per_post": 5,
-        "files_per_day": 10,
-        "files_mb_per_day": 3000,
+        "files_per_day": 0,
+        "files_mb_per_day": 0,
         "max_level": 99,
         "username_min": 2,
         "username_max": 20,

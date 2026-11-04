@@ -1491,14 +1491,15 @@ def _today_start():
 async def upload_file(f: UploadFile = File(...), c=Depends(get_conn),
                       user=Depends(require_user)):
     """附件走 multipart 直接落盘。500MB 的包不能先 base64 再解码——那样内存先炸。"""
-    cap = filesvc.MAX_BYTES
-    if f.size is not None and f.size > cap:
+    cap = filesvc.MAX_BYTES or None
+    if cap and f.size is not None and f.size > cap:
         raise HTTPException(413, "单个文件别超过 %dMB" % filesvc.MAX_MB)
-    n, used = filesvc.quota(c, user["id"], _today_start())
-    if n >= filesvc.PER_DAY:
-        raise HTTPException(429, "今天传够 %d 个了，明天再说" % filesvc.PER_DAY)
-    if used >= filesvc.PER_DAY_MB * 1024 * 1024:
-        raise HTTPException(429, "今天的附件额度用完了")
+    if filesvc.PER_DAY or filesvc.PER_DAY_MB:
+        n, used = filesvc.quota(c, user["id"], _today_start())
+        if filesvc.PER_DAY and n >= filesvc.PER_DAY:
+            raise HTTPException(429, "今天传够 %d 个了，明天再说" % filesvc.PER_DAY)
+        if filesvc.PER_DAY_MB and used >= filesvc.PER_DAY_MB * 1024 * 1024:
+            raise HTTPException(429, "今天的附件额度用完了")
 
     name = filesvc.clean_name(f.filename)
     try:
