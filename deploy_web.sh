@@ -24,7 +24,8 @@ rm -f "$WEB"/canvaskit/skwasm*.js "$WEB"/canvaskit/skwasm*.wasm \
       "$WEB"/canvaskit/wimp*.js "$WEB"/canvaskit/wimp*.wasm \
       "$WEB"/canvaskit/*.symbols
 
-cat > "$WEB"/flutter_service_worker.js <<'SW'// 自毁 SW：安装即接管，激活时清空所有缓存并注销自己。
+# 自毁 SW：安装即接管，激活时清空所有缓存并注销自己。
+cat > "$WEB"/flutter_service_worker.js <<'SW'
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
   e.waitUntil(
