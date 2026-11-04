@@ -322,6 +322,50 @@ def _files_payload(raw):
     return {"files": _load_files(raw)}
 
 
+def _digest_of_url(url):
+    m = _F_URL.match(str(url or "").strip())
+    return m.group(1) if m else None
+
+
+def _sync_book(c, uid, thread_id, items):
+    """帖子用了这些附件：账本里记一笔，标成公开。
+
+    发帖时如果账本里还没有这条（老数据、管理员代发），补一条。
+    文件躺在回收站里又被帖子里用到，直接拉回来——不用它自己再点恢复。
+    """
+    now = int(time.time())
+    for it in items or []:
+        d = _digest_of_url(it.get("url") if isinstance(it, dict) else it)
+        if not d:
+            continue
+        row = c.execute(
+            "SELECT id, deleted_at FROM user_files WHERE user_id=? AND digest=?",
+            (uid, d)).fetchone()
+        if row:
+            c.execute(
+                "UPDATE user_files SET source='post', public=1, thread_id=?, "
+                "deleted_at=NULL WHERE id=?", (thread_id, row["id"]))
+            continue
+        f = c.execute("SELECT name, size FROM files WHERE digest=?", (d,)).fetchone()
+        if not f:
+            continue
+        c.execute(
+            "INSERT INTO user_files(user_id, digest, name, size, source, thread_id, public, created_at) "
+            "VALUES(?,?,?,?,'post',?,1,?)", (uid, d, f["name"], f["size"], thread_id, now))
+
+
+def _sync_public(c, digests):
+    """重新判定公开性：还被任何帖子/回帖用着就公开，没人用了就转回私人。
+
+    删帖、编辑掉附件之后调用。云盘里的文件不因为删帖消失（空间也不退）。
+    """
+    for d in digests:
+        if d:
+            c.execute("UPDATE user_files SET public=? WHERE digest=?",
+                      (1 if _refs(c, d) else 0, d))
+
+
+
 def _norm_files(v, c, user, cap=0):
     """客户端只报地址，名字和大小一律从库里取——别信客户端报的数。
 
@@ -339,7 +383,12 @@ def _norm_files(v, c, user, cap=0):
                         (d,)).fetchone()
         if not row:
             continue
-        if row["uploader"] != user["id"] and not user["is_admin"]:
+        # 归属看账本：内容去重后 files.uploader 可能记的是第一个人，
+        # 但账本里有我这条，就说明这个文件我也有权用。
+        mine = c.execute(
+            "SELECT 1 FROM user_files WHERE user_id=? AND digest=? AND deleted_at IS NULL",
+            (user["id"], d)).fetchone()
+        if not mine and row["uploader"] != user["id"] and not user["is_admin"]:
             continue
         seen.add(d)
         out.append({"url": "/f/" + d, "name": row["name"], "size": row["size"]})
@@ -888,6 +937,7 @@ def create_thread(p: NewThread, c=Depends(get_conn), user=Depends(require_user))
         "VALUES(?,?,?,?,?,0,?,?)",
         (title, body, user["id"], now, now, _save_imgs(p.images), _save_files(attach)))
     tid = cur.lastrowid
+    _sync_book(c, user["id"], tid, attach)
     _notify_mentions(c, body, user["id"], tid, None, now)
     _refresh_level(c, user["id"])
     c.commit()
@@ -1211,6 +1261,7 @@ def reply(tid: int, p: NewReply, c=Depends(get_conn), user=Depends(require_user)
         "VALUES(?,?,?,?,?,?,?,?)",
         (tid, body, user["id"], now, parent, _save_imgs(p.images), floor_no, _save_files(attach)))
     rid = cur.lastrowid
+    _sync_book(c, user["id"], tid, attach)
     if not parent:
         c.execute("UPDATE threads SET reply_count=reply_count+1, updated_at=? WHERE id=?", (now, tid))
     else:
@@ -1254,9 +1305,12 @@ def edit_thread(tid: int, p: PatchThread, c=Depends(get_conn), user=Depends(requ
         raise HTTPException(400, "正文、图片、附件至少留一样")
 
     now = int(time.time())
+    old_d = {_digest_of_url(it.get("url")) for it in _load_files(t["files"])}
     c.execute(
         "UPDATE threads SET title=?, body=?, images=?, files=?, edited_at=? WHERE id=?",
         (title, body, _save_imgs(images), _save_files(attach), now, tid))
+    _sync_book(c, user["id"], tid, attach)
+    _sync_public(c, old_d | {_digest_of_url(it.get("url")) for it in attach})
     c.commit()
     return {"ok": True, "edited_at": now, "title": title, "images": images}
 
@@ -1276,6 +1330,9 @@ def edit_reply(cid: int, p: PatchReply, c=Depends(get_conn), user=Depends(requir
         raise HTTPException(400, "内容不能为空")
 
     now = int(time.time())
+    _sync_book(c, user["id"], r["thread_id"], attach)
+    _sync_public(c, {_digest_of_url(it.get("url")) for it in _load_files(r["files"])}
+                 | {_digest_of_url(it.get("url")) for it in attach})
     c.execute("UPDATE replies SET body=?, images=?, files=?, edited_at=? WHERE id=?",
               (body, _save_imgs(images), _save_files(attach), now, cid))
     c.commit()
@@ -1284,7 +1341,7 @@ def edit_reply(cid: int, p: PatchReply, c=Depends(get_conn), user=Depends(requir
 
 @router.delete("/t/{tid}")
 def delete_thread(tid: int, c=Depends(get_conn), user=Depends(require_user)):
-    t = c.execute("SELECT id, user_id, title FROM threads WHERE id=?",
+    t = c.execute("SELECT id, user_id, title, files FROM threads WHERE id=?",
                   (tid,)).fetchone()
     if not t:
         raise HTTPException(404, "帖子不存在")
@@ -1293,6 +1350,11 @@ def delete_thread(tid: int, c=Depends(get_conn), user=Depends(require_user)):
     victim = t["user_id"]
     title = t["title"] or ""
 
+    # 删帖不退空间：账本里的记录一条不动，文件还在云盘里。
+    # 只把「没人再用它了」的那个标记改回私人。
+    gone = {_digest_of_url(it.get("url")) for it in _load_files(t["files"])}
+    for row in c.execute("SELECT files FROM replies WHERE thread_id=?", (tid,)).fetchall():
+        gone |= {_digest_of_url(it.get("url")) for it in _load_files(row["files"])}
     rids = [r["id"] for r in c.execute("SELECT id FROM replies WHERE thread_id=?", (tid,)).fetchall()]
     for rid in rids:
         c.execute("DELETE FROM likes WHERE target_kind='reply' AND target_id=?", (rid,))
@@ -1303,6 +1365,9 @@ def delete_thread(tid: int, c=Depends(get_conn), user=Depends(require_user)):
     c.execute("DELETE FROM history WHERE thread_id=?", (tid,))
     c.execute("DELETE FROM replies WHERE thread_id=?", (tid,))
     c.execute("DELETE FROM threads WHERE id=?", (tid,))
+    # 指向已删帖子的那栏清空，免得客户端点进去 404
+    c.execute("UPDATE user_files SET thread_id=NULL WHERE thread_id=?", (tid,))
+    _sync_public(c, gone)
     if victim != user["id"]:
         # 帖子已经没了，thread_id 留空，点通知不会跳去 404
         _notify(c, victim, user["id"], "del", None, None, title,
@@ -1313,7 +1378,7 @@ def delete_thread(tid: int, c=Depends(get_conn), user=Depends(require_user)):
 
 @router.delete("/c/{cid}")
 def delete_reply(cid: int, c=Depends(get_conn), user=Depends(require_user)):
-    r = c.execute("SELECT id, thread_id, user_id, parent_id FROM replies WHERE id=?",
+    r = c.execute("SELECT id, thread_id, user_id, parent_id, files FROM replies WHERE id=?",
                   (cid,)).fetchone()
     if not r:
         raise HTTPException(404, "回复不存在")
@@ -1323,12 +1388,18 @@ def delete_reply(cid: int, c=Depends(get_conn), user=Depends(require_user)):
                      (r["thread_id"],)).fetchone()
 
     # 楼层删掉时，挂在它下面的楼中楼一起走
+    gone = {_digest_of_url(it.get("url")) for it in _load_files(r["files"])}
     ids = [cid] + [x["id"] for x in c.execute(
         "SELECT id FROM replies WHERE parent_id=?", (cid,)).fetchall()]
+    for x in ids[1:]:
+        row = c.execute("SELECT files FROM replies WHERE id=?", (x,)).fetchone()
+        if row:
+            gone |= {_digest_of_url(it.get("url")) for it in _load_files(row["files"])}
     for rid in ids:
         c.execute("DELETE FROM likes WHERE target_kind='reply' AND target_id=?", (rid,))
         c.execute("DELETE FROM notifications WHERE reply_id=?", (rid,))
         c.execute("DELETE FROM replies WHERE id=?", (rid,))
+    _sync_public(c, gone)
     if not r["parent_id"]:
         c.execute("UPDATE threads SET reply_count=MAX(reply_count-1, 0), updated_at=? WHERE id=?",
                   (int(time.time()), r["thread_id"]))
@@ -2331,6 +2402,8 @@ def _cloud_item(c, r):
         "size": r["size"],
         "url": "/f/" + r["digest"],
         "source": r["source"],
+        "public": bool(r["public"]),
+        "thread_id": r["thread_id"],
         "created_at": r["created_at"],
         "refs": _refs(c, r["digest"]),
     }
