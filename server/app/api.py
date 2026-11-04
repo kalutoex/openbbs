@@ -60,7 +60,7 @@ def user_json(row):
     }
 
 
-USER_COLS = "id, uid, name, nickname, handle, avatar, cover, signature, level, is_admin, email"
+USER_COLS = "id, uid, name, nickname, handle, avatar, cover, signature, level, is_admin, email, quota_bytes"
 
 
 HANDLE_RE = re.compile(r"[a-z0-9_]{3,16}")
@@ -1491,21 +1491,21 @@ def _today_start():
 async def upload_file(f: UploadFile = File(...), c=Depends(get_conn),
                       user=Depends(require_user)):
     """附件走 multipart 直接落盘。500MB 的包不能先 base64 再解码——那样内存先炸。"""
-    cap = filesvc.MAX_BYTES or None
-    if cap and f.size is not None and f.size > cap:
-        raise HTTPException(413, "单个文件别超过 %dMB" % filesvc.MAX_MB)
-    if filesvc.PER_DAY or filesvc.PER_DAY_MB:
-        n, used = filesvc.quota(c, user["id"], _today_start())
-        if filesvc.PER_DAY and n >= filesvc.PER_DAY:
-            raise HTTPException(429, "今天传够 %d 个了，明天再说" % filesvc.PER_DAY)
-        if filesvc.PER_DAY_MB and used >= filesvc.PER_DAY_MB * 1024 * 1024:
-            raise HTTPException(429, "今天的附件额度用完了")
+    # 云盘额度。None = 不限。回收站里的不算占用。
+    left = filesvc.remaining(c, user)
+    if left is not None:
+        if left <= 0:
+            raise HTTPException(413, filesvc.full_msg(int(f.size or 0)))
+        if f.size and f.size > left:
+            raise HTTPException(413, filesvc.full_msg(f.size - left))
+    cap = left
 
     name = filesvc.clean_name(f.filename)
     try:
         digest, size, _ = await filesvc.ingest(f, cap)
-    except filesvc.TooBig:
-        raise HTTPException(413, "单个文件别超过 %dMB" % filesvc.MAX_MB)
+    except filesvc.TooBig as e:
+        got = int(e.args[0]) if e.args else 0
+        raise HTTPException(413, filesvc.full_msg(got - (cap or 0)))
     except filesvc.Empty:
         raise HTTPException(400, "空文件")
 
@@ -1517,6 +1517,21 @@ async def upload_file(f: UploadFile = File(...), c=Depends(get_conn),
             (digest, name, size, filesvc.guess_mime(name), user["id"], int(time.time())))
         c.commit()
         row = c.execute("SELECT name, size FROM files WHERE digest=?", (digest,)).fetchone()
+
+    # 账本：同一个人重复传同一个内容是免费的（记录已存在就不再加一条）。
+    # 如果那条记录躺在回收站里，直接拉回来复用，别占两份。
+    mine = c.execute(
+        "SELECT id, deleted_at FROM user_files WHERE user_id=? AND digest=?",
+        (user["id"], digest)).fetchone()
+    if mine is None:
+        c.execute(
+            "INSERT INTO user_files(user_id, digest, name, size, source, created_at) "
+            "VALUES(?,?,?,?, 'cloud', ?)",
+            (user["id"], digest, name, size, int(time.time())))
+    elif mine["deleted_at"]:
+        c.execute("UPDATE user_files SET deleted_at=NULL, name=?, created_at=? WHERE id=?",
+                  (name, int(time.time()), mine["id"]))
+    c.commit()
     return {"url": "/f/" + digest, "name": row["name"], "size": row["size"]}
 
 

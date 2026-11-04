@@ -65,12 +65,23 @@ DEFAULTS = {
         "files_per_post": 5,
         "files_per_day": 0,
         "files_mb_per_day": 0,
+        # 云盘：每人默认额度（MB，0 = 不限）、回收站保留天数、空间不足的提示文案
+        "cloud_quota_mb": 5120,
+        "cloud_trash_days": 7,
+        "cloud_full_msg": "空间不足，还差 {need}",
         "max_level": 99,
         "username_min": 2,
         "username_max": 20,
         "password_min": 8,
         "title_max": 120,
         "body_max": 20000,
+    },
+    # 内容过滤开关。词表本身在 config/sensitive.txt，这里只管开不开。
+    "safety": {
+        # 关掉后词表整个不生效（图片黑名单不受影响，那是站长手动禁图）。
+        "sensitive": True,
+        # 关掉后上传不再查图片黑名单，管理接口照样能加能删，只是不拦。
+        "image_block": True,
     },
     "auth": {
         "register_open": True,
