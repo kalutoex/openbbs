@@ -3,22 +3,19 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../store.dart';
 import '../utils.dart';
-import 'inbox_page.dart';
 import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
-/// 通知：回复、楼中楼、赞。
-class NoticeTab extends StatefulWidget {
-  final VoidCallback onMenu;
-
-  const NoticeTab({super.key, required this.onMenu});
+/// 站内消息：回复、楼中楼、赞。从「消息」列表点进来，不再是底栏 tab。
+class NoticePage extends StatefulWidget {
+  const NoticePage({super.key});
 
   @override
-  State<NoticeTab> createState() => _NoticeTabState();
+  State<NoticePage> createState() => _NoticePageState();
 }
 
-class _NoticeTabState extends State<NoticeTab> {
+class _NoticePageState extends State<NoticePage> {
   final List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _err;
@@ -67,82 +64,20 @@ class _NoticeTabState extends State<NoticeTab> {
     }
   }
 
-  String _action(String kind) {
-    switch (kind) {
-      case 'reply':
-        return Lc.current.nRepliedPost;
-      case 'sub':
-        return Lc.current.nRepliedYou;
-      case 'agree':
-        return Lc.current.nLiked;
-      case 'mention':
-        return Lc.current.nMentioned;
-      case 'good':
-        return Lc.current.nFeatured;
-      case 'del':
-        return Lc.current.nDeleted;
-      default:
-        return Lc.current.nNew;
-    }
-  }
+  String _action(String kind) => noticeActionText(kind);
 
-  IconData _icon(String kind) {
-    switch (kind) {
-      case 'agree':
-        return Icons.thumb_up_alt_rounded;
-      case 'sub':
-        return Icons.subdirectory_arrow_right_rounded;
-      case 'mention':
-        return Icons.alternate_email_rounded;
-      case 'good':
-        return Icons.workspace_premium_rounded;
-      case 'del':
-        return Icons.delete_outline_rounded;
-      default:
-        return Icons.chat_bubble_rounded;
-    }
-  }
+  IconData _icon(String kind) => noticeIcon(kind);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          onPressed: widget.onMenu,
-          icon: const Icon(Icons.menu_rounded),
-          tooltip: Lc.current.menu,
-        ),
         titleSpacing: 0,
         title: Text(
-          Lc.current.notice,
+          Lc.current.siteMessages,
           style: Theme.of(context).textTheme.titleLarge
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
-        actions: [
-          AnimatedBuilder(
-            animation: AppState.instance,
-            builder: (context, _) {
-              final n = AppState.instance.dmUnread;
-              return IconButton(
-                tooltip: Lc.current.dmTitle,
-                onPressed: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const InboxPage()),
-                  );
-                  if (mounted) {
-                    setState(() {});
-                    AppState.instance.refreshDmUnread();
-                  }
-                },
-                icon: Badge(
-                  isLabelVisible: n > 0,
-                  label: Text(n > 99 ? '99+' : '$n'),
-                  child: const Icon(Icons.mail_outline_rounded),
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: _buildBody(context),
     );
@@ -389,5 +324,43 @@ class _Empty extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// 站内消息一行摘要的动词：「回复了你的帖子」这类。
+/// 消息列表和站内消息页共用，改文案只改这里。
+String noticeActionText(String kind) {
+  switch (kind) {
+    case 'reply':
+      return Lc.current.nRepliedPost;
+    case 'sub':
+      return Lc.current.nRepliedYou;
+    case 'agree':
+      return Lc.current.nLiked;
+    case 'mention':
+      return Lc.current.nMentioned;
+    case 'good':
+      return Lc.current.nFeatured;
+    case 'del':
+      return Lc.current.nDeleted;
+    default:
+      return Lc.current.nNew;
+  }
+}
+
+IconData noticeIcon(String kind) {
+  switch (kind) {
+    case 'agree':
+      return Icons.thumb_up_alt_rounded;
+    case 'sub':
+      return Icons.subdirectory_arrow_right_rounded;
+    case 'mention':
+      return Icons.alternate_email_rounded;
+    case 'good':
+      return Icons.workspace_premium_rounded;
+    case 'del':
+      return Icons.delete_outline_rounded;
+    default:
+      return Icons.chat_bubble_rounded;
   }
 }

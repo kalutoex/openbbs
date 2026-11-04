@@ -1879,6 +1879,30 @@ class LZh extends L {
   String get dmEmpty => '还没有私信';
 
   @override
+  String get messagesTab => '消息';
+
+  @override
+  String get siteMessages => '站内消息';
+
+  @override
+  String get pinChat => '置顶';
+
+  @override
+  String get unpinChat => '取消置顶';
+
+  @override
+  String get muteChat => '免打扰';
+
+  @override
+  String get unmuteChat => '取消免打扰';
+
+  @override
+  String get markRead => '标为已读';
+
+  @override
+  String get deleteChat => '删除该聊天';
+
+  @override
   String get dmEmptyHint => '在别人主页点「发私信」';
 
   @override

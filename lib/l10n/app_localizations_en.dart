@@ -1916,6 +1916,30 @@ class LEn extends L {
   String get dmEmpty => 'No messages yet';
 
   @override
+  String get messagesTab => 'Messages';
+
+  @override
+  String get siteMessages => 'Notices';
+
+  @override
+  String get pinChat => 'Pin';
+
+  @override
+  String get unpinChat => 'Unpin';
+
+  @override
+  String get muteChat => 'Mute';
+
+  @override
+  String get unmuteChat => 'Unmute';
+
+  @override
+  String get markRead => 'Mark as read';
+
+  @override
+  String get deleteChat => 'Delete chat';
+
+  @override
   String get dmEmptyHint => 'Tap “Send message” on someone\'s profile';
 
   @override

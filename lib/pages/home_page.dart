@@ -10,7 +10,7 @@ import 'compose_page.dart';
 import 'feed_tab.dart';
 import 'login_page.dart';
 import 'me_tab.dart';
-import 'notice_tab.dart';
+import 'messages_page.dart';
 import 'site_catalog_page.dart';
 
 import '../l10n/app_localizations.dart';
@@ -153,7 +153,7 @@ class _HomePageState extends State<HomePage> {
                     else
                       const SizedBox.shrink(),
                     if (_started.contains(2))
-                      NoticeTab(onMenu: _menu)
+                      MessagesPage(onMenu: _menu)
                     else
                       const SizedBox.shrink(),
                     if (_started.contains(3))
@@ -212,14 +212,14 @@ class _HomePageState extends State<HomePage> {
                   icon: Badge(
                     isLabelVisible: unread > 0,
                     label: Text(unread > 99 ? '99+' : '$unread'),
-                    child: const Icon(Icons.notifications_none_rounded),
+                    child: const Icon(Icons.chat_bubble_outline_rounded),
                   ),
                   selectedIcon: Badge(
                     isLabelVisible: unread > 0,
                     label: Text(unread > 99 ? '99+' : '$unread'),
-                    child: const Icon(Icons.notifications_rounded),
+                    child: const Icon(Icons.chat_bubble_rounded),
                   ),
-                  label: Lc.current.notice,
+                  label: Lc.current.messagesTab,
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline_rounded),

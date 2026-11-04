@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../pages/inbox_page.dart';
 
 import '../site_config.dart';
 import '../api.dart';
@@ -146,14 +145,6 @@ class _AppDrawerState extends State<AppDrawer> {
                       if (st.loggedIn) ...[
                         const SizedBox(height: 10),
                         _label(context, Lc.current.me),
-                        _item(
-                          context,
-                          icon: Icons.mail_outline_rounded,
-                          activeIcon: Icons.mail_rounded,
-                          label: Lc.current.dmTitle,
-                          badge: st.dmUnread,
-                          onTap: () => _push(const InboxPage()),
-                        ),
                         _item(
                           context,
                           icon: Icons.bookmark_border,

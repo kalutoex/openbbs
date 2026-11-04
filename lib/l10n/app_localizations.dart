@@ -3464,6 +3464,54 @@ abstract class L {
   /// **'还没有私信'**
   String get dmEmpty;
 
+  /// No description provided for @messagesTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'消息'**
+  String get messagesTab;
+
+  /// No description provided for @siteMessages.
+  ///
+  /// In zh, this message translates to:
+  /// **'站内消息'**
+  String get siteMessages;
+
+  /// No description provided for @pinChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'置顶'**
+  String get pinChat;
+
+  /// No description provided for @unpinChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消置顶'**
+  String get unpinChat;
+
+  /// No description provided for @muteChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'免打扰'**
+  String get muteChat;
+
+  /// No description provided for @unmuteChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消免打扰'**
+  String get unmuteChat;
+
+  /// No description provided for @markRead.
+  ///
+  /// In zh, this message translates to:
+  /// **'标为已读'**
+  String get markRead;
+
+  /// No description provided for @deleteChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除该聊天'**
+  String get deleteChat;
+
   /// No description provided for @dmEmptyHint.
   ///
   /// In zh, this message translates to:
