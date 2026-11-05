@@ -6,6 +6,9 @@ import '../l10n/l10n.dart';
 import '../sites.dart';
 import '../store.dart';
 import 'site_feed_page.dart';
+import '../widgets/app_card.dart';
+import '../widgets/empty_view.dart';
+import '../widgets/page_width.dart';
 
 /// 主页第二个 tab：站点目录。
 ///
@@ -170,18 +173,22 @@ class _SiteCatalogPageState extends State<SiteCatalogPage> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: items == null
-            ? const Center(child: CircularProgressIndicator())
-            : items.isEmpty
-            ? _empty(cs)
-            : ListView.separated(
-                padding: const EdgeInsets.only(bottom: 32),
-                itemCount: items.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (_, i) => _row(items[i], cs),
-              ),
+      body: PageWidth(
+        child: RefreshIndicator(
+          onRefresh: _load,
+          child: items == null
+              ? const Center(child: CircularProgressIndicator())
+              : items.isEmpty
+              ? _empty(cs)
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 32),
+                  itemCount: items.length,
+                  itemBuilder: (_, i) => AppCard(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: _row(items[i], cs),
+                  ),
+                ),
+        ),
       ),
     );
   }
@@ -206,7 +213,11 @@ class _SiteCatalogPageState extends State<SiteCatalogPage> {
         ),
         if (it.master) ...[
           const SizedBox(width: 6),
-          _tag(Lc.current.siteMaster, cs.tertiaryContainer, cs.onTertiaryContainer),
+          _tag(
+            Lc.current.siteMaster,
+            cs.tertiaryContainer,
+            cs.onTertiaryContainer,
+          ),
         ],
       ],
     ),
@@ -217,45 +228,22 @@ class _SiteCatalogPageState extends State<SiteCatalogPage> {
     onTap: () => _open(it),
   );
 
-  Widget _empty(ColorScheme cs) => ListView(
+  Widget _empty(ColorScheme cs) => EmptyView(
     // 下拉刷新要有可滚的东西，空态也得能拉。
-    physics: const AlwaysScrollableScrollPhysics(),
-    children: [
-      const SizedBox(height: 120),
-      Icon(Icons.public_off_rounded, size: 56, color: cs.outline),
-      const SizedBox(height: 16),
-      Center(
-        child: Text(
-          Lc.current.siteCatalogEmpty,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-      ),
-      const SizedBox(height: 8),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Text(
-          Lc.current.siteCatalogEmptyHint,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: cs.onSurfaceVariant),
-        ),
-      ),
-      if (_err != null) ...[
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Text(
-            errorText(context, _err!),
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: cs.error),
-          ),
-        ),
-      ],
-    ],
-  );
+    icon: Icons.public_off_rounded,
+    title: Lc.current.siteCatalogEmpty,
+    hint: _err == null
+        ? Lc.current.siteCatalogEmptyHint
+        : errorText(context, _err!),
+    error: _err != null,
+  ).scrollable();
 
   Widget _tag(String text, Color bg, Color fg) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(4),
+    ),
     child: Text(text, style: TextStyle(fontSize: 11, color: fg)),
   );
 }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/page_width.dart';
+import '../widgets/empty_view.dart';
 import '../widgets/thread_tile.dart';
 
 /// 别的站上的帖子列表。
@@ -49,52 +51,45 @@ class _SiteFeedPageState extends State<SiteFeedPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final items = _items;
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
         title: Text(widget.name.isEmpty ? Lc.current.sites : widget.name),
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: items == null
-            ? const Center(child: CircularProgressIndicator())
-            : items.isEmpty
-            ? ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  const SizedBox(height: 120),
-                  Center(
-                    child: Text(
-                      _err == null
-                          ? Lc.current.siteNoPosts
-                          : errorText(context, _err!),
-                      style: TextStyle(
-                        color: _err == null ? cs.onSurfaceVariant : cs.error,
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.only(bottom: 24),
-                itemCount: items.length,
-                separatorBuilder: (_, _) =>
-                    Divider(height: 1, color: cs.outlineVariant),
-                itemBuilder: (_, i) => ThreadTile(
-                  item: items[i],
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => SiteThreadPage(
-                        name: widget.name,
-                        urls: widget.urls,
-                        tid: (items[i]['id'] as num?)?.toInt() ?? 0,
+      body: PageWidth(
+        child: RefreshIndicator(
+          onRefresh: _load,
+          child: items == null
+              ? const Center(child: CircularProgressIndicator())
+              : items.isEmpty
+              ? EmptyView(
+                  icon: _err == null
+                      ? Icons.forum_outlined
+                      : Icons.cloud_off_rounded,
+                  title: _err == null
+                      ? Lc.current.siteNoPosts
+                      : errorText(context, _err!),
+                  error: _err != null,
+                ).scrollable()
+              : ListView.separated(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  itemCount: items.length,
+                  separatorBuilder: (_, _) => const SizedBox.shrink(),
+                  itemBuilder: (_, i) => ThreadTile(
+                    item: items[i],
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SiteThreadPage(
+                          name: widget.name,
+                          urls: widget.urls,
+                          tid: (items[i]['id'] as num?)?.toInt() ?? 0,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+        ),
       ),
     );
   }

@@ -2018,6 +2018,18 @@ abstract class L {
   /// **'还没有人发帖'**
   String get noPostsYet;
 
+  /// No description provided for @noPostsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'发第一条，把这里开个头'**
+  String get noPostsHint;
+
+  /// No description provided for @loadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'没能拉到内容'**
+  String get loadFailed;
+
   /// No description provided for @longAgo.
   ///
   /// In zh, this message translates to:
@@ -4153,6 +4165,12 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'系统通知权限没开，去手机设置里打开'**
   String get sysNotifyOff;
+
+  /// No description provided for @noRepliesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'说两句，让楼主知道有人看。'**
+  String get noRepliesHint;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

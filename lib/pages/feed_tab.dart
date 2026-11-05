@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../site_config.dart';
 import '../api.dart';
 import '../store.dart';
+import '../widgets/page_width.dart';
+import '../widgets/empty_view.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/thread_tile.dart';
 import 'search_page.dart';
@@ -10,6 +12,7 @@ import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+
 /// 时间线：全站最新的帖子。
 class FeedTab extends StatefulWidget {
   final VoidCallback onMenu;
@@ -29,6 +32,7 @@ class _FeedTabState extends State<FeedTab> {
   bool _first = true;
   String? _err;
   int _seen = 0;
+
   /// 请求代号：刷新会换号，旧请求回来自动作废。
   int _seq = 0;
 
@@ -74,7 +78,6 @@ class _FeedTabState extends State<FeedTab> {
     });
     _reload();
   }
-
 
   /// 离底还有一屏就开始拉下一页，滑到底时内容已经在手上了。
   double get _ahead {
@@ -219,101 +222,111 @@ class _FeedTabState extends State<FeedTab> {
               child: const Icon(Icons.arrow_upward, size: 20),
             )
           : null,
-      body: Column(
-        children: [
-          if (_offline)
-            Material(
-              color: cs.tertiaryContainer,
-              child: InkWell(
-                onTap: _reload,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.cloud_off,
-                        size: 15,
-                        color: cs.onTertiaryContainer,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          Lc.current.offlineCacheFeed,
+      body: PageWidth(
+        child: Column(
+          children: [
+            if (_offline)
+              Material(
+                color: cs.tertiaryContainer,
+                child: InkWell(
+                  onTap: _reload,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.cloud_off,
+                          size: 15,
+                          color: cs.onTertiaryContainer,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            Lc.current.offlineCacheFeed,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onTertiaryContainer,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          Lc.current.retry,
                           style: TextStyle(
                             fontSize: 12,
+                            fontWeight: FontWeight.w600,
                             color: cs.onTertiaryContainer,
                           ),
                         ),
-                      ),
-                      Text(
-                        Lc.current.retry,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onTertiaryContainer,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _reload,
-              child: _first
-            ? const SkeletonList()
-            : ListView.separated(
-                controller: _scroll,
-                physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: _items.length + 1,
-                separatorBuilder: (_, _) =>
-                    Divider(height: 1, color: cs.outlineVariant),
-                itemBuilder: (context, i) {
-                  if (i == _items.length) {
-                    if (_err != null) {
-                      return Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Center(
-                          child: Text(_err!, style: TextStyle(color: cs.error)),
-                        ),
-                      );
-                    }
-                    if (_items.isEmpty) {
-                      return Padding(
-                        padding: EdgeInsets.only(top: 120),
-                        child: Center(child: Text(Lc.current.noPostsYet)),
-                      );
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Center(
-                        child: _hasMore
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _reload,
+                child: _first
+                    ? const SkeletonList()
+                    : ListView.separated(
+                        controller: _scroll,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: _items.length + 1,
+                        // 卡片自带描边和间距，不再要分割线。
+                        separatorBuilder: (_, _) => const SizedBox.shrink(),
+                        itemBuilder: (context, i) {
+                          if (i == _items.length) {
+                            if (_err != null) {
+                              return EmptyView(
+                                icon: Icons.cloud_off_rounded,
+                                title: Lc.current.loadFailed,
+                                hint: _err,
+                                error: true,
+                                action: FilledButton.tonal(
+                                  onPressed: _reload,
+                                  child: Text(Lc.current.retry),
                                 ),
-                              )
-                            : Text(Lc.current.endOfList, style: TextStyle(color: cs.outline)),
+                              );
+                            }
+                            if (_items.isEmpty) {
+                              return EmptyView(
+                                icon: Icons.forum_outlined,
+                                title: Lc.current.noPostsYet,
+                                hint: Lc.current.noPostsHint,
+                              );
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              child: Center(
+                                child: _hasMore
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        Lc.current.endOfList,
+                                        style: TextStyle(color: cs.outline),
+                                      ),
+                              ),
+                            );
+                          }
+                          final it = _items[i];
+                          return ThreadTile(
+                            item: it,
+                            onTap: () => _open(it),
+                            onDeleted: _reload,
+                          );
+                        },
                       ),
-                    );
-                  }
-                  final it = _items[i];
-                  return ThreadTile(
-                    item: it,
-                    onTap: () => _open(it),
-                    onDeleted: _reload,
-                  );
-                },
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

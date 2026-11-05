@@ -24,6 +24,7 @@ import 'theme_color_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/page_width.dart';
 import '../widgets/toast.dart';
 
 /// 设置：外观、浏览、云服务、网络、内容、账号、关于。
@@ -37,218 +38,228 @@ class SettingsPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(Lc.current.settings)),
-      body: ListenableBuilder(
-        listenable: st,
-        builder: (context, _) {
-          final u = st.user;
-          return ListView(
-            padding: const EdgeInsets.only(bottom: 40),
-            children: [
-              _label(context, Lc.current.appearance),
-              ValueListenableBuilder<ThemeMode>(
-                valueListenable: st.themeMode,
-                builder: (_, m, _) => _row(
-                  context,
-                  icon: Icons.dark_mode_outlined,
-                  title: Lc.current.theme,
-                  value: _themeName(m),
-                  onTap: () => _pickTheme(context),
-                ),
-              ),
-              ValueListenableBuilder<double>(
-                valueListenable: st.accentHue,
-                builder: (_, h, _) => _row(
-                  context,
-                  icon: Icons.palette_outlined,
-                  title: Lc.current.accentColor,
-                  value: AppState.hueName(h),
-                  dot: st.colorOfHue(h),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ThemeColorPage()),
+      body: PageWidth(
+        child: ListenableBuilder(
+          listenable: st,
+          builder: (context, _) {
+            final u = st.user;
+            return ListView(
+              padding: const EdgeInsets.only(bottom: 40),
+              children: [
+                _label(context, Lc.current.appearance),
+                ValueListenableBuilder<ThemeMode>(
+                  valueListenable: st.themeMode,
+                  builder: (_, m, _) => _row(
+                    context,
+                    icon: Icons.dark_mode_outlined,
+                    title: Lc.current.theme,
+                    value: _themeName(m),
+                    onTap: () => _pickTheme(context),
                   ),
                 ),
-              ),
-              const Divider(height: 24),
-              _label(context, Lc.current.browseSection),
-              ValueListenableBuilder<String>(
-                valueListenable: st.feedSort,
-                builder: (_, v, _) => _row(
-                  context,
-                  icon: Icons.sort,
-                  title: Lc.current.feedSort,
-                  value: v == 'created'
-                      ? Lc.current.sortCreated
-                      : Lc.current.sortUpdated,
-                  onTap: () => _pickSort(context),
-                ),
-              ),
-              ValueListenableBuilder<int>(
-                valueListenable: st.startTab,
-                builder: (_, v, _) => _row(
-                  context,
-                  icon: Icons.home_outlined,
-                  title: Lc.current.startTab,
-                  subtitle: Lc.current.startTabHint,
-                  value: _tabName(v),
-                  onTap: () => _pickStartTab(context),
-                ),
-              ),
-              ValueListenableBuilder<bool>(
-                valueListenable: st.thumbs,
-                builder: (_, v, _) => SwitchListTile(
-                  secondary: const Icon(Icons.image_outlined),
-                  title: Text(Lc.current.showThumbnails),
-                  subtitle: Text(Lc.current.showThumbnailsHint),
-                  value: v,
-                  onChanged: (x) => st.setThumbs(x),
-                ),
-              ),
-              ValueListenableBuilder<bool>(
-                valueListenable: st.autoUnread,
-                builder: (_, v, _) => SwitchListTile(
-                  secondary: const Icon(Icons.notifications_active_outlined),
-                  title: Text(Lc.current.autoCheckNotice),
-                  subtitle: Text(Lc.current.autoCheckNoticeHint),
-                  value: v,
-                  onChanged: (x) => st.setAutoUnread(x),
-                ),
-              ),
-              ValueListenableBuilder<bool>(
-                valueListenable: st.sysNotify,
-                builder: (ctx, v, _) => SwitchListTile(
-                  secondary: const Icon(Icons.notification_add_outlined),
-                  title: Text(Lc.current.sysNotify),
-                  subtitle: Text(Lc.current.sysNotifyHint),
-                  value: v,
-                  onChanged: (x) async {
-                    await st.setSysNotify(x);
-                    // 打开时顺手要权限；系统那边拒绝过的话这里要不到，
-                    // 得当场说一声，不然他以为开关一拨就能收到。
-                    if (!x) return;
-                    final ok = await SysNotify.ask();
-                    if (!ok && ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(content: Text(Lc.current.sysNotifyOff)),
-                      );
-                    }
-                  },
-                ),
-              ),
-              const Divider(height: 24),
-              _label(context, Lc.current.cloudSection),
-              ListTile(
-                leading: const Icon(Icons.cloud_outlined),
-                title: Text(Lc.current.cloudSettings),
-                subtitle: Text(Lc.current.cloudSettingsHint),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CloudSettingsPage()),
-                ),
-              ),
-              const Divider(height: 24),
-              _label(context, Lc.current.networkSection),
-              _row(
-                context,
-                icon: Icons.dns_outlined,
-                title: Lc.current.sitesManage,
-                subtitle: st.sites.isEmpty
-                    ? Lc.current.siteEmptyHint
-                    : '${st.activeSite?.display ?? ''} · ${st.sites.length}',
-                value: _siteSummary(st),
-                onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const SitesPage())),
-              ),
-              const Divider(height: 24),
-              _label(context, Lc.current.contentSection),
-              const _ClearCacheTile(),
-              ListTile(
-                leading: const Icon(Icons.verified_user_outlined),
-                title: Text(Lc.current.permissions),
-                subtitle: Text(Lc.current.permSubtitle),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PermissionsPage()),
-                ),
-              ),
-              const Divider(height: 24),
-              _label(context, Lc.current.accounts),
-              ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: Text(Lc.current.currentAccount),
-                subtitle: Text(
-                  st.accounts.length > 1
-                      ? Lc.current.accountLine(
-                          u == null
-                              ? Lc.current.notLoggedIn
-                              : (u['nickname'] ?? u['name'] ?? ''),
-                          '${st.accounts.length}',
-                        )
-                      : (u == null
-                            ? Lc.current.notLoggedIn
-                            : '${u['nickname'] ?? u['name']}'),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const AccountsPage())),
-              ),
-              if (u != null)
-                ListTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: Text(Lc.current.accountSecurity),
-                  subtitle: Text(
-                    ((u['email'] as String?) ?? '').isEmpty
-                        ? Lc.current.noEmailBoundHint
-                        : (u['email'] as String),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const AccountSecurityPage(),
+                ValueListenableBuilder<double>(
+                  valueListenable: st.accentHue,
+                  builder: (_, h, _) => _row(
+                    context,
+                    icon: Icons.palette_outlined,
+                    title: Lc.current.accentColor,
+                    value: AppState.hueName(h),
+                    dot: st.colorOfHue(h),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ThemeColorPage()),
                     ),
                   ),
                 ),
-              if (u != null)
-                ListTile(
-                  leading: Icon(Icons.logout, color: cs.error),
-                  title: Text(
-                    Lc.current.logout,
-                    style: TextStyle(color: cs.error),
+                const SizedBox(height: 6),
+                _label(context, Lc.current.browseSection),
+                ValueListenableBuilder<String>(
+                  valueListenable: st.feedSort,
+                  builder: (_, v, _) => _row(
+                    context,
+                    icon: Icons.sort,
+                    title: Lc.current.feedSort,
+                    value: v == 'created'
+                        ? Lc.current.sortCreated
+                        : Lc.current.sortUpdated,
+                    onTap: () => _pickSort(context),
                   ),
-                  onTap: () => _logout(context),
                 ),
-              const Divider(height: 24),
-              if (kIsWeb) ...[
-                _label(context, Lc.current.webAccessSection),
-                const _WebEntryRow(),
+                ValueListenableBuilder<int>(
+                  valueListenable: st.startTab,
+                  builder: (_, v, _) => _row(
+                    context,
+                    icon: Icons.home_outlined,
+                    title: Lc.current.startTab,
+                    subtitle: Lc.current.startTabHint,
+                    value: _tabName(v),
+                    onTap: () => _pickStartTab(context),
+                  ),
+                ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: st.thumbs,
+                  builder: (_, v, _) => SwitchListTile(
+                    secondary: const Icon(Icons.image_outlined),
+                    title: Text(Lc.current.showThumbnails),
+                    subtitle: Text(Lc.current.showThumbnailsHint),
+                    value: v,
+                    onChanged: (x) => st.setThumbs(x),
+                  ),
+                ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: st.autoUnread,
+                  builder: (_, v, _) => SwitchListTile(
+                    secondary: const Icon(Icons.notifications_active_outlined),
+                    title: Text(Lc.current.autoCheckNotice),
+                    subtitle: Text(Lc.current.autoCheckNoticeHint),
+                    value: v,
+                    onChanged: (x) => st.setAutoUnread(x),
+                  ),
+                ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: st.sysNotify,
+                  builder: (ctx, v, _) => SwitchListTile(
+                    secondary: const Icon(Icons.notification_add_outlined),
+                    title: Text(Lc.current.sysNotify),
+                    subtitle: Text(Lc.current.sysNotifyHint),
+                    value: v,
+                    onChanged: (x) async {
+                      await st.setSysNotify(x);
+                      // 打开时顺手要权限；系统那边拒绝过的话这里要不到，
+                      // 得当场说一声，不然他以为开关一拨就能收到。
+                      if (!x) return;
+                      final ok = await SysNotify.ask();
+                      if (!ok && ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(content: Text(Lc.current.sysNotifyOff)),
+                        );
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _label(context, Lc.current.cloudSection),
+                ListTile(
+                  leading: const Icon(Icons.cloud_outlined),
+                  title: Text(Lc.current.cloudSettings),
+                  subtitle: Text(Lc.current.cloudSettingsHint),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const CloudSettingsPage(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _label(context, Lc.current.networkSection),
+                _row(
+                  context,
+                  icon: Icons.dns_outlined,
+                  title: Lc.current.sitesManage,
+                  subtitle: st.sites.isEmpty
+                      ? Lc.current.siteEmptyHint
+                      : '${st.activeSite?.display ?? ''} · ${st.sites.length}',
+                  value: _siteSummary(st),
+                  onTap: () => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const SitesPage())),
+                ),
+                const SizedBox(height: 6),
+                _label(context, Lc.current.contentSection),
+                const _ClearCacheTile(),
+                ListTile(
+                  leading: const Icon(Icons.verified_user_outlined),
+                  title: Text(Lc.current.permissions),
+                  subtitle: Text(Lc.current.permSubtitle),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PermissionsPage()),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _label(context, Lc.current.accounts),
+                ListTile(
+                  leading: const Icon(Icons.person_outline),
+                  title: Text(Lc.current.currentAccount),
+                  subtitle: Text(
+                    st.accounts.length > 1
+                        ? Lc.current.accountLine(
+                            u == null
+                                ? Lc.current.notLoggedIn
+                                : (u['nickname'] ?? u['name'] ?? ''),
+                            '${st.accounts.length}',
+                          )
+                        : (u == null
+                              ? Lc.current.notLoggedIn
+                              : '${u['nickname'] ?? u['name']}'),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AccountsPage()),
+                  ),
+                ),
+                if (u != null)
+                  ListTile(
+                    leading: const Icon(Icons.lock_outline),
+                    title: Text(Lc.current.accountSecurity),
+                    subtitle: Text(
+                      ((u['email'] as String?) ?? '').isEmpty
+                          ? Lc.current.noEmailBoundHint
+                          : (u['email'] as String),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AccountSecurityPage(),
+                      ),
+                    ),
+                  ),
+                if (u != null)
+                  ListTile(
+                    leading: Icon(Icons.logout, color: cs.error),
+                    title: Text(
+                      Lc.current.logout,
+                      style: TextStyle(color: cs.error),
+                    ),
+                    onTap: () => _logout(context),
+                  ),
+                const SizedBox(height: 6),
+                if (kIsWeb) ...[
+                  _label(context, Lc.current.webAccessSection),
+                  const _WebEntryRow(),
+                ],
+                _label(context, Lc.current.about),
+                const _VersionRow(),
+                ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: Text(Lc.current.aboutBrand('${SiteConfig.brand}')),
+                  subtitle: Text(Lc.current.aboutSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const AboutPage())),
+                ),
               ],
-              _label(context, Lc.current.about),
-              const _VersionRow(),
-              ListTile(
-                leading: const Icon(Icons.info_outline),
-                title: Text(Lc.current.aboutBrand('${SiteConfig.brand}')),
-                subtitle: Text(Lc.current.aboutSubtitle),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const AboutPage())),
-              ),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 
+  /// 分组标题：小、灰、跟下面留一点空。
+  ///
+  /// 原来用主色 + 全宽分割线，一屏下来绿线和灰字打架，
+  /// 现在靠留白分组，标题只做定位不做装饰。
   static Widget _label(BuildContext context, String s) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
     child: Text(
       s,
       style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.5,
-        color: Theme.of(context).colorScheme.primary,
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.6,
+        color: Theme.of(context).colorScheme.outline,
       ),
     ),
   );

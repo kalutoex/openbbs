@@ -458,6 +458,8 @@
   "followers": "Followers",
   "editProfile": "Edit profile",
   "noPostsYet": "Nothing posted yet",
+  "noPostsHint": "Be the first to post here",
+  "loadFailed": "Couldn't load this",
   "longAgo": "A long time ago",
   "yearMonth": "{v1}-{v2}",
   "acceptConfirm": "Accept this one?",
@@ -878,25 +880,39 @@
   "systemFolderHidden": "System folder (contents hidden)",
   "@pickedCount": {
     "placeholders": {
-      "v1": {"type": "String"}
+      "v1": {
+        "type": "String"
+      }
     }
   },
   "@uploadPicked": {
     "placeholders": {
-      "v1": {"type": "String"}
+      "v1": {
+        "type": "String"
+      }
     }
   },
   "@uploadingIndexOf": {
     "placeholders": {
-      "v1": {"type": "String"},
-      "v2": {"type": "String"},
-      "v3": {"type": "String"}
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      },
+      "v3": {
+        "type": "String"
+      }
     }
   },
   "@uploadSomeFailed": {
     "placeholders": {
-      "v1": {"type": "String"},
-      "v2": {"type": "String"}
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
     }
   },
   "dmWaitReply": "You can send again once they reply",
@@ -904,7 +920,6 @@
   "dmTapToProfile": "Tap for profile",
   "dmNoChat": "No messages yet — say hi",
   "quote": "Quote",
-  "replyTo": "Reply to {v1}",
   "replyImage": "[image]",
   "dmPickImage": "Photos",
   "dmPickFile": "File",
@@ -913,10 +928,13 @@
   "notifyNewCount": "{n} new messages",
   "@notifyNewCount": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "sysNotify": "Message alerts",
   "sysNotifyHint": "Show a system notification when a message arrives",
-  "sysNotifyOff": "Notifications are blocked in system settings"
+  "sysNotifyOff": "Notifications are blocked in system settings",
+  "noRepliesHint": "Be the first to say something."
 }

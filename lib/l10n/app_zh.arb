@@ -708,6 +708,8 @@
   "followers": "关注者",
   "editProfile": "编辑个人资料",
   "noPostsYet": "还没有人发帖",
+  "noPostsHint": "发第一条，把这里开个头",
+  "loadFailed": "没能拉到内容",
   "longAgo": "很久以前",
   "yearMonth": "{v1} 年 {v2} 月",
   "@yearMonth": {
@@ -1489,15 +1491,25 @@
   },
   "@uploadingIndexOf": {
     "placeholders": {
-      "v1": {"type": "String"},
-      "v2": {"type": "String"},
-      "v3": {"type": "String"}
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      },
+      "v3": {
+        "type": "String"
+      }
     }
   },
   "@uploadSomeFailed": {
     "placeholders": {
-      "v1": {"type": "String"},
-      "v2": {"type": "String"}
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
     }
   },
   "dmWaitReply": "对方还没回关，等他回一句你就能接着发",
@@ -1505,13 +1517,7 @@
   "dmTapToProfile": "点开看资料",
   "dmNoChat": "还没聊过，说点什么吧",
   "quote": "引用",
-  "replyTo": "回复 {v1}",
   "replyImage": "[图片]",
-  "@replyTo": {
-    "placeholders": {
-      "v1": {"type": "String"}
-    }
-  },
   "dmPickImage": "图片",
   "dmPickFile": "文件",
   "dmAttach": "发送",
@@ -1519,10 +1525,13 @@
   "notifyNewCount": "{n} 条新消息",
   "@notifyNewCount": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "sysNotify": "消息通知",
   "sysNotifyHint": "有新消息时弹一条系统通知",
-  "sysNotifyOff": "系统通知权限没开，去手机设置里打开"
+  "sysNotifyOff": "系统通知权限没开，去手机设置里打开",
+  "noRepliesHint": "说两句，让楼主知道有人看。"
 }

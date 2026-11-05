@@ -10,6 +10,8 @@ import '../store.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/empty_view.dart';
+import '../widgets/app_card.dart';
 import '../widgets/toast.dart';
 
 /// 站点管理：本机站点表。加、删、切、设登录站，以及清单导入。
@@ -435,12 +437,14 @@ class _SitesPageState extends State<SitesPage> {
             ],
           ),
           body: sites.isEmpty
-              ? _empty(cs)
-              : ListView.separated(
-                  padding: const EdgeInsets.only(bottom: 32),
+              ? _empty()
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 96),
                   itemCount: sites.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (_, i) => _tile(sites[i], cs),
+                  itemBuilder: (_, i) => AppCard(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: _tile(sites[i], cs),
+                  ),
                 ),
           floatingActionButton: sites.isEmpty
               ? null
@@ -454,38 +458,24 @@ class _SitesPageState extends State<SitesPage> {
     );
   }
 
-  Widget _empty(ColorScheme cs) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.dns_outlined, size: 56, color: cs.outline),
-          const SizedBox(height: 16),
-          Text(
-            Lc.current.siteEmpty,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            Lc.current.siteEmptyHint,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: _busy ? null : _addManual,
-            icon: const Icon(Icons.add),
-            label: Text(Lc.current.siteAdd),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _busy ? null : _importFromMaster,
-            icon: const Icon(Icons.cloud_download_outlined),
-            label: Text(Lc.current.siteImportMaster),
-          ),
-        ],
-      ),
+  Widget _empty() => EmptyView(
+    icon: Icons.dns_outlined,
+    title: Lc.current.siteEmpty,
+    hint: Lc.current.siteEmptyHint,
+    action: Column(
+      children: [
+        FilledButton.icon(
+          onPressed: _busy ? null : _addManual,
+          icon: const Icon(Icons.add),
+          label: Text(Lc.current.siteAdd),
+        ),
+        const SizedBox(height: 4),
+        TextButton.icon(
+          onPressed: _busy ? null : _importFromMaster,
+          icon: const Icon(Icons.cloud_download_outlined),
+          label: Text(Lc.current.siteImportMaster),
+        ),
+      ],
     ),
   );
 

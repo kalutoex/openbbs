@@ -1074,6 +1074,12 @@ class LZh extends L {
   String get noPostsYet => '还没有人发帖';
 
   @override
+  String get noPostsHint => '发第一条，把这里开个头';
+
+  @override
+  String get loadFailed => '没能拉到内容';
+
+  @override
   String get longAgo => '很久以前';
 
   @override
@@ -2266,4 +2272,7 @@ class LZh extends L {
 
   @override
   String get sysNotifyOff => '系统通知权限没开，去手机设置里打开';
+
+  @override
+  String get noRepliesHint => '说两句，让楼主知道有人看。';
 }

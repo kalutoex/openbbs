@@ -53,26 +53,36 @@ class ThreadTileSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Skeleton(width: 38, height: 38, radius: 19),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Skeleton(width: 120, height: 11),
-                SizedBox(height: 9),
-                Skeleton(height: 14),
-                SizedBox(height: 7),
-                Skeleton(width: 200, height: 11),
-              ],
+    final line = Theme.of(context).colorScheme.outlineVariant
+        .withValues(alpha: .4);
+    return Padding(
+      // 外壳和 ThreadTile 的卡片对齐，真数据进来的时候不会跳一下。
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: line),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Skeleton(width: 38, height: 38, radius: 19),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Skeleton(width: 120, height: 11),
+                  SizedBox(height: 9),
+                  Skeleton(height: 14),
+                  SizedBox(height: 7),
+                  Skeleton(width: 200, height: 11),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -86,11 +96,10 @@ class SkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final line = Theme.of(context).colorScheme.outlineVariant;
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       itemCount: count,
-      separatorBuilder: (_, _) => Divider(height: 1, color: line),
+      separatorBuilder: (_, _) => const SizedBox.shrink(),
       itemBuilder: (_, _) => const ThreadTileSkeleton(),
     );
   }

@@ -1087,6 +1087,12 @@ class LEn extends L {
   String get noPostsYet => 'Nothing posted yet';
 
   @override
+  String get noPostsHint => 'Be the first to post here';
+
+  @override
+  String get loadFailed => 'Couldn\'t load this';
+
+  @override
   String get longAgo => 'A long time ago';
 
   @override
@@ -2312,4 +2318,7 @@ class LEn extends L {
 
   @override
   String get sysNotifyOff => 'Notifications are blocked in system settings';
+
+  @override
+  String get noRepliesHint => 'Be the first to say something.';
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
+import '../widgets/empty_view.dart';
+import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
 import '../widgets/thread_tile.dart';
 import 'thread_page.dart';
@@ -138,7 +140,8 @@ class _SearchPageState extends State<SearchPage> {
         return;
       }
     }
-    if (q == _q && (_items.isNotEmpty || _replies.isNotEmpty || _users.isNotEmpty)) {
+    if (q == _q &&
+        (_items.isNotEmpty || _replies.isNotEmpty || _users.isNotEmpty)) {
       return;
     }
     // 换词就换号并放行：上一个词的分页请求还在飞的话，回来不许往新结果里塞。
@@ -183,14 +186,15 @@ class _SearchPageState extends State<SearchPage> {
     final kind = _kind;
     _busy = true;
     try {
-      final d = await Api.get('/search', query: {
-        'q': _q,
-        'page': '$_page',
-        'kind': kind,
-      });
+      final d = await Api.get(
+        '/search',
+        query: {'q': _q, 'page': '$_page', 'kind': kind},
+      );
       if (!mounted || seq != _seq) return;
-      final items = (d['items'] as List? ?? const []).cast<Map<String, dynamic>>();
-      final reps = (d['replies'] as List? ?? const []).cast<Map<String, dynamic>>();
+      final items = (d['items'] as List? ?? const [])
+          .cast<Map<String, dynamic>>();
+      final reps = (d['replies'] as List? ?? const [])
+          .cast<Map<String, dynamic>>();
       final us = (d['users'] as List? ?? const []).cast<Map<String, dynamic>>();
       setState(() {
         if (kind == 'thread') {
@@ -270,11 +274,13 @@ class _SearchPageState extends State<SearchPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          if (_searched) _kindBar(context),
-          Expanded(child: _body(context)),
-        ],
+      body: PageWidth(
+        child: Column(
+          children: [
+            if (_searched) _kindBar(context),
+            Expanded(child: _body(context)),
+          ],
+        ),
       ),
     );
   }
@@ -290,7 +296,9 @@ class _SearchPageState extends State<SearchPage> {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: cs.outlineVariant, width: 0.5)),
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant, width: 0.5),
+        ),
       ),
       child: Wrap(
         spacing: 8,
@@ -324,8 +332,10 @@ class _SearchPageState extends State<SearchPage> {
         children: [
           Row(
             children: [
-              Text(Lc.current.recentSearches,
-                  style: TextStyle(fontSize: 12, color: cs.outline)),
+              Text(
+                Lc.current.recentSearches,
+                style: TextStyle(fontSize: 12, color: cs.outline),
+              ),
               const Spacer(),
               TextButton(
                 onPressed: _clearHist,
@@ -334,8 +344,10 @@ class _SearchPageState extends State<SearchPage> {
                   minimumSize: const Size(0, 28),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: Text(Lc.current.clearAll,
-                    style: const TextStyle(fontSize: 12)),
+                child: Text(
+                  Lc.current.clearAll,
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
             ],
           ),
@@ -367,40 +379,30 @@ class _SearchPageState extends State<SearchPage> {
     if (_kind == 'user') return _userList(context);
 
     if (_err != null && _items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                _err!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: cs.error),
-              ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.tonal(
-              onPressed: () => _submit(_q),
-              child: Text(Lc.current.retry),
-            ),
-          ],
+      return EmptyView(
+        icon: Icons.cloud_off_rounded,
+        title: Lc.current.loadFailed,
+        hint: _err,
+        error: true,
+        action: FilledButton.tonal(
+          onPressed: () => _submit(_q),
+          child: Text(Lc.current.retry),
         ),
       );
     }
 
     if (_items.isEmpty) {
       if (_busy) return const Center(child: CircularProgressIndicator());
-      return Center(
-        child: Text(Lc.current.noSearchResult(_q),
-            style: TextStyle(color: cs.onSurfaceVariant)),
+      return EmptyView(
+        icon: Icons.search_off_rounded,
+        title: Lc.current.noSearchResult(_q),
       );
     }
 
     return ListView.separated(
       controller: _scroll,
       itemCount: _items.length + 1,
-      separatorBuilder: (_, i) => const Divider(height: 1),
+      separatorBuilder: (_, i) => const SizedBox.shrink(),
       itemBuilder: (context, i) {
         if (i == _items.length) {
           return Padding(
@@ -410,8 +412,8 @@ class _SearchPageState extends State<SearchPage> {
                 _busy
                     ? Lc.current.loading
                     : (_hasMore
-                        ? Lc.current.totalCount('$_total')
-                        : Lc.current.endTotalCount('$_total')),
+                          ? Lc.current.totalCount('$_total')
+                          : Lc.current.endTotalCount('$_total')),
                 style: TextStyle(color: cs.outline, fontSize: 12),
               ),
             ),
@@ -430,8 +432,10 @@ class _SearchPageState extends State<SearchPage> {
     }
     if (_replies.isEmpty) {
       return Center(
-        child: Text(Lc.current.noSearchResult(_q),
-            style: TextStyle(color: cs.onSurfaceVariant)),
+        child: Text(
+          Lc.current.noSearchResult(_q),
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
       );
     }
     return ListView.separated(
@@ -452,7 +456,10 @@ class _SearchPageState extends State<SearchPage> {
                   (r['thread_title'] ?? '') as String,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -481,8 +488,10 @@ class _SearchPageState extends State<SearchPage> {
     }
     if (_users.isEmpty) {
       return Center(
-        child: Text(Lc.current.noSearchResult(_q),
-            style: TextStyle(color: cs.onSurfaceVariant)),
+        child: Text(
+          Lc.current.noSearchResult(_q),
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
       );
     }
     return ListView.separated(
@@ -501,7 +510,9 @@ class _SearchPageState extends State<SearchPage> {
           ),
           title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
           subtitle: Text(
-            sign.isEmpty ? (handle.isEmpty ? '' : '@$handle') : '@$handle · $sign',
+            sign.isEmpty
+                ? (handle.isEmpty ? '' : '@$handle')
+                : '@$handle · $sign',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

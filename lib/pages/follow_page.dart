@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
 import '../widgets/name_tag.dart';
 import '../widgets/user_link.dart';
@@ -148,7 +149,7 @@ class _FollowPageState extends State<FollowPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(Lc.current.follow)),
-      body: Column(
+      body: PageWidth(child: Column(
         children: [
           _segmented(),
           Expanded(
@@ -161,7 +162,7 @@ class _FollowPageState extends State<FollowPage> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 

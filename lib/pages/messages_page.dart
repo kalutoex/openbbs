@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../store.dart';
 import '../utils.dart';
+import '../widgets/app_card.dart';
+import '../widgets/empty_view.dart';
+import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import 'chat_page.dart';
+import 'login_page.dart';
 import 'notice_page.dart';
 import '../widgets/toast.dart';
 
@@ -245,74 +249,56 @@ class _MessagesPageState extends State<MessagesPage> {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      body: RefreshIndicator(onRefresh: _load, child: _body(context)),
+      body: PageWidth(
+        child: RefreshIndicator(onRefresh: _load, child: _body(context)),
+      ),
     );
   }
 
   Widget _body(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     if (!AppState.instance.loggedIn) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 140),
-          Icon(Icons.lock_outline_rounded, size: 48, color: cs.outline),
-          const SizedBox(height: 12),
-          Center(child: Text(Lc.current.noticeLoginNeeded)),
-        ],
-      );
+      return EmptyView(
+        icon: Icons.lock_outline_rounded,
+        title: Lc.current.noticeLoginNeeded,
+        hint: Lc.current.loginBenefits,
+        action: FilledButton(
+          onPressed: () =>
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const LoginPage())),
+          child: Text(Lc.current.login),
+        ),
+      ).scrollable();
     }
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_err != null) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 120),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(_err!, textAlign: TextAlign.center),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: FilledButton.tonal(
-              onPressed: () {
-                setState(() => _loading = true);
-                _load();
-              },
-              child: Text(Lc.current.retry),
-            ),
-          ),
-        ],
-      );
+      return EmptyView(
+        icon: Icons.cloud_off_rounded,
+        title: _err!,
+        error: true,
+        action: FilledButton.tonal(
+          onPressed: () {
+            setState(() => _loading = true);
+            _load();
+          },
+          child: Text(Lc.current.retry),
+        ),
+      ).scrollable();
     }
     if (_rows.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 120),
-          Icon(Icons.forum_outlined, size: 48, color: cs.outline),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              Lc.current.dmEmpty,
-              style: TextStyle(color: cs.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Center(
-            child: Text(
-              Lc.current.dmEmptyHint,
-              style: TextStyle(fontSize: 12, color: cs.outline),
-            ),
-          ),
-        ],
-      );
+      return EmptyView(
+        icon: Icons.forum_outlined,
+        title: Lc.current.dmEmpty,
+        hint: Lc.current.dmEmptyHint,
+      ).scrollable();
     }
-    return ListView.separated(
+    return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
       itemCount: _rows.length,
-      separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
-      itemBuilder: (context, i) => _tile(context, _rows[i]),
+      itemBuilder: (context, i) => AppCard(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: _tile(context, _rows[i]),
+      ),
     );
   }
 

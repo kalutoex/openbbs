@@ -7,6 +7,7 @@ import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/empty_view.dart';
 import '../widgets/toast.dart';
 
 /// 管理员看举报。删掉或者认定没问题，二选一。
@@ -139,25 +140,18 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
 
   Widget _buildBody(ColorScheme cs) {
     if (_err != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_err!, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              FilledButton.tonal(
-                onPressed: () => _load(reset: true),
-                child: Text(Lc.current.retry),
-              ),
-            ],
-          ),
+      return EmptyView(
+        icon: Icons.cloud_off_rounded,
+        title: _err!,
+        error: true,
+        action: FilledButton.tonal(
+          onPressed: () => _load(reset: true),
+          child: Text(Lc.current.retry),
         ),
       );
     }
     if (_items.isEmpty) {
-      return Center(child: Text(Lc.current.noReports));
+      return EmptyView(icon: Icons.flag_outlined, title: Lc.current.noReports);
     }
     return ListView.separated(
       itemCount: _items.length + 1,

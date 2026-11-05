@@ -14,6 +14,13 @@ ThemeData buildAppTheme(Brightness brightness, Color seed) {
   // 只为了取一份基准 TextTheme，组件主题要引用它。
   final text = ThemeData(useMaterial3: true, colorScheme: scheme).textTheme;
 
+  // 卡片的边线：浅色下靠它把卡片从背景里拉出来，暗色下压暗一点别刺眼。
+  final hairline = BorderSide(
+    color: scheme.outlineVariant.withValues(
+      alpha: brightness == Brightness.light ? .55 : .35,
+    ),
+  );
+
   const shapeM = RoundedRectangleBorder(
     borderRadius: BorderRadius.all(Radius.circular(12)),
   );
@@ -54,7 +61,10 @@ ThemeData buildAppTheme(Brightness brightness, Color seed) {
       elevation: 0,
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      shape: shapeL,
+      shape: RoundedRectangleBorder(
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        side: hairline,
+      ),
     ),
 
     listTileTheme: ListTileThemeData(
@@ -169,6 +179,80 @@ ThemeData buildAppTheme(Brightness brightness, Color seed) {
     ),
 
     progressIndicatorTheme: ProgressIndicatorThemeData(color: scheme.primary),
+
+    // 底部导航：选中项文字加粗、图标换实心由各页面自己给，
+    // 这里只管底色、字号和未选中的灰。
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: scheme.surfaceContainer,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      height: 64,
+      indicatorColor: scheme.secondaryContainer,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final on = states.contains(WidgetState.selected);
+        return text.labelMedium?.copyWith(
+          fontSize: 11.5,
+          fontWeight: on ? FontWeight.w600 : FontWeight.w500,
+          color: on ? scheme.onSurface : scheme.onSurfaceVariant,
+        );
+      }),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final on = states.contains(WidgetState.selected);
+        return IconThemeData(
+          size: 24,
+          color: on ? scheme.onSecondaryContainer : scheme.onSurfaceVariant,
+        );
+      }),
+    ),
+
+    popupMenuTheme: PopupMenuThemeData(
+      color: scheme.surfaceContainerHigh,
+      surfaceTintColor: scheme.surfaceTint,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        side: hairline,
+      ),
+      textStyle: text.bodyMedium?.copyWith(color: scheme.onSurface),
+    ),
+
+    // 底部菜单统一带拖手柄、圆角上沿，和对话框一个语言。
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: scheme.surfaceContainerLow,
+      modalBackgroundColor: scheme.surfaceContainerLow,
+      surfaceTintColor: scheme.surfaceTint,
+      showDragHandle: true,
+      elevation: 0,
+      modalElevation: 0,
+      dragHandleColor: scheme.outlineVariant,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+    ),
+
+    chipTheme: ChipThemeData(
+      backgroundColor: scheme.surfaceContainerLow,
+      selectedColor: scheme.secondaryContainer,
+      side: hairline,
+      shape: const StadiumBorder(),
+      labelStyle: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+      secondaryLabelStyle: text.labelMedium?.copyWith(
+        color: scheme.onSecondaryContainer,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    ),
+
+    badgeTheme: BadgeThemeData(
+      backgroundColor: scheme.error,
+      textColor: scheme.onError,
+      smallSize: 7,
+      largeSize: 16,
+      textStyle: text.labelSmall?.copyWith(
+        color: scheme.onError,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
 
     // 页面切换。默认的 Zoom 是缩放淡入，暗色下边角会露一下底色，
     // 看着像"闪"。换成 M3 的 fade-forwards，横向推进，没有缩放。

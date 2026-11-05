@@ -6,6 +6,8 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../api.dart';
 import '../file_pick.dart';
 import '../plat.dart';
+import '../widgets/app_card.dart';
+import '../widgets/page_width.dart';
 import '../widgets/mention.dart';
 import '../store.dart';
 import '../img_compress.dart';
@@ -844,60 +846,64 @@ class _ThreadPageState extends State<ThreadPage> {
           ),
         ],
       ),
-      body: _first
-          ? const SkeletonList(count: 4)
-          : Column(
-              children: [
-                if (_err != null)
-                  Container(
-                    width: double.infinity,
-                    color: cs.errorContainer,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Text(
-                      _err!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: cs.onErrorContainer,
+      body: PageWidth(
+        child: _first
+            ? const SkeletonList(count: 4)
+            : Column(
+                children: [
+                  if (_err != null)
+                    Container(
+                      width: double.infinity,
+                      color: cs.errorContainer,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        _err!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onErrorContainer,
+                        ),
                       ),
                     ),
+                  Expanded(
+                    child: ScrollablePositionedList.builder(
+                      itemScrollController: _itemScroll,
+                      itemPositionsListener: _posListener,
+                      itemCount: rest.length + 1,
+                      itemBuilder: (context, i) {
+                        if (i == 0) return _header(cs, op);
+                        final p = rest[i - 1];
+                        return _PostCard(
+                          post: p,
+                          highlight:
+                              _flashFloor > 0 &&
+                              (p['floor'] ?? 0) == _flashFloor,
+                          onReply: () => _beginReply(p),
+                          onAgree: () => _agree(p),
+                          onEdit: p['can_edit'] == true
+                              ? () => _editReply(p)
+                              : null,
+                          onDelete:
+                              (p['can_delete'] == true &&
+                                  (p['floor'] ?? 0) != 1)
+                              ? () => _deletePost(p)
+                              : null,
+                          onDeleteSub: _deleteSub,
+                          onReport: (p['floor'] ?? 0) == 1
+                              ? _reportThread
+                              : () => _reportReply(p),
+                        );
+                      },
+                    ),
                   ),
-                Expanded(
-                  child: ScrollablePositionedList.builder(
-                    itemScrollController: _itemScroll,
-                    itemPositionsListener: _posListener,
-                    itemCount: rest.length + 1,
-                    itemBuilder: (context, i) {
-                      if (i == 0) return _header(cs, op);
-                      final p = rest[i - 1];
-                      return _PostCard(
-                        post: p,
-                        highlight:
-                            _flashFloor > 0 && (p['floor'] ?? 0) == _flashFloor,
-                        onReply: () => _beginReply(p),
-                        onAgree: () => _agree(p),
-                        onEdit: p['can_edit'] == true
-                            ? () => _editReply(p)
-                            : null,
-                        onDelete:
-                            (p['can_delete'] == true && (p['floor'] ?? 0) != 1)
-                            ? () => _deletePost(p)
-                            : null,
-                        onDeleteSub: _deleteSub,
-                        onReport: (p['floor'] ?? 0) == 1
-                            ? _reportThread
-                            : () => _reportReply(p),
-                      );
-                    },
-                  ),
-                ),
-                // 输入栏放在 body 里而不是 bottomNavigationBar：
-                // 后者在键盘弹出时不上浮，会被盖住。
-                _replyBar(cs),
-              ],
-            ),
+                  // 输入栏放在 body 里而不是 bottomNavigationBar：
+                  // 后者在键盘弹出时不上浮，会被盖住。
+                  _replyBar(cs),
+                ],
+              ),
+      ),
     );
   }
 
@@ -927,7 +933,9 @@ class _ThreadPageState extends State<ThreadPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
+        // 楼主这层跟下面的楼层用同一种卡片，不然上半截平铺、下半截卡片会断层。
+        AppCard(
+          margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1041,7 +1049,7 @@ class _ThreadPageState extends State<ThreadPage> {
             ],
           ),
         ),
-        Container(height: 8, color: cs.surfaceContainerHighest),
+        const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Row(
@@ -1062,6 +1070,27 @@ class _ThreadPageState extends State<ThreadPage> {
             ],
           ),
         ),
+        // 一条回复都没有的时候，下半截会是一大片空白，
+        // 给个能点的地方，别让人以为页面没加载完。
+        if (replies == 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+            child: AppCard(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 26),
+              child: Column(
+                children: [
+                  Icon(Icons.forum_outlined, size: 26, color: cs.outline),
+                  const SizedBox(height: 10),
+                  Text(
+                    Lc.current.noRepliesHint,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: cs.outline),
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -1436,11 +1465,26 @@ class _PostCardState extends State<_PostCard> {
     final isOp = post['is_op'] == true;
     final liked = agreed ? cs.primary : cs.outline;
 
+    // 楼层走卡片：和列表页一个语言，跳楼时靠描边和底色提示位置。
     return AnimatedContainer(
       duration: const Duration(milliseconds: 320),
-      color: widget.highlight
-          ? cs.primary.withValues(alpha: 0.08)
-          : Colors.transparent,
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: widget.highlight
+            ? cs.primary.withValues(alpha: 0.07)
+            : cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: widget.highlight
+              ? cs.primary.withValues(alpha: 0.40)
+              : cs.outlineVariant.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.light
+                      ? .55
+                      : .35,
+                ),
+        ),
+      ),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onLongPress: _moreSheet,
@@ -1632,12 +1676,7 @@ class _PostCardState extends State<_PostCard> {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            Divider(
-              height: 1,
-              indent: 62,
-              color: cs.outlineVariant.withValues(alpha: 0.3),
-            ),
+            const SizedBox(height: 6),
           ],
         ),
       ),

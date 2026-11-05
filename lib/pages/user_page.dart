@@ -8,6 +8,8 @@ import '../plat.dart';
 import '../save_cover.dart';
 import '../img_compress.dart';
 import '../store.dart';
+import '../widgets/empty_view.dart';
+import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
 import '../widgets/thread_tile.dart';
 import 'edit_profile_page.dart';
@@ -256,27 +258,25 @@ class _UserPageState extends State<UserPage> {
 
     final info = _info ?? const <String, dynamic>{};
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _reload,
-        child: ListView.builder(
-          controller: _scroll,
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: _items.length + 3,
-          itemBuilder: (context, i) {
-            if (i == 0) return _cover(info, cs);
-            if (i == 1) return _profile(info, cs);
-            if (i == 2) return _tabStrip(cs);
-            final it = _items[i - 3];
-            return Column(
-              children: [
-                ThreadTile(item: it, onTap: () => _open(it), onDeleted: _load),
-                Divider(
-                  height: 1,
-                  color: cs.outlineVariant.withValues(alpha: .4),
-                ),
-              ],
-            );
-          },
+      body: PageWidth(
+        child: RefreshIndicator(
+          onRefresh: _reload,
+          child: ListView.builder(
+            controller: _scroll,
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: _items.length + 3,
+            itemBuilder: (context, i) {
+              if (i == 0) return _cover(info, cs);
+              if (i == 1) return _profile(info, cs);
+              if (i == 2) return _tabStrip(cs);
+              final it = _items[i - 3];
+              return ThreadTile(
+                item: it,
+                onTap: () => _open(it),
+                onDeleted: _load,
+              );
+            },
+          ),
         ),
       ),
     );
@@ -683,11 +683,12 @@ class _UserPageState extends State<UserPage> {
           ],
         ),
         if (_items.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 44),
-            child: Text(
-              Lc.current.noPostsYet,
-              style: TextStyle(fontSize: 13, color: cs.outline),
+          // Column 里高度无界，EmptyView 自己要一个框。
+          SizedBox(
+            height: 220,
+            child: EmptyView(
+              icon: Icons.article_outlined,
+              title: Lc.current.noPostsYet,
             ),
           ),
       ],

@@ -6,6 +6,7 @@ import '../permissions.dart';
 import '../site_meta.dart';
 import '../store.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/page_width.dart';
 import 'compose_page.dart';
 import 'feed_tab.dart';
 import 'login_page.dart';
@@ -113,7 +114,9 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  L.of(context).siteNeedsUpdate('$api', '${SiteMeta.supportedApi}'),
+                  L
+                      .of(context)
+                      .siteNeedsUpdate('$api', '${SiteMeta.supportedApi}'),
                   style: TextStyle(fontSize: 12.5, color: cs.onErrorContainer),
                 ),
               ),
@@ -189,44 +192,48 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            child: NavigationBar(
-              selectedIndex: _index,
-              elevation: 0,
-              height: 64,
-              backgroundColor: Colors.transparent,
-              indicatorColor: cs.secondaryContainer,
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              onDestinationSelected: _go,
-              destinations: [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home_rounded),
-                  label: Lc.current.home,
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.grid_view_outlined),
-                  selectedIcon: Icon(Icons.grid_view_rounded),
-                  label: Lc.current.sites,
-                ),
-                NavigationDestination(
-                  icon: Badge(
-                    isLabelVisible: unread > 0,
-                    label: Text(unread > 99 ? '99+' : '$unread'),
-                    child: const Icon(Icons.chat_bubble_outline_rounded),
+            // 宽屏时导航项也收进同一栏，别让四个图标散到屏幕四角。
+            child: PageWidth(
+              max: 760,
+              child: NavigationBar(
+                selectedIndex: _index,
+                elevation: 0,
+                height: 64,
+                backgroundColor: Colors.transparent,
+                indicatorColor: cs.secondaryContainer,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                onDestinationSelected: _go,
+                destinations: [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home_rounded),
+                    label: Lc.current.home,
                   ),
-                  selectedIcon: Badge(
-                    isLabelVisible: unread > 0,
-                    label: Text(unread > 99 ? '99+' : '$unread'),
-                    child: const Icon(Icons.chat_bubble_rounded),
+                  NavigationDestination(
+                    icon: Icon(Icons.grid_view_outlined),
+                    selectedIcon: Icon(Icons.grid_view_rounded),
+                    label: Lc.current.sites,
                   ),
-                  label: Lc.current.messagesTab,
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.person_outline_rounded),
-                  selectedIcon: Icon(Icons.person_rounded),
-                  label: Lc.current.me,
-                ),
-              ],
+                  NavigationDestination(
+                    icon: Badge(
+                      isLabelVisible: unread > 0,
+                      label: Text(unread > 99 ? '99+' : '$unread'),
+                      child: const Icon(Icons.chat_bubble_outline_rounded),
+                    ),
+                    selectedIcon: Badge(
+                      isLabelVisible: unread > 0,
+                      label: Text(unread > 99 ? '99+' : '$unread'),
+                      child: const Icon(Icons.chat_bubble_rounded),
+                    ),
+                    label: Lc.current.messagesTab,
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.person_outline_rounded),
+                    selectedIcon: Icon(Icons.person_rounded),
+                    label: Lc.current.me,
+                  ),
+                ],
+              ),
             ),
           );
         },

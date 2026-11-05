@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../widgets/empty_view.dart';
+import '../widgets/page_width.dart';
 import '../widgets/thread_tile.dart';
 import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+
 /// 一条只有帖子列表的页：收藏、浏览历史共用。
 class ThreadListPage extends StatefulWidget {
   final String title;
@@ -44,7 +47,6 @@ class _ThreadListPageState extends State<ThreadListPage> {
     });
     _load();
   }
-
 
   /// 离底还有一屏就开始拉下一页，滑到底时内容已经在手上了。
   double get _ahead {
@@ -143,7 +145,9 @@ class _ThreadListPageState extends State<ThreadListPage> {
           ),
         ],
       ),
-      body: RefreshIndicator(onRefresh: _reload, child: _body(context, cs)),
+      body: PageWidth(
+        child: RefreshIndicator(onRefresh: _reload, child: _body(context, cs)),
+      ),
     );
   }
 
@@ -153,55 +157,38 @@ class _ThreadListPageState extends State<ThreadListPage> {
     }
 
     if (_err != null && _items.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 120),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                _err!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: cs.error),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: FilledButton.tonal(
-              onPressed: _reload,
-              child: Text(Lc.current.retry),
-            ),
-          ),
-        ],
-      );
+      return EmptyView(
+        icon: Icons.cloud_off_rounded,
+        title: Lc.current.loadFailed,
+        hint: _err,
+        error: true,
+        action: FilledButton.tonal(
+          onPressed: _reload,
+          child: Text(Lc.current.retry),
+        ),
+      ).scrollable();
     }
 
     if (_items.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 140),
-          Center(
-            child: Text(
-              widget.emptyText,
-              style: TextStyle(color: cs.onSurfaceVariant),
-            ),
-          ),
-        ],
-      );
+      return EmptyView(
+        icon: Icons.inbox_outlined,
+        title: widget.emptyText,
+      ).scrollable();
     }
 
     return ListView.separated(
       controller: _scroll,
       itemCount: _items.length + 1,
-      separatorBuilder: (_, i) => const Divider(height: 1),
+      separatorBuilder: (_, i) => const SizedBox.shrink(),
       itemBuilder: (context, i) {
         if (i == _items.length) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 18),
             child: Center(
               child: Text(
-                _busy ? Lc.current.loading : (_hasMore ? Lc.current.moreToLoad : Lc.current.endOfList),
+                _busy
+                    ? Lc.current.loading
+                    : (_hasMore ? Lc.current.moreToLoad : Lc.current.endOfList),
                 style: TextStyle(color: cs.outline, fontSize: 12),
               ),
             ),

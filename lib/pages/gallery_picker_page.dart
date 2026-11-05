@@ -7,6 +7,7 @@ import 'package:photo_manager/photo_manager.dart';
 import '../plat.dart';
 
 import '../l10n/l10n.dart';
+import '../widgets/empty_view.dart';
 import '../widgets/toast.dart';
 
 /// 自己的相册页：直接读本机媒体库，缩略图网格 + 多选。
@@ -326,60 +327,36 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
   }
 
   Widget _deniedView() {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.photo_library_outlined, size: 48, color: cs.outline),
-            const SizedBox(height: 16),
-            Text(
-              hasMediaStore
-                  ? Lc.current.needsAlbumPermission
-                  : Lc.current.noAlbumUsePicker,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              Lc.current.localThumbsOnly,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: () async {
-                if (!hasMediaStore) {
-                  Navigator.of(context).pop(<XFile>[]);
-                  return;
-                }
-                final s = await PhotoManager.requestPermissionExtend();
-                if (!s.hasAccess) {
-                  await PhotoManager.openSetting();
-                  return;
-                }
-                setState(() => _denied = false);
-                await _boot();
-              },
-              child: Text(
-                hasMediaStore
-                    ? Lc.current.grantPermission
-                    : Lc.current.pickAnotherWay,
-              ),
-            ),
-          ],
+    final canUseMedia = hasMediaStore;
+    return EmptyView(
+      icon: Icons.photo_library_outlined,
+      title: canUseMedia
+          ? Lc.current.needsAlbumPermission
+          : Lc.current.noAlbumUsePicker,
+      hint: Lc.current.localThumbsOnly,
+      action: FilledButton(
+        onPressed: () async {
+          if (!canUseMedia) {
+            Navigator.of(context).pop(<XFile>[]);
+            return;
+          }
+          final s = await PhotoManager.requestPermissionExtend();
+          if (!s.hasAccess) {
+            await PhotoManager.openSetting();
+            return;
+          }
+          setState(() => _denied = false);
+          await _boot();
+        },
+        child: Text(
+          canUseMedia ? Lc.current.grantPermission : Lc.current.pickAnotherWay,
         ),
       ),
     );
   }
 
-  Widget _hint(String s) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Text(s, textAlign: TextAlign.center),
-    ),
-  );
+  Widget _hint(String s) =>
+      EmptyView(icon: Icons.photo_library_outlined, title: s);
 }
 
 /// 打开自己的相册页，返回选中的图。

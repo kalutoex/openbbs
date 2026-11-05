@@ -8,6 +8,8 @@ import '../file_open.dart';
 import '../file_pick.dart';
 import '../l10n/error_text.dart';
 import '../utils.dart';
+import '../widgets/empty_view.dart';
+import '../widgets/page_width.dart';
 import '../widgets/file_card.dart';
 
 import '../l10n/l10n.dart';
@@ -319,25 +321,27 @@ class _CloudPageState extends State<CloudPage> {
             : const Icon(Icons.upload_file),
         label: Text(Lc.current.upload),
       ),
-      body: RefreshIndicator(
-        onRefresh: () => _load(),
-        child: Column(
-          children: [
-            if (_usage != null) _UsageBar(usage: _usage!),
-            _SearchBar(
-              controller: _search,
-              onChanged: (v) {
-                setState(() => _q = v);
-                _load();
-              },
-              sort: _sort,
-              onSort: (s) {
-                setState(() => _sort = s);
-                _load();
-              },
-            ),
-            Expanded(child: _body()),
-          ],
+      body: PageWidth(
+        child: RefreshIndicator(
+          onRefresh: () => _load(),
+          child: Column(
+            children: [
+              if (_usage != null) _UsageBar(usage: _usage!),
+              _SearchBar(
+                controller: _search,
+                onChanged: (v) {
+                  setState(() => _q = v);
+                  _load();
+                },
+                sort: _sort,
+                onSort: (s) {
+                  setState(() => _sort = s);
+                  _load();
+                },
+              ),
+              Expanded(child: _body()),
+            ],
+          ),
         ),
       ),
     );
@@ -359,16 +363,9 @@ class _CloudPageState extends State<CloudPage> {
       );
     }
     if (_items.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 100),
-          Center(
-            child: Text(
-              _q.isEmpty ? Lc.current.nothingUploadedYet : Lc.current.notFound,
-              style: TextStyle(color: Theme.of(context).colorScheme.outline),
-            ),
-          ),
-        ],
+      return EmptyView(
+        icon: _q.isEmpty ? Icons.cloud_outlined : Icons.search_off_rounded,
+        title: _q.isEmpty ? Lc.current.nothingUploadedYet : Lc.current.notFound,
       );
     }
     return ListView.builder(

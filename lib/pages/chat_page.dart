@@ -14,6 +14,8 @@ import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../plat.dart';
 import '../store.dart';
+import '../widgets/empty_view.dart';
+import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
 import '../widgets/file_card.dart';
 import '../widgets/toast.dart';
@@ -212,15 +214,10 @@ class _ChatPageState extends State<ChatPage> {
                 },
               ),
               const SizedBox(width: 24),
-              _attachTile(
-                ctx,
-                Icons.attach_file,
-                Lc.current.dmPickFile,
-                () {
-                  Navigator.pop(ctx);
-                  _pickFile();
-                },
-              ),
+              _attachTile(ctx, Icons.attach_file, Lc.current.dmPickFile, () {
+                Navigator.pop(ctx);
+                _pickFile();
+              }),
             ],
           ),
         ),
@@ -271,8 +268,7 @@ class _ChatPageState extends State<ChatPage> {
       } else {
         final r = await Navigator.of(context).push<List<XFile>>(
           MaterialPageRoute(
-            builder: (_) =>
-                GalleryPickerPage(maxCount: 9 - _pending.length),
+            builder: (_) => GalleryPickerPage(maxCount: 9 - _pending.length),
           ),
         );
         picked = r ?? const <XFile>[];
@@ -397,7 +393,8 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _send() async {
     final text = _input.text.trim();
-    if ((text.isEmpty && _pending.isEmpty && _pendingFiles.isEmpty) || _sending) {
+    if ((text.isEmpty && _pending.isEmpty && _pendingFiles.isEmpty) ||
+        _sending) {
       return;
     }
     setState(() => _sending = true);
@@ -485,38 +482,40 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(child: _msgArea(cs)),
-                if (_newBelow)
-                  Positioned(
-                    right: 12,
-                    bottom: 12,
-                    child: FilledButton.tonalIcon(
-                      onPressed: () {
-                        setState(() => _newBelow = false);
-                        _toBottom(animate: true);
-                      },
-                      icon: const Icon(Icons.arrow_downward, size: 16),
-                      label: Text(
-                        Lc.current.dmNewMessages,
-                        style: const TextStyle(fontSize: 12.5),
-                      ),
-                      style: FilledButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
+      body: PageWidth(
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(child: _msgArea(cs)),
+                  if (_newBelow)
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: FilledButton.tonalIcon(
+                        onPressed: () {
+                          setState(() => _newBelow = false);
+                          _toBottom(animate: true);
+                        },
+                        icon: const Icon(Icons.arrow_downward, size: 16),
+                        label: Text(
+                          Lc.current.dmNewMessages,
+                          style: const TextStyle(fontSize: 12.5),
+                        ),
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (_pending.isNotEmpty || _pendingFiles.isNotEmpty)
-            _pendingBar(cs),
-          _composer(cs),
-        ],
+            if (_pending.isNotEmpty || _pendingFiles.isNotEmpty)
+              _pendingBar(cs),
+            _composer(cs),
+          ],
+        ),
       ),
     );
   }
@@ -524,39 +523,23 @@ class _ChatPageState extends State<ChatPage> {
   Widget _msgArea(ColorScheme cs) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_err != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_err!, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              FilledButton.tonal(
-                onPressed: () {
-                  setState(() => _loading = true);
-                  _load(initial: true);
-                },
-                child: Text(Lc.current.retry),
-              ),
-            ],
-          ),
+      return EmptyView(
+        icon: Icons.cloud_off_rounded,
+        title: _err!,
+        error: true,
+        action: FilledButton.tonal(
+          onPressed: () {
+            setState(() => _loading = true);
+            _load(initial: true);
+          },
+          child: Text(Lc.current.retry),
         ),
       );
     }
     if (_msgs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.chat_bubble_outline, size: 34, color: cs.outlineVariant),
-            const SizedBox(height: 10),
-            Text(
-              Lc.current.dmNoChat,
-              style: TextStyle(fontSize: 13, color: cs.outline),
-            ),
-          ],
-        ),
+      return EmptyView(
+        icon: Icons.chat_bubble_outline,
+        title: Lc.current.dmNoChat,
       );
     }
     // 点消息区任意空白、或者开始往上翻，都收键盘
@@ -631,9 +614,7 @@ class _ChatPageState extends State<ChatPage> {
                   _avatar(_peerAvatar, _peerName, _openPeer),
                   const SizedBox(width: 7.5),
                 ],
-                Flexible(
-                  child: _bubble(cs, mine, body, imgs, files, reply),
-                ),
+                Flexible(child: _bubble(cs, mine, body, imgs, files, reply)),
                 if (mine) ...[
                   const SizedBox(width: 7.5),
                   _avatar(_myAvatar, _myName, _openMe),
@@ -707,9 +688,7 @@ class _ChatPageState extends State<ChatPage> {
         child: _BubbleBox(
           color: bg,
           // 纯图片几乎贴边；带图文的，图片也只留一点点，文字另外缩进
-          padding: onlyImgs
-              ? const EdgeInsets.all(3)
-              : const EdgeInsets.all(4),
+          padding: onlyImgs ? const EdgeInsets.all(3) : const EdgeInsets.all(4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -869,33 +848,37 @@ class _ChatPageState extends State<ChatPage> {
             });
           }
           return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.memory(
-                _pending[i],
-                width: 60,
-                height: 60,
-                fit: BoxFit.cover,
-              ),
-            ),
-            Positioned(
-              right: -6,
-              top: -6,
-              child: GestureDetector(
-                onTap: () => setState(() => _pending.removeAt(i)),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                  ),
-                  padding: const EdgeInsets.all(2),
-                  child: const Icon(Icons.close, size: 14, color: Colors.white),
+            clipBehavior: Clip.none,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.memory(
+                  _pending[i],
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
                 ),
               ),
-            ),
-          ],
+              Positioned(
+                right: -6,
+                top: -6,
+                child: GestureDetector(
+                  onTap: () => setState(() => _pending.removeAt(i)),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -1021,7 +1004,8 @@ class _ChatPageState extends State<ChatPage> {
   Widget _replyBar(ColorScheme cs) {
     final r = _replyTo!;
     final body = (r['body'] ?? '') as String;
-    final hasImg = (r['images'] as List? ?? const []).isNotEmpty ||
+    final hasImg =
+        (r['images'] as List? ?? const []).isNotEmpty ||
         (r['files'] as List? ?? const []).isNotEmpty;
     final mine = (r['from_id'] ?? 0) == AppState.instance.user?['id'];
     final name = mine ? _myName : _peerName;
@@ -1166,7 +1150,6 @@ class _BubbleBox extends StatelessWidget {
     );
   }
 }
-
 
 /// 图片全屏看。左右滑同一批图，点一下就关。
 class _ImageViewer extends StatefulWidget {

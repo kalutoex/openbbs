@@ -100,146 +100,185 @@ class ThreadTile extends StatelessWidget {
       _ => 10.0,
     };
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, pad, 16, pad),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (item['is_top'] == true) ...[
-                  Text(
-                    Lc.current.pinned,
-                    style: tt.labelSmall?.copyWith(
-                      color: cs.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                if (good) ...[
-                  Text(
-                    Lc.current.featured,
-                    style: tt.labelSmall?.copyWith(
-                      color: cs.error,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                if (imgs.length >= 2) ...[
-                  Text(
-                    Lc.current.multiImage,
-                    style: tt.labelSmall?.copyWith(
-                      color: cs.tertiary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                Flexible(
-                  child: NameTag(
-                    name: author,
-                    handle: '${item['handle'] ?? ''}',
-                    onTap: () =>
-                        openUserPage(context, '${item['handle'] ?? ''}'),
-                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
+    final radius = BorderRadius.circular(16);
+
+    return Padding(
+      // 卡片之间靠这条外边距隔开，列表的分割线已经不用了。
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Material(
+        color: cs.surfaceContainerLow,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: cs.outlineVariant.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.light
+                      ? .55
+                      : .35,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  timeAgo(ts),
-                  style: tt.labelSmall?.copyWith(color: cs.outline),
-                ),
-                if (item['can_delete'] == true) ...[
-                  const SizedBox(width: 2),
-                  InkResponse(
-                    onTap: () => _delete(context),
-                    radius: 18,
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.delete_outline,
-                        size: 16,
-                        color: cs.outline,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            SizedBox(height: gap),
-            Text(
-              (item['title'] ?? '') as String,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: tt.titleSmall?.copyWith(
-                fontSize: (tt.titleSmall?.fontSize ?? 14) + 3,
-                fontWeight: FontWeight.w800,
-                height: 1.3,
               ),
             ),
-            if (excerpt.isNotEmpty) ...[
-              SizedBox(height: (gap * 0.5).clamp(3, 8).toDouble()),
-              _excerptText(shown, cut, cs, tt),
-            ],
-            if (cover.isNotEmpty) ...[
-              SizedBox(height: gap),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  // 占位和成品同一个框，图下来不会再从 4:3 跳成别的比例。
-                  width: 208,
-                  child: AspectRatio(
-                    aspectRatio: _coverRatio(cover, coverSizes),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: CachedNetworkImage(
-                        cacheManager: ImgCache.manager,
-                        imageRenderMethodForWeb:
-                            ImageRenderMethodForWeb.HttpGet,
-                        imageUrl: Api.thumb(cover, 320),
-                        fit: BoxFit.cover,
-                        alignment: Alignment.topCenter,
-                        memCacheWidth:
-                            (208 * MediaQuery.devicePixelRatioOf(context))
-                                .round()
-                                .clamp(208, 640),
-                        placeholder: (_, _) =>
-                            Container(color: cs.surfaceContainerHighest),
-                        errorWidget: (_, _, _) => Container(
-                          color: cs.surfaceContainerHighest,
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            size: 20,
-                            color: cs.outline,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(14, pad, 14, pad),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (item['is_top'] == true) ...[
+                        _tag(Lc.current.pinned, cs.primary),
+                        const SizedBox(width: 5),
+                      ],
+                      if (good) ...[
+                        _tag(Lc.current.featured, cs.error),
+                        const SizedBox(width: 5),
+                      ],
+                      if (imgs.length >= 2) ...[
+                        _tag(Lc.current.multiImage, cs.tertiary),
+                        const SizedBox(width: 5),
+                      ],
+                      Flexible(
+                        child: NameTag(
+                          name: author,
+                          handle: '${item['handle'] ?? ''}',
+                          onTap: () =>
+                              openUserPage(context, '${item['handle'] ?? ''}'),
+                          style: tt.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Text(
+                        timeAgo(ts),
+                        style: tt.labelSmall?.copyWith(color: cs.outline),
+                      ),
+                      if (item['can_delete'] == true) ...[
+                        const SizedBox(width: 2),
+                        InkResponse(
+                          onTap: () => _delete(context),
+                          radius: 18,
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.delete_outline,
+                              size: 16,
+                              color: cs.outline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  SizedBox(height: gap),
+                  Text(
+                    (item['title'] ?? '') as String,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: tt.titleSmall?.copyWith(
+                      fontSize: (tt.titleSmall?.fontSize ?? 14) + 3,
+                      fontWeight: FontWeight.w800,
+                      height: 1.3,
                     ),
                   ),
-                ),
+                  if (excerpt.isNotEmpty) ...[
+                    SizedBox(height: (gap * 0.5).clamp(3, 8).toDouble()),
+                    _excerptText(shown, cut, cs, tt),
+                  ],
+                  if (cover.isNotEmpty) ...[
+                    SizedBox(height: gap),
+                    // 封面宽度跟着卡片走，上限 [_coverMaxWidth]。
+                    // 以前死写 208，宽屏上就是一张贴纸，撑不起卡片的份量。
+                    LayoutBuilder(
+                      builder: (ctx, box) {
+                        final w = box.maxWidth < _coverMaxWidth
+                            ? box.maxWidth
+                            : _coverMaxWidth;
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: SizedBox(
+                            // 占位和成品同一个框，图下来不会再从 4:3 跳成别的比例。
+                            width: w,
+                            child: AspectRatio(
+                              aspectRatio: _coverRatio(cover, coverSizes),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: CachedNetworkImage(
+                                  cacheManager: ImgCache.manager,
+                                  imageRenderMethodForWeb:
+                                      ImageRenderMethodForWeb.HttpGet,
+                                  imageUrl: Api.thumb(cover, 320),
+                                  fit: BoxFit.cover,
+                                  alignment: Alignment.topCenter,
+                                  memCacheWidth:
+                                      (w * MediaQuery.devicePixelRatioOf(ctx))
+                                          .round()
+                                          .clamp(208, 720),
+                                  placeholder: (_, _) => Container(
+                                    color: cs.surfaceContainerHighest,
+                                  ),
+                                  errorWidget: (_, _, _) => Container(
+                                    color: cs.surfaceContainerHighest,
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      size: 20,
+                                      color: cs.outline,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                  if (files.isNotEmpty) CompactFiles(files: files),
+                  SizedBox(height: gap),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline,
+                        size: 14,
+                        color: cs.outline,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        replies == 0 ? Lc.current.comments : bigNum(replies),
+                        style: tt.labelSmall?.copyWith(color: cs.outline),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-            if (files.isNotEmpty) CompactFiles(files: files),
-            SizedBox(height: gap),
-            Row(
-              children: [
-                Icon(Icons.chat_bubble_outline, size: 14, color: cs.outline),
-                const SizedBox(width: 5),
-                Text(
-                  replies == 0 ? Lc.current.comments : bigNum(replies),
-                  style: tt.labelSmall?.copyWith(color: cs.outline),
-                ),
-              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  /// 置顶 / 精华 / 多图。三个彩色字挤在一起太碎，做成小胶囊。
+  Widget _tag(String text, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 10.5,
+        height: 1.2,
+        fontWeight: FontWeight.w700,
+        color: color,
+      ),
+    ),
+  );
 
   /// 封面比例：服务端给的优先，本地存过的次之，都没有才 4:3。
   /// 重点是加载前后这个框不能变。
@@ -266,6 +305,9 @@ class ThreadTile extends StatelessWidget {
   }
 
   static const _coverMinRatio = 0.7;
+
+  /// 封面最大宽度：再宽就成海报了，列表里一屏看不下几条。
+  static const _coverMaxWidth = 280.0;
 
   /// 正文预览：超过 200 字就用渐变色的省略号收尾，要点进去才看全文。
   Widget _excerptText(String text, bool cut, ColorScheme cs, TextTheme tt) {
