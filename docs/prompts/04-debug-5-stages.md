@@ -97,7 +97,7 @@ python3 db_snapshot.py --check data/backups/debug1_*.db | tail -3
 
 ```bash
 # 只读冒烟（303 = 本地明文口）
-S=http://127.0.0.1:8080/api
+S=http://[::1]:8080/api
 curl -s $S/feed | head -c 300
 curl -s -o /dev/null -w "%{http_code}\n" $S/me          # 期望 401
 curl -s -o /dev/null -w "%{http_code}\n" $S/admin/users # 期望 401
@@ -458,7 +458,7 @@ bash -lc 'source /vol1/1000/data/code/.fenv && flutter build web --release --bas
 bash /home/060923/AstrBot/data/skills/timeline-forum/scripts/status.sh
 
 # 两个入口
-curl -s -o /dev/null -w "8080 %{http_code}\n" http://127.0.0.1:8080/api/feed
+curl -s -o /dev/null -w "8080 %{http_code}\n" http://[::1]:8080/api/feed
 curl -sk -o /dev/null -w "26016 %{http_code}\n" https://127.0.0.1:26016/api/feed
 
 # 证书

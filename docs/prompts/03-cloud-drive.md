@@ -52,7 +52,7 @@
 
 - **服务端改两处**：`bbs/server/app/*` 改完，同样改动同步到 `openbbs/server/app/*`。
   两份 `api.py` 已有分叉（约 500 行差异），**逐处手改，不要整文件覆盖**。
-- 改完服务端：`cd bbs/server && bash run.sh`，`curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/api/feed` 要 200。
+- 改完服务端：`cd bbs/server && bash run.sh`，`curl -s -o /dev/null -w "%{http_code}" http://[::1]:8080/api/feed` 要 200。
 - 改完客户端：`flutter analyze` 零 error，`flutter test` 68 个全过，`bash deploy_web.sh` 部署。
 - 每段做完提交一次 commit，信息写清楚做了什么。
 - 不要顺手重构无关代码。不要动图片上传链路、不要动 `/api/upload` 的限额。
@@ -125,7 +125,7 @@ ALTER TABLE users ADD COLUMN quota_bytes INTEGER;
 3. 在 `server/config/site.json` 的 `paths.files` 写 `/vol3/cloud/files`。**不改代码默认值**，路径属于部署配置。
 4. 重启服务端，验证：
    - 老帖子附件 URL 仍 200
-   - `curl -X POST -F file=@xx.txt -H "Authorization: Bearer <token>" http://127.0.0.1:8080/api/file` 落盘在 `/vol3/cloud/files/`
+   - `curl -X POST -F file=@xx.txt -H "Authorization: Bearer <token>" http://[::1]:8080/api/file` 落盘在 `/vol3/cloud/files/`
 5. 确认 `data/files` 先别删，留一周。
 
 **验收**：新传的文件在 `/vol3` 下；老附件能下载；`df -h /vol3` 正常。

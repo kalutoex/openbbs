@@ -29,7 +29,7 @@ cd openbbs/server
 ./run.sh
 
 # 4 看一眼
-curl -s localhost:8080/api/meta | head
+curl -s [::1]:8080/api/meta | head
 ```
 
 `install.sh` 会问站名、端口、主站地址、对外地址，回车就取默认值。全程可以无交互：
