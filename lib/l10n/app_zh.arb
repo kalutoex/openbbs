@@ -1538,5 +1538,27 @@
   },
   "currentPasswordRequired": "先填原密码",
   "showPassword": "显示密码",
-  "hidePassword": "隐藏密码"
+  "hidePassword": "隐藏密码",
+  "downloadsPage": "已下载",
+  "downloadsEmpty": "还没下载过文件",
+  "downloadsCount": "{v1} 个 · {v2}",
+  "@downloadsCount": {
+    "placeholders": {
+      "v1": {},
+      "v2": {}
+    }
+  },
+  "showInFolder": "在文件夹中显示",
+  "deleteLocalFile": "删除本地文件",
+  "deleteLocalAsk": "删了手机上就没了，云盘里的还在。",
+  "localFileGone": "文件不在了",
+  "removeFromList": "从列表移除",
+  "cantOpenThis": "打不开这个文件：{v1}",
+  "@cantOpenThis": {
+    "placeholders": {
+      "v1": {}
+    }
+  },
+  "downloadsByBrowser": "网页版的下载归浏览器管，这里列不出来。",
+  "clearMissingRecords": "清掉不在了的"
 }

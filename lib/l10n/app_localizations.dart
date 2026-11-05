@@ -4201,6 +4201,72 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'隐藏密码'**
   String get hidePassword;
+
+  /// No description provided for @downloadsPage.
+  ///
+  /// In zh, this message translates to:
+  /// **'已下载'**
+  String get downloadsPage;
+
+  /// No description provided for @downloadsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没下载过文件'**
+  String get downloadsEmpty;
+
+  /// No description provided for @downloadsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{v1} 个 · {v2}'**
+  String downloadsCount(Object v1, Object v2);
+
+  /// No description provided for @showInFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'在文件夹中显示'**
+  String get showInFolder;
+
+  /// No description provided for @deleteLocalFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除本地文件'**
+  String get deleteLocalFile;
+
+  /// No description provided for @deleteLocalAsk.
+  ///
+  /// In zh, this message translates to:
+  /// **'删了手机上就没了，云盘里的还在。'**
+  String get deleteLocalAsk;
+
+  /// No description provided for @localFileGone.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件不在了'**
+  String get localFileGone;
+
+  /// No description provided for @removeFromList.
+  ///
+  /// In zh, this message translates to:
+  /// **'从列表移除'**
+  String get removeFromList;
+
+  /// No description provided for @cantOpenThis.
+  ///
+  /// In zh, this message translates to:
+  /// **'打不开这个文件：{v1}'**
+  String cantOpenThis(Object v1);
+
+  /// No description provided for @downloadsByBrowser.
+  ///
+  /// In zh, this message translates to:
+  /// **'网页版的下载归浏览器管，这里列不出来。'**
+  String get downloadsByBrowser;
+
+  /// No description provided for @clearMissingRecords.
+  ///
+  /// In zh, this message translates to:
+  /// **'清掉不在了的'**
+  String get clearMissingRecords;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

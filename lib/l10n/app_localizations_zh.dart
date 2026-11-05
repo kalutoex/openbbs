@@ -2291,4 +2291,41 @@ class LZh extends L {
 
   @override
   String get hidePassword => '隐藏密码';
+
+  @override
+  String get downloadsPage => '已下载';
+
+  @override
+  String get downloadsEmpty => '还没下载过文件';
+
+  @override
+  String downloadsCount(Object v1, Object v2) {
+    return '$v1 个 · $v2';
+  }
+
+  @override
+  String get showInFolder => '在文件夹中显示';
+
+  @override
+  String get deleteLocalFile => '删除本地文件';
+
+  @override
+  String get deleteLocalAsk => '删了手机上就没了，云盘里的还在。';
+
+  @override
+  String get localFileGone => '文件不在了';
+
+  @override
+  String get removeFromList => '从列表移除';
+
+  @override
+  String cantOpenThis(Object v1) {
+    return '打不开这个文件：$v1';
+  }
+
+  @override
+  String get downloadsByBrowser => '网页版的下载归浏览器管，这里列不出来。';
+
+  @override
+  String get clearMissingRecords => '清掉不在了的';
 }

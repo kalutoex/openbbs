@@ -2330,4 +2330,43 @@ class LEn extends L {
 
   @override
   String get hidePassword => 'Hide password';
+
+  @override
+  String get downloadsPage => 'Downloads';
+
+  @override
+  String get downloadsEmpty => 'Nothing downloaded yet';
+
+  @override
+  String downloadsCount(Object v1, Object v2) {
+    return '$v1 files · $v2';
+  }
+
+  @override
+  String get showInFolder => 'Show in folder';
+
+  @override
+  String get deleteLocalFile => 'Delete local file';
+
+  @override
+  String get deleteLocalAsk =>
+      'This removes it from the phone. The copy on the cloud stays.';
+
+  @override
+  String get localFileGone => 'File is gone';
+
+  @override
+  String get removeFromList => 'Remove from list';
+
+  @override
+  String cantOpenThis(Object v1) {
+    return 'Can\'t open this file: $v1';
+  }
+
+  @override
+  String get downloadsByBrowser =>
+      'Downloads are handled by the browser on the web.';
+
+  @override
+  String get clearMissingRecords => 'Clear missing';
 }

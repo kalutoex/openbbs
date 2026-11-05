@@ -941,5 +941,27 @@
   "revokeFailed": "Couldn't sign out: {v1}",
   "currentPasswordRequired": "Enter your current password",
   "showPassword": "Show password",
-  "hidePassword": "Hide password"
+  "hidePassword": "Hide password",
+  "downloadsPage": "Downloads",
+  "downloadsEmpty": "Nothing downloaded yet",
+  "downloadsCount": "{v1} files · {v2}",
+  "@downloadsCount": {
+    "placeholders": {
+      "v1": {},
+      "v2": {}
+    }
+  },
+  "showInFolder": "Show in folder",
+  "deleteLocalFile": "Delete local file",
+  "deleteLocalAsk": "This removes it from the phone. The copy on the cloud stays.",
+  "localFileGone": "File is gone",
+  "removeFromList": "Remove from list",
+  "cantOpenThis": "Can't open this file: {v1}",
+  "@cantOpenThis": {
+    "placeholders": {
+      "v1": {}
+    }
+  },
+  "downloadsByBrowser": "Downloads are handled by the browser on the web.",
+  "clearMissingRecords": "Clear missing"
 }

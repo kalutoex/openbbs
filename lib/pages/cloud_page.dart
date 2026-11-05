@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../cloud.dart';
+import '../download_index.dart';
 import '../downloads.dart';
+import '../local_files.dart';
+import '../pages/downloads_page.dart';
 import '../file_browser.dart';
 import '../file_open.dart';
 import '../file_pick.dart';
@@ -48,12 +51,43 @@ class _CloudPageState extends State<CloudPage> {
   /// 这次进来已经下完的，行尾给个绿标。还能再下，标不会清。
   final Set<int> _done = {};
 
+  /// 云盘 id -> 本机那份。下载过就记着，开了 app 也能认出来。
+  final Map<int, LocalDownload> _local = {};
+
+  /// 文件名 -> 本机那份。从帖子附件下的没带云盘 id，按名字兜一下。
+  final Map<String, LocalDownload> _localByName = {};
+
   @override
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
+    _loadLocal();
     _load();
   }
+
+  /// 本机下载记录：认出哪些已经在自己手机上，点的时候不重复下。
+  Future<void> _loadLocal() async {
+    final recs = await loadLocalDownloads();
+    final map = <int, LocalDownload>{};
+    final byName = <String, LocalDownload>{};
+    for (final r in recs) {
+      final id = int.tryParse(r.cloudId ?? '');
+      if (id != null) map.putIfAbsent(id, () => r);
+      byName.putIfAbsent(r.name, () => r);
+    }
+    if (!mounted) return;
+    setState(() {
+      _local
+        ..clear()
+        ..addAll(map);
+      _localByName
+        ..clear()
+        ..addAll(byName);
+    });
+  }
+
+  /// 这个云盘文件在本机的哪一份。先认 id，再认名字。
+  LocalDownload? _localOf(CloudFile f) => _local[f.id] ?? _localByName[f.name];
 
   @override
   void dispose() {
@@ -137,12 +171,16 @@ class _CloudPageState extends State<CloudPage> {
 
   Future<void> _open(CloudFile f) async {
     if (_dl.containsKey(f.id)) return; // 同一个文件别叠着下
+    // 本机已经有了：不重下，带他去文件所在的那层目录，里面再点才打开。
+    final local = _localOf(f);
+    if (local != null && await _reveal(f, local)) return;
     final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
     setState(() => _dl[f.id] = 0);
     try {
       final saved = await openRemoteFile(
         url,
         f.name,
+        cloudId: '${f.id}',
         onProgress: (p) {
           if (mounted) setState(() => _dl[f.id] = p);
         },
@@ -152,6 +190,8 @@ class _CloudPageState extends State<CloudPage> {
         _dl.remove(f.id);
         _done.add(f.id);
       });
+      // 刚下完，本地记录也更新一下，再点就是带你去找文件
+      await _loadLocal();
       // 落点只说一次；之后看行里的绿标就够了，不再弹提示。
       if (await DownloadHint.firstTime()) {
         if (mounted) _toast(Lc.current.savedTo(saved.display));
@@ -161,6 +201,31 @@ class _CloudPageState extends State<CloudPage> {
       setState(() => _dl.remove(f.id));
       _toast(errorText(context, e));
     }
+  }
+
+  /// 去本机那份文件所在的位置。文件被删了就返回 false，转去正常下载。
+  Future<bool> _reveal(CloudFile f, LocalDownload local) async {
+    final path = await localFileOf(local);
+    if (path == null) {
+      // 记录还在、文件没了：把这条清掉，下次点就是重新下
+      await forgetLocalDownload(local.display);
+      if (mounted) setState(() => _local.remove(f.id));
+      return false;
+    }
+    final cut = path.lastIndexOf('/');
+    if (cut <= 0) return false;
+    if (!mounted) return false;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FileBrowserPage(
+          openOnly: true,
+          initialPath: path.substring(0, cut),
+          highlight: path.substring(cut + 1),
+        ),
+      ),
+    );
+    return true;
   }
 
   Future<void> _delete(CloudFile f) async {
@@ -207,8 +272,16 @@ class _CloudPageState extends State<CloudPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.download_outlined),
-              title: Text(Lc.current.download),
+              leading: Icon(
+                _localOf(f) != null
+                    ? Icons.folder_open_outlined
+                    : Icons.download_outlined,
+              ),
+              title: Text(
+                _localOf(f) != null
+                    ? Lc.current.showInFolder
+                    : Lc.current.download,
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _open(f);
@@ -289,6 +362,15 @@ class _CloudPageState extends State<CloudPage> {
     }
   }
 
+  Future<void> _toDownloads() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DownloadsPage()),
+    );
+    // 那边可能删了文件，回来重新认一遍
+    if (mounted) _loadLocal();
+  }
+
   Future<void> _toTrash() async {
     await Navigator.push(
       context,
@@ -303,6 +385,11 @@ class _CloudPageState extends State<CloudPage> {
       appBar: AppBar(
         title: Text(Lc.current.cloudDisk),
         actions: [
+          IconButton(
+            tooltip: Lc.current.downloadsPage,
+            icon: const Icon(Icons.download_done_outlined),
+            onPressed: _toDownloads,
+          ),
           IconButton(
             tooltip: Lc.current.recycleBin,
             icon: const Icon(Icons.delete_outline),
@@ -391,7 +478,7 @@ class _CloudPageState extends State<CloudPage> {
           onTap: () => _open(f),
           onLongPress: () => _menu(f),
           progress: _dl[f.id],
-          downloaded: _done.contains(f.id),
+          downloaded: _done.contains(f.id) || _localOf(f) != null,
         );
       },
     );

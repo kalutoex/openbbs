@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'api.dart';
 import 'cloud.dart';
+import 'downloads.dart';
 import 'file_pick.dart';
 import 'l10n/l10n.dart';
 import 'utils.dart';
@@ -25,11 +26,26 @@ bool get fileBrowserSupported => Platform.isAndroid;
 const _blockedNames = {'Android'};
 
 class FileBrowserPage extends StatefulWidget {
-  const FileBrowserPage({super.key, this.pickOnly = false});
+  const FileBrowserPage({
+    super.key,
+    this.pickOnly = false,
+    this.openOnly = false,
+    this.initialPath,
+    this.highlight,
+  });
 
   /// 只挑不传：选完把文件交回调用方，由它自己决定传不传、传到哪里。
   /// 云盘那边是 false——点一下就直接传上去了。
   final bool pickOnly;
+
+  /// 只看不传：点文件就是打开它。「已下载」和云盘定位都走这个。
+  final bool openOnly;
+
+  /// 一进来就站到哪。从云盘点已下载的文件时，直接落到它那层目录。
+  final String? initialPath;
+
+  /// 落进去之后给谁打底。文件名，对得上就染一下，省得在一屏里找。
+  final String? highlight;
 
   @override
   State<FileBrowserPage> createState() => _FileBrowserPageState();
@@ -74,6 +90,7 @@ class _FileBrowserPageState extends State<FileBrowserPage>
   String _upName = '';
 
   final TextEditingController _search = TextEditingController();
+  final ScrollController _scroll = ScrollController();
   String _q = '';
 
   @override
@@ -87,6 +104,7 @@ class _FileBrowserPageState extends State<FileBrowserPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _search.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -132,6 +150,11 @@ class _FileBrowserPageState extends State<FileBrowserPage>
       _noAccess = false;
       _roots = roots;
     });
+    final start = widget.initialPath;
+    if (start != null && start.isNotEmpty && await Directory(start).exists()) {
+      await _load(start);
+      return;
+    }
     await _load(roots.isEmpty ? '/storage/emulated/0' : roots.first);
   }
 
@@ -212,6 +235,24 @@ class _FileBrowserPageState extends State<FileBrowserPage>
       _rows = rows;
       _loading = false;
     });
+    _scrollToHighlight(rows);
+  }
+
+  /// 进来找的那个文件：估算一下位置，先滚到它附近。估不准也只是差几行。
+  void _scrollToHighlight(List<_Row> rows) {
+    final want = widget.highlight;
+    if (want == null || want.isEmpty) return;
+    final i = rows.indexWhere((r) => r.name == want);
+    if (i < 0) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final at = (i * 56.0).clamp(0.0, _scroll.position.maxScrollExtent);
+      _scroll.animateTo(
+        at,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   bool get _atRoot => _roots.isEmpty || _path == _roots.first;
@@ -240,6 +281,15 @@ class _FileBrowserPageState extends State<FileBrowserPage>
     _load(r.path);
   }
 
+  /// 打开一个文件：系统里有什么就用什么，打不开就说打不开。
+  Future<void> _openFile(String path) async {
+    try {
+      await openSaved(SavedFile(display: path, path: path));
+    } catch (e) {
+      if (mounted) toast(context, Lc.current.cantOpenThis(e.toString()));
+    }
+  }
+
   void _toggle(_Row r, {bool force = false}) {
     if (r.isDir) {
       _enter(r);
@@ -247,6 +297,10 @@ class _FileBrowserPageState extends State<FileBrowserPage>
     }
     if (!_selecting && !force) {
       // 单击一个文件：直接用它，不必先进多选
+      if (widget.openOnly) {
+        _openFile(r.path);
+        return;
+      }
       if (widget.pickOnly) {
         _handOff([r.path]);
       } else {
@@ -599,6 +653,7 @@ class _FileBrowserPageState extends State<FileBrowserPage>
       );
     }
     return ListView.builder(
+      controller: _scroll,
       itemCount: rows.length + (showShortcuts ? 1 : 0),
       itemBuilder: (context, i) {
         if (showShortcuts && i == 0) return _shortcuts(cs);
@@ -641,9 +696,11 @@ class _FileBrowserPageState extends State<FileBrowserPage>
 
   Widget _rowTile(_Row r, ColorScheme cs) {
     final picked = _picked.contains(r.path);
+    final marked = widget.highlight != null && r.name == widget.highlight;
     return ListTile(
       dense: true,
       selected: picked,
+      tileColor: marked ? cs.primaryContainer.withValues(alpha: 0.4) : null,
       leading: _selecting && !r.isDir
           ? Icon(
               picked ? Icons.check_circle : Icons.radio_button_unchecked,
@@ -676,7 +733,10 @@ class _FileBrowserPageState extends State<FileBrowserPage>
           ? Icon(Icons.chevron_right, size: 18, color: cs.outline)
           : null,
       onTap: () => _toggle(r),
-      onLongPress: r.isDir ? null : () => _toggle(r, force: true),
+      // 只看不传的模式下不给多选：这里没有「上传」这一步可做
+      onLongPress: r.isDir || widget.openOnly
+          ? null
+          : () => _toggle(r, force: true),
     );
   }
 }
