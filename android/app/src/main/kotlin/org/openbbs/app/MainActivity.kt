@@ -84,8 +84,10 @@ class MainActivity : FlutterActivity() {
 
     private fun aliasOf(key: String): ComponentName {
         aliasMap()[key]?.let { return it }
+        // 注意两个参数不是一回事：第一个是包名（applicationId），
+        // 第二个是类全名（namespace 开头）。混了就是 Unknown component。
         val full = "$namespace.Icon${key.replaceFirstChar { it.uppercase() }}"
-        return ComponentName(namespace, full)
+        return ComponentName(packageName, full)
     }
 
     private fun currentIcon(): String {

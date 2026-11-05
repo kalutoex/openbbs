@@ -168,8 +168,12 @@ class _IconPickerState extends State<_IconPicker> {
       // 带上错误码：换不了的时候得能一眼看出是没找到别名，还是系统拒了。
       if (!mounted) return;
       setState(() => _busy = null);
+      final detail = e.message?.trim();
+      final tail = detail == null || detail.isEmpty
+          ? e.code
+          : '${e.code}: ${detail.length > 40 ? detail.substring(0, 40) : detail}';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${t.appIconUnavailable}（${e.code}）')),
+        SnackBar(content: Text('${t.appIconUnavailable}（$tail）')),
       );
     } catch (_) {
       if (!mounted) return;
