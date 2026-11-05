@@ -363,7 +363,6 @@ class SettingsPage extends StatelessWidget {
         current: cur,
         options: [
           (0, Lc.current.home),
-          (1, Lc.current.sites),
           (2, Lc.current.notice),
           (3, Lc.current.me),
         ],

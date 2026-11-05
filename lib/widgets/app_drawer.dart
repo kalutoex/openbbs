@@ -132,17 +132,19 @@ class _AppDrawerState extends State<AppDrawer> {
                           widget.onTimeline();
                         },
                       ),
-                      _item(
-                        context,
-                        icon: Icons.grid_view_outlined,
-                        activeIcon: Icons.grid_view_rounded,
-                        label: Lc.current.sites,
-                        active: widget.currentTab == 1,
-                        onTap: () {
-                          _close();
-                          widget.onSites?.call();
-                        },
-                      ),
+                      // 站点先收起：底栏已经拿掉了，抽屉里也一起不给入口。
+                      // 要放回来，把这段和 home_page 里的 _barTabs 都加回 1。
+                      // _item(
+                      //   context,
+                      //   icon: Icons.grid_view_outlined,
+                      //   activeIcon: Icons.grid_view_rounded,
+                      //   label: Lc.current.sites,
+                      //   active: widget.currentTab == 1,
+                      //   onTap: () {
+                      //     _close();
+                      //     widget.onSites?.call();
+                      //   },
+                      // ),
                       if (st.loggedIn) ...[
                         const SizedBox(height: 10),
                         _label(context, Lc.current.me),

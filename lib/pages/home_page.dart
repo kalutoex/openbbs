@@ -30,8 +30,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _sk = GlobalKey<ScaffoldState>();
 
-  /// 0 = 时间线，1 = 站点，2 = 通知，3 = 我的
+  /// 0 = 时间线，1 = 站点，2 = 消息，3 = 我的
   late int _index = _tabOf(AppState.instance.startTab.value);
+
+  /// 底栏只露这几页。站点（1）暂时没那么大用处，先不放进底栏，
+  /// 页面和索引都留着，想放回来把 1 加回这个列表就行。
+  static const _barTabs = <int>[0, 2, 3];
 
   /// IndexedStack 会把四个 tab 全部建出来、initState 一起发请求，
   /// 启动瞬间四路网络 + 四份骨架一起刷，看着就是一阵乱闪。
@@ -39,9 +43,11 @@ class _HomePageState extends State<HomePage> {
   late final Set<int> _started = {_index};
 
   /// 历史版本存过 0..3（1 是站点），语义和现在这张表一致，越界就回首页。
-  static int _tabOf(int v) => v >= 0 && v <= 3 ? v : 0;
+  /// 站点没入口了，存着 1 的老设置直接给首页。
+  static int _tabOf(int v) => v >= 0 && v <= 3 && v != 1 ? v : 0;
 
   void _go(int i) {
+    if (!_barTabs.contains(i)) return;
     if (i == _index) return;
     setState(() {
       _index = i;
@@ -198,23 +204,20 @@ class _HomePageState extends State<HomePage> {
             child: PageWidth(
               max: 760,
               child: NavigationBar(
-                selectedIndex: _index,
+                selectedIndex: _barTabs.contains(_index)
+                    ? _barTabs.indexOf(_index)
+                    : 0,
                 elevation: 0,
                 height: 64,
                 backgroundColor: Colors.transparent,
                 indicatorColor: cs.secondaryContainer,
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                onDestinationSelected: _go,
+                onDestinationSelected: (i) => _go(_barTabs[i]),
                 destinations: [
                   NavigationDestination(
                     icon: Icon(Icons.home_outlined),
                     selectedIcon: Icon(Icons.home_rounded),
                     label: Lc.current.home,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.grid_view_outlined),
-                    selectedIcon: Icon(Icons.grid_view_rounded),
-                    label: Lc.current.sites,
                   ),
                   NavigationDestination(
                     icon: Badge(
