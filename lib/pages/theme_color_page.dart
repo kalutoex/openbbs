@@ -2,6 +2,7 @@ import '../app_icon.dart';
 import '../widgets/page_width.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../store.dart';
 
@@ -162,6 +163,13 @@ class _IconPickerState extends State<_IconPicker> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(t.appIconChanged)),
+      );
+    } on PlatformException catch (e) {
+      // 带上错误码：换不了的时候得能一眼看出是没找到别名，还是系统拒了。
+      if (!mounted) return;
+      setState(() => _busy = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${t.appIconUnavailable}（${e.code}）')),
       );
     } catch (_) {
       if (!mounted) return;

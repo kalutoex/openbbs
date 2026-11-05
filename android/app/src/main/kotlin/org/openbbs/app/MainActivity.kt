@@ -50,14 +50,33 @@ class MainActivity : FlutterActivity() {
      * 这里只负责启用其中一个、禁用其余。用 DONT_KILL_APP，切完应用不被杀，
      * 桌面图标要等启动器自己刷新（一般几秒）。
      */
-    private fun aliasOf(key: String) = ComponentName(
-        packageName,
-        "$packageName.Icon${key.replaceFirstChar { it.uppercase() }}",
-    )
+    /**
+     * 别名组件名不能自己拼。
+     *
+     * 清单里的 .IconMint 是按 namespace（org.openbbs.app）展开的，
+     * 而运行时 packageName 给的是 applicationId（com.kalutoex.shijianxian），
+     * 拿它拼出来的名字系统里根本不存在——所以这里直接问系统要一遍，缓存住。
+     */
+    @Suppress("DEPRECATION")
+    private fun aliasMap(): Map<String, ComponentName> {
+        aliasCache?.let { return it }
+        val out = HashMap<String, ComponentName>()
+        val info = packageManager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
+        for (a in info.activities ?: emptyArray()) {
+            val i = a.name.lastIndexOf(".Icon")
+            if (i < 0) continue
+            val k = a.name.substring(i + 5).lowercase()
+            if (k in ICONS) out[k] = ComponentName(a.packageName, a.name)
+        }
+        aliasCache = out
+        return out
+    }
 
     private fun currentIcon(): String {
+        val map = aliasMap()
         for (k in ICONS) {
-            val state = packageManager.getComponentEnabledSetting(aliasOf(k))
+            val c = map[k] ?: continue
+            val state = packageManager.getComponentEnabledSetting(c)
             val on = when (state) {
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
                 PackageManager.COMPONENT_ENABLED_STATE_DISABLED -> false
@@ -74,17 +93,24 @@ class MainActivity : FlutterActivity() {
             result.error("unknownIcon", "没有这套图标：$key", null)
             return
         }
+        val map = aliasMap()
+        val target = map[key]
+        if (target == null) {
+            result.error("noAlias", "清单里没有 Icon$key", null)
+            return
+        }
         try {
             // 先开新的再关旧的，中间不会出现"一个都没有"的空档。
             packageManager.setComponentEnabledSetting(
-                aliasOf(key),
+                target,
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                 PackageManager.DONT_KILL_APP,
             )
             for (k in ICONS) {
                 if (k == key) continue
+                val c = map[k] ?: continue
                 packageManager.setComponentEnabledSetting(
-                    aliasOf(k),
+                    c,
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                     PackageManager.DONT_KILL_APP,
                 )
@@ -94,6 +120,8 @@ class MainActivity : FlutterActivity() {
             result.error("iconFailed", e.message ?: e.toString(), null)
         }
     }
+
+    private var aliasCache: Map<String, ComponentName>? = null
 
     private var dirResult: MethodChannel.Result? = null
 
