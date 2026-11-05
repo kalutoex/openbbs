@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 由 tool/gen_app_icons.py 生成，别手改。 -->
+<resources>
+    <color name="ic_launcher_mint_background">#111F1B</color>
+    <color name="ic_launcher_blue_background">#0E1723</color>
+    <color name="ic_launcher_purple_background">#171323</color>
+    <color name="ic_launcher_pink_background">#220F19</color>
+    <color name="ic_launcher_coral_background">#23160F</color>
+    <color name="ic_launcher_red_background">#231111</color>
+    <color name="ic_launcher_lime_background">#151F10</color>
+    <color name="ic_launcher_steel_background">#16191C</color>
+</resources>

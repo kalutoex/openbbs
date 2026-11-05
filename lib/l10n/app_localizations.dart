@@ -3122,6 +3122,30 @@ abstract class L {
   /// **'上面的按钮、选中状态、输入框焦点圈都会跟着这条色带走。'**
   String get accentColorHint;
 
+  /// No description provided for @appIconTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用图标'**
+  String get appIconTitle;
+
+  /// No description provided for @appIconHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'桌面图标和名字是打包时定死的，这里换的是预先做好的几套。选完桌面要等几秒才变，个别启动器还得重启一下。'**
+  String get appIconHint;
+
+  /// No description provided for @appIconChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'换好了，看桌面'**
+  String get appIconChanged;
+
+  /// No description provided for @appIconUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个平台上换不了图标'**
+  String get appIconUnavailable;
+
   /// No description provided for @moreToLoad.
   ///
   /// In zh, this message translates to:

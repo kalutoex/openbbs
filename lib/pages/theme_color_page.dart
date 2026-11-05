@@ -1,3 +1,4 @@
+import '../app_icon.dart';
 import '../widgets/page_width.dart';
 
 import 'package:flutter/material.dart';
@@ -117,9 +118,156 @@ class ThemeColorPage extends StatelessWidget {
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
+                const _IconPicker(),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 桌面图标。系统层换图标只能靠清单里预置的别名，这里只是挑启用哪一个，
+/// 所以下面这些是固定的 8 套，不是随便挑图。
+class _IconPicker extends StatefulWidget {
+  const _IconPicker();
+
+  @override
+  State<_IconPicker> createState() => _IconPickerState();
+}
+
+class _IconPickerState extends State<_IconPicker> {
+  String? _current;
+  String? _busy;
+
+  @override
+  void initState() {
+    super.initState();
+    currentAppIcon().then((v) {
+      if (mounted) setState(() => _current = v);
+    });
+  }
+
+  Future<void> _pick(String key) async {
+    if (_busy != null || key == _current) return;
+    setState(() => _busy = key);
+    final t = Lc.current;
+    try {
+      await setAppIcon(key);
+      if (!mounted) return;
+      setState(() {
+        _current = key;
+        _busy = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t.appIconChanged)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t.appIconUnavailable)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!canChangeAppIcon) return const SizedBox.shrink();
+    final t = Theme.of(context);
+    final scheme = t.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 28),
+        Text(Lc.current.appIconTitle, style: t.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text(
+          Lc.current.appIconHint,
+          style: t.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: [
+            for (final o in appIconOptions)
+              _IconTile(
+                option: o,
+                selected: o.key == _current,
+                busy: o.key == _busy,
+                onTap: () => _pick(o.key),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _IconTile extends StatelessWidget {
+  const _IconTile({
+    required this.option,
+    required this.selected,
+    required this.busy,
+    required this.onTap,
+  });
+
+  final AppIconOption option;
+  final bool selected;
+  final bool busy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 64,
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: selected ? scheme.primary : Colors.transparent,
+                      width: 2.5,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(appIconAsset(option.key)),
+                  ),
+                ),
+                if (busy)
+                  const Positioned.fill(
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              option.label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
         ),
       ),
     );

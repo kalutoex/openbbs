@@ -642,7 +642,11 @@
   "connect": "Connect",
   "themeColorTitle": "Accent color",
   "accentColorHint": "Buttons, selections and input focus rings all follow this color band.",
-  "moreToLoad": "More to come",
+    "appIconTitle": "App icon",
+  "appIconHint": "The launcher icon is fixed when the app is built; these are the sets shipped with it. The home screen may take a few seconds to refresh.",
+  "appIconChanged": "Done — check your home screen",
+  "appIconUnavailable": "Not supported on this platform",
+"moreToLoad": "More to come",
   "resetPasswordConfirm": "Set “{v1}”'s password to a random string?\n\nThe old one stops working at once. The new one is shown only once — send it to them.",
   "@resetPasswordConfirm": {
     "placeholders": {

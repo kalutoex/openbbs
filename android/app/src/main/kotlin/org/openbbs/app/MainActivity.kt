@@ -1,8 +1,10 @@
 package org.openbbs.app
 
 import android.app.Activity
+import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -28,14 +30,83 @@ import java.io.File
 class MainActivity : FlutterActivity() {
     companion object {
         private const val CHANNEL = "openbbs/downloads"
+        private const val ICON_CHANNEL = "openbbs/icon"
         private const val REQ_DIR = 4801
         private const val FOLDER = "OpenBBS"
+
+        /** 图标别名顺序，跟 AndroidManifest.xml 里的 Icon* 一一对应。 */
+        private val ICONS = listOf("mint", "blue", "purple", "pink", "coral", "red", "lime", "steel")
+
+        /** 清单里默认启用的那个。 */
+        private const val DEFAULT_ICON = "mint"
+    }
+
+    // ------------------------------------------------------------ 应用图标
+
+    /**
+     * 桌面图标靠 activity-alias 切换。
+     *
+     * 图标和名字都写在清单里，运行时改不了，所以预置了几套别名，
+     * 这里只负责启用其中一个、禁用其余。用 DONT_KILL_APP，切完应用不被杀，
+     * 桌面图标要等启动器自己刷新（一般几秒）。
+     */
+    private fun aliasOf(key: String) = ComponentName(
+        packageName,
+        "$packageName.Icon${key.replaceFirstChar { it.uppercase() }}",
+    )
+
+    private fun currentIcon(): String {
+        for (k in ICONS) {
+            val state = packageManager.getComponentEnabledSetting(aliasOf(k))
+            val on = when (state) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED -> false
+                // 没动过就是清单里的初值：只有默认那个是启用的。
+                else -> k == DEFAULT_ICON
+            }
+            if (on) return k
+        }
+        return DEFAULT_ICON
+    }
+
+    private fun setIcon(key: String, result: MethodChannel.Result) {
+        if (key !in ICONS) {
+            result.error("unknownIcon", "没有这套图标：$key", null)
+            return
+        }
+        try {
+            // 先开新的再关旧的，中间不会出现"一个都没有"的空档。
+            packageManager.setComponentEnabledSetting(
+                aliasOf(key),
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP,
+            )
+            for (k in ICONS) {
+                if (k == key) continue
+                packageManager.setComponentEnabledSetting(
+                    aliasOf(k),
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP,
+                )
+            }
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("iconFailed", e.message ?: e.toString(), null)
+        }
     }
 
     private var dirResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
+        MethodChannel(engine.dartExecutor.binaryMessenger, ICON_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "current" -> result.success(currentIcon())
+                    "set" -> setIcon(call.argument<String>("key") ?: "", result)
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

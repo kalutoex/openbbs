@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.5.0+110
+version: 1.5.1+111
 environment:
   sdk: ^3.13.5
 
@@ -78,6 +78,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # 应用图标预览图（8 套），由 tool/gen_app_icons.py 生成。
+  assets:
+    - assets/icons/
 
   # l10n.yaml + lib/l10n/*.arb → .dart_tool/flutter_gen/gen_l10n/L
   generate: true

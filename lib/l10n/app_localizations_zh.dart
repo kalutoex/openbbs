@@ -1688,6 +1688,19 @@ class LZh extends L {
   String get accentColorHint => '上面的按钮、选中状态、输入框焦点圈都会跟着这条色带走。';
 
   @override
+  String get appIconTitle => '应用图标';
+
+  @override
+  String get appIconHint =>
+      '桌面图标和名字是打包时定死的，这里换的是预先做好的几套。选完桌面要等几秒才变，个别启动器还得重启一下。';
+
+  @override
+  String get appIconChanged => '换好了，看桌面';
+
+  @override
+  String get appIconUnavailable => '这个平台上换不了图标';
+
+  @override
   String get moreToLoad => '还有更多';
 
   @override

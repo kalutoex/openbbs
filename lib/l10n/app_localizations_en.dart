@@ -1719,6 +1719,19 @@ class LEn extends L {
       'Buttons, selections and input focus rings all follow this color band.';
 
   @override
+  String get appIconTitle => 'App icon';
+
+  @override
+  String get appIconHint =>
+      'The launcher icon is fixed when the app is built; these are the sets shipped with it. The home screen may take a few seconds to refresh.';
+
+  @override
+  String get appIconChanged => 'Done — check your home screen';
+
+  @override
+  String get appIconUnavailable => 'Not supported on this platform';
+
+  @override
   String get moreToLoad => 'More to come';
 
   @override
