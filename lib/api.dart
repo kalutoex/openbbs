@@ -61,6 +61,14 @@ class Api {
   /// 封禁文案是服务端写死的，客户端按它认。
   static const bannedMessage = '账号已被封禁';
 
+  /// 令牌失效时 [require_user] 回的文案。同样是服务端写死的。
+  ///
+  /// 和封禁分开认：封禁要换整棵树，令牌失效只要把本地登录状态清掉。
+  static const needLoginMessage = '请先登录';
+
+  /// 令牌被服务端废掉（管理员重置密码、令牌过期）时通知外面清状态。
+  static void Function()? onUnauthorized;
+
   /// 换一组入口。重复地址去掉，顺序保持调用方给的（已 v6 优先）。
   static void setEndpoints(List<String> urls, {String? preferred}) {
     final out = <String>[];
@@ -170,11 +178,19 @@ class Api {
   /// 用户切网络（家里 WiFi → 校园网 → 流量）时，缓存里的地址不一定还对，
   /// 靠这个自己换过去，不用人去站点页点。换通了就把 base 定在新的那条上。
   /// 服务器真回了错误（ApiException）不换——那不是路的问题。
-  static Future<T> _withFailover<T>(Future<T> Function() run) async {
+  ///
+  /// [retryOnTimeout] 只对幂等请求（GET）给真：写操作超时时，请求多半已经
+  /// 到了服务端，只是回程没等到，换条路重发就是写第二遍——发帖变两条、
+  /// 上传存两份。这种宁可让用户看到失败后自己重试。
+  static Future<T> _withFailover<T>(
+    Future<T> Function() run, {
+    bool retryOnTimeout = true,
+  }) async {
     try {
       return await run();
     } catch (e) {
       if (e is ApiException) rethrow;
+      if (!retryOnTimeout && e is TimeoutException) rethrow;
       final prev = base;
       for (final other in endpoints) {
         if (other == prev) continue;
@@ -188,8 +204,13 @@ class Api {
           // 这条路上服务器答了话，问题不在路，回原路重抛。
           base = prev;
           rethrow;
-        } catch (_) {
-          // 继续下一条
+        } catch (e) {
+          // 继续下一条；但写操作一旦在下一条上超时，就到此为止——
+          // 它可能已经写进去了，不该再往第三条发。
+          if (!retryOnTimeout && e is TimeoutException) {
+            base = prev;
+            rethrow;
+          }
         }
       }
       base = prev;
@@ -224,6 +245,15 @@ class Api {
       } on ApiException {
         rethrow; // 服务端答了话，别换入口重试
       } catch (e) {
+        // 注册、找回密码都不幂等：超时说明请求可能已经到了，换条入口再发
+        // 会变成「注册两次」这种怪事。连接没建起来（其余异常）才换。
+        if (e is TimeoutException) {
+          throw ApiException(
+            Lc.current.connectFailed('$e'),
+            code: 'connectFailed',
+            detail: '$e',
+          );
+        }
         last = e;
       }
     }
@@ -288,9 +318,12 @@ class Api {
     if (!configured) throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
     final body = jsonEncode({'name': name, 'data': base64Encode(bytes)});
     try {
-      final r = await _withFailover(() => http
-          .post(_uri('/upload'), headers: _headers, body: body)
-          .timeout(const Duration(seconds: 60)));
+      final r = await _withFailover(
+        retryOnTimeout: false,
+        () => http
+            .post(_uri('/upload'), headers: _headers, body: body)
+            .timeout(const Duration(seconds: 60)),
+      );
       final d = _decode(r);
       final url = (d is Map ? d['url'] : null) as String?;
       if (url == null || url.isEmpty) throw ApiException('upload returned no url', code: 'uploadNoUrl');
@@ -308,6 +341,7 @@ class Api {
     if (!configured) throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
     try {
       final d = await _withFailover(
+        retryOnTimeout: false,
         () => postFile(_uri('/file').toString(), _headers, f),
       );
       final url = '${d['url'] ?? ''}';
@@ -365,6 +399,15 @@ class Api {
           d.contains(bannedMessage)) {
         onBanned?.call();
       }
+      // 令牌废了：清本地登录状态，别让人在页面里反复撞「请先登录」。
+      // 只有带着令牌却被告知要登录才算，登录页密码输错不会走到这里。
+      if (r.statusCode == 401 &&
+          token != null &&
+          token!.isNotEmpty &&
+          d is String &&
+          d.contains(needLoginMessage)) {
+        onUnauthorized?.call();
+      }
       // 服务端给了 detail 就用它（原文，服务端说了算）；
       // 没给才是客户端自己兜的这句，得能翻译。
       if (d is String && d.isNotEmpty) {
@@ -421,9 +464,12 @@ class Api {
   static Future<dynamic> post(String path, Map<String, dynamic> body) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
     try {
-      final r = await _withFailover(() => http
-          .post(_uri(path), headers: _headers, body: jsonEncode(body))
-          .timeout(const Duration(seconds: 15)));
+      final r = await _withFailover(
+        retryOnTimeout: false,
+        () => http
+            .post(_uri(path), headers: _headers, body: jsonEncode(body))
+            .timeout(const Duration(seconds: 15)),
+      );
       return _decode(r);
     } on ApiException {
       rethrow;
@@ -435,9 +481,12 @@ class Api {
   static Future<dynamic> delete(String path) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
     try {
-      final r = await _withFailover(() => http
-          .delete(_uri(path), headers: _headers)
-          .timeout(const Duration(seconds: 15)));
+      final r = await _withFailover(
+        retryOnTimeout: false,
+        () => http
+            .delete(_uri(path), headers: _headers)
+            .timeout(const Duration(seconds: 15)),
+      );
       return _decode(r);
     } on ApiException {
       rethrow;
@@ -449,9 +498,12 @@ class Api {
   static Future<dynamic> patch(String path, Map<String, dynamic> body) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
     try {
-      final r = await _withFailover(() => http
-          .patch(_uri(path), headers: _headers, body: jsonEncode(body))
-          .timeout(const Duration(seconds: 15)));
+      final r = await _withFailover(
+        retryOnTimeout: false,
+        () => http
+            .patch(_uri(path), headers: _headers, body: jsonEncode(body))
+            .timeout(const Duration(seconds: 15)),
+      );
       return _decode(r);
     } on ApiException {
       rethrow;

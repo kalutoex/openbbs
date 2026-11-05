@@ -95,6 +95,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 服务端说这个令牌不认了。清干净，别留着继续发请求。
+  ///
+  /// 走的是同步路径（接口层是从解析响应的位置回调过来的），落盘让它自己跑。
+  void _tokenExpired() {
+    if (Api.token == null || Api.token!.isEmpty) return;
+    Api.token = null;
+    user = null;
+    _applyCacheScope(null);
+    TokenStore.clear();
+    notifyListeners();
+  }
+
   /// 管理员：未处理举报数。抽屉角标读这里，处理完就地改。
   int reportOpen = 0;
 
@@ -424,6 +436,9 @@ class AppState extends ChangeNotifier {
     };
     // 接口层回「账号已被封禁」就切全局封禁页。
     Api.onBanned = markBanned;
+    // 令牌失效就清本地登录状态：不 then 自动弹登录页，只保证不再拿废令牌
+    // 到处撞「请先登录」。下次发帖一类要身份的操作会自己引到登录页。
+    Api.onUnauthorized = _tokenExpired;
     ready = true;
   }
 
