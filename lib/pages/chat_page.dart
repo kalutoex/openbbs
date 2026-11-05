@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart' hide PickedFile;
 
 import '../api.dart';
+import '../poller.dart';
 import '../cloud.dart';
 import '../file_browser.dart';
 import '../file_pick.dart';
@@ -79,6 +80,8 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    // 告诉轮询：这个人的消息别弹，人正看着呢。
+    Poller.instance.activePeer = _peerId;
     _scroll.addListener(_onScroll);
     _load(initial: true);
     _poll = Timer.periodic(const Duration(seconds: 15), (_) {
@@ -89,6 +92,9 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    if (Poller.instance.activePeer == _peerId) {
+      Poller.instance.activePeer = 0;
+    }
     _poll?.cancel();
     _scroll.dispose();
     _input.dispose();

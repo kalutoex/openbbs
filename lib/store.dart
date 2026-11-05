@@ -28,6 +28,7 @@ class AppState extends ChangeNotifier {
   static const _kThumbs = 'thumbs';
   static const _kFeedSort = 'feed_sort';
   static const _kAutoUnread = 'auto_unread';
+  static const _kSysNotify = 'sys_notify';
   static const _kStartTab = 'start_tab';
 
   /// 底部 tab 表变过（板块改成站点），老键里存的值按旧表解释，新值单开一个键。
@@ -185,6 +186,9 @@ class AppState extends ChangeNotifier {
   /// 每分钟去问一次未读数。
   final ValueNotifier<bool> autoUnread = ValueNotifier(true);
 
+  /// 有新消息时弹系统通知。角标不受这个开关影响，照常更新。
+  final ValueNotifier<bool> sysNotify = ValueNotifier(true);
+
   /// 启动落在哪个 tab：0 时间线 / 1 站点 / 2 通知 / 3 我的。
   final ValueNotifier<int> startTab = ValueNotifier(0);
 
@@ -286,6 +290,12 @@ class AppState extends ChangeNotifier {
     await p.setBool(_kAutoUnread, v);
   }
 
+  Future<void> setSysNotify(bool v) async {
+    sysNotify.value = v;
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kSysNotify, v);
+  }
+
   Future<void> setStartTab(int v) async {
     startTab.value = v.clamp(0, 3);
     final p = await SharedPreferences.getInstance();
@@ -313,6 +323,20 @@ class AppState extends ChangeNotifier {
   void bumpFeed() {
     feedVersion++;
     notifyListeners();
+  }
+
+  /// 轮询回来的角标数，直接落到界面，省一次 /notifications 全量拉取。
+  void setBadges({required int dm, required int notice}) {
+    var changed = false;
+    if (notice != unread) {
+      unread = notice;
+      changed = true;
+    }
+    if (dm != dmUnread) {
+      dmUnread = dm;
+      changed = true;
+    }
+    if (changed) notifyListeners();
   }
 
   Future<void> refreshUnread() async {
@@ -379,6 +403,7 @@ class AppState extends ChangeNotifier {
     final fs = p.getString(_kFeedSort);
     if (fs == 'updated' || fs == 'created') feedSort.value = fs!;
     autoUnread.value = p.getBool(_kAutoUnread) ?? true;
+    sysNotify.value = p.getBool(_kSysNotify) ?? true;
     startTab.value = _startTabOf(p);
     final lc = p.getString(_kLocale) ?? '';
     localeCode.value = (lc == 'zh' || lc == 'en') ? lc : '';

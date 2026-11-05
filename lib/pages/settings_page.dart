@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
+import '../notify.dart';
 import '../site_config.dart';
 import '../cache_clear.dart';
 import '../store.dart';
@@ -110,6 +111,27 @@ class SettingsPage extends StatelessWidget {
                   subtitle: Text(Lc.current.autoCheckNoticeHint),
                   value: v,
                   onChanged: (x) => st.setAutoUnread(x),
+                ),
+              ),
+              ValueListenableBuilder<bool>(
+                valueListenable: st.sysNotify,
+                builder: (ctx, v, _) => SwitchListTile(
+                  secondary: const Icon(Icons.notification_add_outlined),
+                  title: Text(Lc.current.sysNotify),
+                  subtitle: Text(Lc.current.sysNotifyHint),
+                  value: v,
+                  onChanged: (x) async {
+                    await st.setSysNotify(x);
+                    // 打开时顺手要权限；系统那边拒绝过的话这里要不到，
+                    // 得当场说一声，不然他以为开关一拨就能收到。
+                    if (!x) return;
+                    final ok = await SysNotify.ask();
+                    if (!ok && ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text(Lc.current.sysNotifyOff)),
+                      );
+                    }
+                  },
                 ),
               ),
               const Divider(height: 24),

@@ -1514,5 +1514,15 @@
   },
   "dmPickImage": "图片",
   "dmPickFile": "文件",
-  "dmAttach": "发送"
+  "dmAttach": "发送",
+  "notifyNewDm": "新私信",
+  "notifyNewCount": "{n} 条新消息",
+  "@notifyNewCount": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "sysNotify": "消息通知",
+  "sysNotifyHint": "有新消息时弹一条系统通知",
+  "sysNotifyOff": "系统通知权限没开，去手机设置里打开"
 }

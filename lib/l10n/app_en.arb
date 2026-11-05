@@ -908,5 +908,15 @@
   "replyImage": "[image]",
   "dmPickImage": "Photos",
   "dmPickFile": "File",
-  "dmAttach": "Send"
+  "dmAttach": "Send",
+  "notifyNewDm": "New message",
+  "notifyNewCount": "{n} new messages",
+  "@notifyNewCount": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "sysNotify": "Message alerts",
+  "sysNotifyHint": "Show a system notification when a message arrives",
+  "sysNotifyOff": "Notifications are blocked in system settings"
 }

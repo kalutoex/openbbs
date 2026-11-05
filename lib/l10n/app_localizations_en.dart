@@ -2294,4 +2294,22 @@ class LEn extends L {
 
   @override
   String get dmAttach => 'Send';
+
+  @override
+  String get notifyNewDm => 'New message';
+
+  @override
+  String notifyNewCount(int n) {
+    return '$n new messages';
+  }
+
+  @override
+  String get sysNotify => 'Message alerts';
+
+  @override
+  String get sysNotifyHint =>
+      'Show a system notification when a message arrives';
+
+  @override
+  String get sysNotifyOff => 'Notifications are blocked in system settings';
 }

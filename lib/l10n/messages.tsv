@@ -552,3 +552,8 @@ $usedText / $quotaText	usedOfTotal	{v1} / {v2}
 额度（MB，留空 = 跟全站默认）	quotaMbHint	Quota in MB (empty = site default)
 额度已更新	quotaSaved	Quota updated
 全站默认	cloudQuotaDefault	site default
+新私信	notifyNewDm	New message
+{n} 条新消息	notifyNewCount	{n} new messages
+[图片]	notifyImage	[Photo]
+消息通知	sysNotify	Message alerts
+系统通知权限没开，去手机设置里打开	sysNotifyOff	Notifications are blocked in system settings

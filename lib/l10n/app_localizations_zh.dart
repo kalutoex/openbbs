@@ -2249,4 +2249,21 @@ class LZh extends L {
 
   @override
   String get dmAttach => '发送';
+
+  @override
+  String get notifyNewDm => '新私信';
+
+  @override
+  String notifyNewCount(int n) {
+    return '$n 条新消息';
+  }
+
+  @override
+  String get sysNotify => '消息通知';
+
+  @override
+  String get sysNotifyHint => '有新消息时弹一条系统通知';
+
+  @override
+  String get sysNotifyOff => '系统通知权限没开，去手机设置里打开';
 }

@@ -4123,6 +4123,36 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'发送'**
   String get dmAttach;
+
+  /// No description provided for @notifyNewDm.
+  ///
+  /// In zh, this message translates to:
+  /// **'新私信'**
+  String get notifyNewDm;
+
+  /// No description provided for @notifyNewCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{n} 条新消息'**
+  String notifyNewCount(int n);
+
+  /// No description provided for @sysNotify.
+  ///
+  /// In zh, this message translates to:
+  /// **'消息通知'**
+  String get sysNotify;
+
+  /// No description provided for @sysNotifyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'有新消息时弹一条系统通知'**
+  String get sysNotifyHint;
+
+  /// No description provided for @sysNotifyOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统通知权限没开，去手机设置里打开'**
+  String get sysNotifyOff;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

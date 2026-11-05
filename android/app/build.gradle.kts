@@ -21,6 +21,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // flutter_local_notifications 22 要这个，不开的话 Gradle 直接报
+        // 「Dependency ':flutter_local_notifications' requires core library desugaring」。
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -66,4 +69,9 @@ kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+dependencies {
+    // 本地通知插件要求；版本跟插件 android/build.gradle 里写的一致。
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

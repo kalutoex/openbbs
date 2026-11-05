@@ -7,10 +7,17 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
 import 'l10n/app_localizations.dart';
+import 'notify.dart';
+import 'pages/chat_page.dart';
 import 'pages/home_page.dart';
 import 'pages/banned_page.dart';
+import 'pages/notice_page.dart';
+import 'poller.dart';
 import 'store.dart';
 import 'theme.dart';
+
+/// 点通知跳页面要一个全局 Navigator，此时还没有 context。
+final GlobalKey<NavigatorState> appNav = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +29,7 @@ Future<void> main() async {
   // 表现就是点开一片空白、以为打不开。设置读完会自己触发一次重建，
   // 主题跟着换过去，代价只是极短的一帧默认色。
   runApp(const ShijianxianApp());
+  unawaited(SysNotify.init(_onNotifyTap));
   unawaited(_boot());
 }
 
@@ -63,6 +71,45 @@ Future<void> _boot() async {
   // 设置读完才有 Api.token。冷启动必须在这里补一次 /me，
   // 否则杀掉后台再进来，token 还在、user 却是空的，看着就是掉登录。
   unawaited(AppState.instance.init());
+  // 轮询放在最后启动：要有 token 才有东西可查。
+  unawaited(Poller.instance.start());
+  // 登录着但还没给通知权限的，问一次；问过系统自己会记住。
+  unawaited(_askNotifyOnce());
+}
+
+/// 通知权限只主动问一次。拒绝了就去设置页手动开，这里不骚扰。
+Future<void> _askNotifyOnce() async {
+  try {
+    if (!AppState.instance.loggedIn) return;
+    if (await SysNotify.granted()) return;
+    await SysNotify.ask();
+  } catch (_) {
+    // 问不到就算了，不影响别的
+  }
+}
+
+/// 点通知回到 App 里。payload 只有两种：dm:<id>:<名字> 和 notice。
+void _onNotifyTap(String payload) {
+  final nav = appNav.currentState;
+  if (nav == null) return;
+  if (payload == 'notice') {
+    nav.push(MaterialPageRoute(builder: (_) => const NoticePage()));
+    return;
+  }
+  if (payload.startsWith('dm:')) {
+    final parts = payload.split(':');
+    if (parts.length < 3) return;
+    final id = int.tryParse(parts[1]);
+    if (id == null) return;
+    final name = parts.sublist(2).join(':');
+    nav.push(MaterialPageRoute(
+      builder: (_) => ChatPage(peer: {
+        'id': id,
+        'name': name,
+        'nickname': name,
+      }),
+    ));
+  }
 }
 
 class ShijianxianApp extends StatefulWidget {
@@ -160,6 +207,7 @@ class _ShijianxianAppState extends State<ShijianxianApp>
         theme: _theme(Brightness.light),
         darkTheme: _theme(Brightness.dark),
         themeMode: AppState.instance.themeMode.value,
+        navigatorKey: appNav,
         builder: (ctx, child) => ValueListenableBuilder<double>(
           valueListenable: AppState.instance.fontScale,
           builder: (_, scale, _) {
