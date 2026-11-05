@@ -66,7 +66,8 @@ class DiskCache {
       final m = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
       if (m['key'] != key) return null;
       final at = (m['at'] ?? 0) as int;
-      if (DateTime.now().millisecondsSinceEpoch ~/ 1000 - at > _ttl) return null;
+      if (DateTime.now().millisecondsSinceEpoch ~/ 1000 - at > _ttl)
+        return null;
       return m['data'];
     } catch (_) {
       return null;

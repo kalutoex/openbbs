@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../store.dart';
 
 import '../l10n/l10n.dart';
+
 /// 账号被封。整页替换，不留别的入口。
 ///
 /// 服务端封号一律 403 + 固定文案，接口层认出来就置 `AppState.banned`，

@@ -84,10 +84,10 @@ class Poller with WidgetsBindingObserver {
     }
     _busy = true;
     try {
-      final d = await Api.get('/notify/poll', query: {
-        'dm_since': '$_dm',
-        'nt_since': '$_nt',
-      });
+      final d = await Api.get(
+        '/notify/poll',
+        query: {'dm_since': '$_dm', 'nt_since': '$_nt'},
+      );
       final m = d as Map;
       final dm = (m['dm'] as Map).cast<String, dynamic>();
       final nt = (m['notice'] as Map).cast<String, dynamic>();
@@ -129,7 +129,7 @@ class Poller with WidgetsBindingObserver {
       for (final e in items)
         if (((e as Map)['id'] as int? ?? 0) > _dm &&
             (e['peer_id'] as int? ?? 0) != activePeer)
-          e
+          e,
     ];
 
     // 游标推到拿到的最后一条，不管弹不弹——弹过的、正在看的都算处理过。
@@ -183,7 +183,7 @@ class Poller with WidgetsBindingObserver {
 
     final fresh = [
       for (final e in items)
-        if (((e as Map)['id'] as int? ?? 0) > _nt) e
+        if (((e as Map)['id'] as int? ?? 0) > _nt) e,
     ];
 
     final newest = (items.last as Map)['id'] as int? ?? last;

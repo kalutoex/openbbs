@@ -1,3 +1,6 @@
+import '../widgets/page_width.dart';
+import '../widgets/app_card.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -255,58 +258,69 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          _avatarPicker(cs),
-          const SizedBox(height: 6),
-          Divider(color: cs.outlineVariant.withValues(alpha: 0.4)),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _nick,
-            maxLength: 20,
-            decoration: InputDecoration(
-              labelText: Lc.current.nickname,
-              helperText: Lc.current.nicknameMax,
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _tag,
-            maxLength: 16,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]')),
-            ],
-            decoration: InputDecoration(
-              labelText: Lc.current.handle,
-              prefixText: '@',
-              helperText: Lc.current.handleHint,
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _sig,
-            maxLength: 80,
-            maxLines: 3,
-            decoration: InputDecoration(
-              labelText: Lc.current.bio,
-              helperText: Lc.current.bioHint,
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-          ),
-          if (_err != null) ...[
+      body: PageWidth(
+        max: 520,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          children: [
+            _avatarPicker(cs),
             const SizedBox(height: 14),
-            Text(_err!, style: TextStyle(color: cs.error, fontSize: 13)),
+            AppCard(
+              padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _nick,
+                    maxLength: 20,
+                    decoration: InputDecoration(
+                      labelText: Lc.current.nickname,
+                      helperText: Lc.current.nicknameMax,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _tag,
+                    maxLength: 16,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[a-zA-Z0-9_]'),
+                      ),
+                    ],
+                    decoration: InputDecoration(
+                      labelText: Lc.current.handle,
+                      prefixText: '@',
+                      helperText: Lc.current.handleHint,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _sig,
+                    maxLength: 80,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: Lc.current.bio,
+                      helperText: Lc.current.bioHint,
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  if (_err != null) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      _err!,
+                      style: TextStyle(color: cs.error, fontSize: 13),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              Lc.current.profileSavedHint,
+              style: TextStyle(fontSize: 12, color: cs.outline),
+            ),
           ],
-          const SizedBox(height: 10),
-          Text(
-            Lc.current.profileSavedHint,
-            style: TextStyle(fontSize: 12, color: cs.outline),
-          ),
-        ],
+        ),
       ),
     );
   }

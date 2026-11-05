@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/l10n.dart';
+
 /// 权限都收在这儿。
 /// 联网（INTERNET）是安装时系统直接给的，运行时没有弹窗，所以这里只管通知和相册。
 class AppPerms {
@@ -18,8 +19,9 @@ class AppPerms {
   static String label(Permission p) =>
       p == Permission.notification ? Lc.current.notice : Lc.current.album;
 
-  static String subtitle(Permission p) =>
-      p == Permission.notification ? Lc.current.permNotificationWhy : Lc.current.permPhotosWhy;
+  static String subtitle(Permission p) => p == Permission.notification
+      ? Lc.current.permNotificationWhy
+      : Lc.current.permPhotosWhy;
 
   static Future<Map<Permission, PermissionStatus>> statuses() async {
     final out = <Permission, PermissionStatus>{};

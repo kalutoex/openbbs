@@ -39,9 +39,9 @@ Future<Map<String, dynamic>> postFile(
 
   // 大包在慢网下要很久，给足半小时；这中间用户能看到「正在传」。
   final res = await req.send().timeout(
-        const Duration(minutes: 30),
-        onTimeout: () => throw TimeoutException('upload timed out'),
-      );
+    const Duration(minutes: 30),
+    onTimeout: () => throw TimeoutException('upload timed out'),
+  );
   final text = await res.stream.bytesToString();
   if (res.statusCode != 200) {
     String msg = 'HTTP ${res.statusCode}';

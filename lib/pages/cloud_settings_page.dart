@@ -1,4 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+
+import '../widgets/app_card.dart';
+
 import 'package:flutter/material.dart';
 
 import '../downloads.dart';
@@ -72,66 +75,78 @@ class _CloudSettingsPageState extends State<CloudSettingsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.only(bottom: 32),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
                   child: Text(
                     Lc.current.cloudSettingsIntro,
                     style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
                   ),
                 ),
                 if (!kIsWeb) ...[
-                  const Divider(height: 32),
-                  ListTile(
-                    leading: const Icon(Icons.folder_outlined),
-                    title: Text(Lc.current.downloadLocation),
-                    subtitle: Text(
-                      _where.isEmpty ? Lc.current.downloadLocationDefault : _where,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                  AppCard(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.folder_outlined),
+                          title: Text(Lc.current.downloadLocation),
+                          subtitle: Text(
+                            _where.isEmpty
+                                ? Lc.current.downloadLocationDefault
+                                : _where,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: _pick,
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.settings_backup_restore),
+                          title: Text(Lc.current.downloadLocationReset),
+                          subtitle: Text(
+                            Lc.current.downloadLocationDefaultHint,
+                          ),
+                          onTap: _reset,
+                        ),
+                        SwitchListTile(
+                          secondary: const Icon(Icons.open_in_new),
+                          title: Text(Lc.current.downloadAutoOpen),
+                          subtitle: Text(Lc.current.downloadAutoOpenHint),
+                          value: _autoOpen,
+                          onChanged: (v) async {
+                            setState(() => _autoOpen = v);
+                            await DownloadPrefs.setAutoOpen(v);
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.cleaning_services_outlined),
+                          title: Text(Lc.current.downloadCache),
+                          subtitle: Text(
+                            _cache > 0
+                                ? Lc.current.downloadCacheUsed(sizeText(_cache))
+                                : Lc.current.downloadCacheEmpty,
+                          ),
+                          trailing: _cache > 0
+                              ? TextButton(
+                                  onPressed: _clearCache,
+                                  child: Text(Lc.current.clear),
+                                )
+                              : null,
+                        ),
+                      ],
                     ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: _pick,
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.settings_backup_restore),
-                    title: Text(Lc.current.downloadLocationReset),
-                    subtitle: Text(Lc.current.downloadLocationDefaultHint),
-                    onTap: _reset,
-                  ),
-                  SwitchListTile(
-                    secondary: const Icon(Icons.open_in_new),
-                    title: Text(Lc.current.downloadAutoOpen),
-                    subtitle: Text(Lc.current.downloadAutoOpenHint),
-                    value: _autoOpen,
-                    onChanged: (v) async {
-                      setState(() => _autoOpen = v);
-                      await DownloadPrefs.setAutoOpen(v);
-                    },
-                  ),
-                  const Divider(height: 32),
-                  ListTile(
-                    leading: const Icon(Icons.cleaning_services_outlined),
-                    title: Text(Lc.current.downloadCache),
-                    subtitle: Text(
-                      _cache > 0
-                          ? Lc.current.downloadCacheUsed(sizeText(_cache))
-                          : Lc.current.downloadCacheEmpty,
-                    ),
-                    trailing: _cache > 0
-                        ? TextButton(
-                            onPressed: _clearCache,
-                            child: Text(Lc.current.clear),
-                          )
-                        : null,
                   ),
                 ] else
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                     child: Text(
                       Lc.current.downloadByBrowser,
-                      style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ),
               ],

@@ -17,18 +17,19 @@ class CloudUsage {
   final int trashCount;
 
   factory CloudUsage.fromJson(Map m) => CloudUsage(
-        quota: m['quota'] is int ? m['quota'] as int : null,
-        used: m['used'] is int ? m['used'] as int : 0,
-        count: m['count'] is int ? m['count'] as int : 0,
-        trash: m['trash'] is int ? m['trash'] as int : 0,
-        trashCount: m['trash_count'] is int ? m['trash_count'] as int : 0,
-      );
+    quota: m['quota'] is int ? m['quota'] as int : null,
+    used: m['used'] is int ? m['used'] as int : 0,
+    count: m['count'] is int ? m['count'] as int : 0,
+    trash: m['trash'] is int ? m['trash'] as int : 0,
+    trashCount: m['trash_count'] is int ? m['trash_count'] as int : 0,
+  );
 
   bool get unlimited => quota == null || quota == 0;
 
   int get left => unlimited ? 0 : (quota! - used).clamp(0, quota!);
 
-  double get ratio => unlimited || quota == 0 ? 0 : (used / quota!).clamp(0.0, 1.0);
+  double get ratio =>
+      unlimited || quota == 0 ? 0 : (used / quota!).clamp(0.0, 1.0);
 }
 
 /// 云盘里的一个文件。
@@ -66,25 +67,28 @@ class CloudFile {
   final int? expiresIn;
 
   factory CloudFile.fromJson(Map m) => CloudFile(
-        id: (m['id'] ?? 0) as int,
-        digest: (m['digest'] ?? '') as String,
-        name: (m['name'] ?? '') as String,
-        size: m['size'] is int ? m['size'] as int : 0,
-        url: (m['url'] ?? '') as String,
-        source: (m['source'] ?? 'cloud') as String,
-        public: m['public'] == true,
-        threadId: m['thread_id'] is int ? m['thread_id'] as int : null,
-        createdAt:
-            m['created_at'] is int ? m['created_at'] as int : 0,
-        refs: m['refs'] is int ? m['refs'] as int : 0,
-        expiresIn: m['expires_in'] is int ? m['expires_in'] as int : null,
-      );
+    id: (m['id'] ?? 0) as int,
+    digest: (m['digest'] ?? '') as String,
+    name: (m['name'] ?? '') as String,
+    size: m['size'] is int ? m['size'] as int : 0,
+    url: (m['url'] ?? '') as String,
+    source: (m['source'] ?? 'cloud') as String,
+    public: m['public'] == true,
+    threadId: m['thread_id'] is int ? m['thread_id'] as int : null,
+    createdAt: m['created_at'] is int ? m['created_at'] as int : 0,
+    refs: m['refs'] is int ? m['refs'] as int : 0,
+    expiresIn: m['expires_in'] is int ? m['expires_in'] as int : null,
+  );
 
   String get sizeText => bytesText(size);
 }
 
 class CloudPage {
-  const CloudPage({required this.items, required this.total, required this.page});
+  const CloudPage({
+    required this.items,
+    required this.total,
+    required this.page,
+  });
 
   final List<CloudFile> items;
   final int total;
@@ -123,7 +127,7 @@ class CloudApi {
     return CloudPage(
       items: [
         for (final it in raw)
-          if (it is Map) CloudFile.fromJson(it)
+          if (it is Map) CloudFile.fromJson(it),
       ],
       total: m['total'] is int ? m['total'] as int : 0,
       page: m['page'] is int ? m['page'] as int : 1,
@@ -139,7 +143,7 @@ class CloudApi {
     final raw = (m['items'] as List?) ?? const [];
     return [
       for (final it in raw)
-        if (it is Map) CloudFile.fromJson(it)
+        if (it is Map) CloudFile.fromJson(it),
     ];
   }
 

@@ -149,20 +149,22 @@ class _FollowPageState extends State<FollowPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(Lc.current.follow)),
-      body: PageWidth(child: Column(
-        children: [
-          _segmented(),
-          Expanded(
-            child: IndexedStack(
-              index: _tab,
-              children: [
-                _list(_following, following: true),
-                _list(_followers, following: false),
-              ],
+      body: PageWidth(
+        child: Column(
+          children: [
+            _segmented(),
+            Expanded(
+              child: IndexedStack(
+                index: _tab,
+                children: [
+                  _list(_following, following: true),
+                  _list(_followers, following: false),
+                ],
+              ),
             ),
-          ),
-        ],
-      )),
+          ],
+        ),
+      ),
     );
   }
 

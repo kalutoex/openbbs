@@ -369,9 +369,7 @@ class _FileBrowserPageState extends State<FileBrowserPage>
                 onPressed: () => widget.pickOnly
                     ? _handOff(_picked.toList())
                     : _uploadAll(_picked.toList()),
-                icon: Icon(
-                  widget.pickOnly ? Icons.check : Icons.upload_file,
-                ),
+                icon: Icon(widget.pickOnly ? Icons.check : Icons.upload_file),
                 label: Text(
                   widget.pickOnly
                       ? Lc.current.cloudPickDone('${_picked.length}')

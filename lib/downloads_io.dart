@@ -86,15 +86,10 @@ Future<String?> pickDownloadDir() async {
   if (Platform.isAndroid) {
     final r = await _chan.invokeMapMethod<String, dynamic>('pickDir');
     if (r == null) return null;
-    await DownloadPrefs.setDir(
-      r['uri'] as String?,
-      r['label'] as String?,
-    );
+    await DownloadPrefs.setDir(r['uri'] as String?, r['label'] as String?);
     return r['label'] as String?;
   }
-  final dir = await FilePicker.getDirectoryPath(
-    dialogTitle: '选择下载位置',
-  );
+  final dir = await FilePicker.getDirectoryPath(dialogTitle: '选择下载位置');
   if (dir == null || dir.isEmpty) return null;
   await DownloadPrefs.setDir(dir, dir);
   return dir;
@@ -128,12 +123,14 @@ Future<SavedFile> saveDownloaded(String tmpPath, String name) async {
 }
 
 String _unique(Directory dir, String name) {
-  if (!File('${dir.path}${Platform.pathSeparator}$name').existsSync()) return name;
+  if (!File('${dir.path}${Platform.pathSeparator}$name').existsSync())
+    return name;
   final dot = name.lastIndexOf('.');
   final stem = dot > 0 ? name.substring(0, dot) : name;
   final ext = dot > 0 ? name.substring(dot) : '';
   var n = 1;
-  while (File('${dir.path}${Platform.pathSeparator}$stem ($n)$ext').existsSync()) {
+  while (File('${dir.path}${Platform.pathSeparator}$stem ($n)$ext')
+      .existsSync()) {
     n++;
   }
   return '$stem ($n)$ext';
@@ -172,8 +169,11 @@ int _haveLen(String path) {
 }
 
 /// 抓着网络这一头，落到临时文件。断过就接着下。
-Future<File> fetchToTemp(String url, String name,
-    {void Function(double)? onProgress}) async {
+Future<File> fetchToTemp(
+  String url,
+  String name, {
+  void Function(double)? onProgress,
+}) async {
   final dir = await _tmpDir();
   final safe = name.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1f]'), '_');
   final file = File('${dir.path}${Platform.pathSeparator}$safe');
@@ -195,7 +195,9 @@ Future<File> fetchToTemp(String url, String name,
     if (res.statusCode == 200 && have > 0) have = 0;
     final total = (res.contentLength ?? 0) + have;
     final sink = file.openWrite(
-      mode: have > 0 && res.statusCode == 206 ? FileMode.append : FileMode.write,
+      mode: have > 0 && res.statusCode == 206
+          ? FileMode.append
+          : FileMode.write,
     );
     var got = have;
     await for (final chunk in res.stream) {
@@ -211,8 +213,11 @@ Future<File> fetchToTemp(String url, String name,
 }
 
 /// 下载 → 落到下载目录 → 删临时文件。返回落到哪了。
-Future<SavedFile> downloadToDevice(String url, String name,
-    {void Function(double)? onProgress}) async {
+Future<SavedFile> downloadToDevice(
+  String url,
+  String name, {
+  void Function(double)? onProgress,
+}) async {
   final tmp = await fetchToTemp(url, name, onProgress: onProgress);
   final saved = await saveDownloaded(tmp.path, name);
   try {
@@ -248,4 +253,3 @@ Future<void> clearDownloadCache() async {
     if (await d.exists()) await d.delete(recursive: true);
   } catch (_) {}
 }
-

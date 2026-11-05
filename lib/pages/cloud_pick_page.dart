@@ -1,3 +1,5 @@
+import '../widgets/empty_view.dart';
+
 import 'package:flutter/material.dart';
 
 import '../cloud.dart';
@@ -62,7 +64,12 @@ class _CloudPickPageState extends State<CloudPickPage> {
       _failed = false;
     });
     try {
-      final p = await CloudApi.list(q: _q, sort: _sort, page: 1, perPage: _perPage);
+      final p = await CloudApi.list(
+        q: _q,
+        sort: _sort,
+        page: 1,
+        perPage: _perPage,
+      );
       if (!mounted) return;
       setState(() {
         _items
@@ -172,26 +179,20 @@ class _CloudPickPageState extends State<CloudPickPage> {
   Widget _body(ColorScheme cs) {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_failed) {
-      return Center(
-        child: TextButton(
+      return EmptyView(
+        icon: Icons.cloud_off_rounded,
+        title: Lc.current.connectFailedPlain,
+        error: true,
+        action: FilledButton.tonal(
           onPressed: _load,
           child: Text(Lc.current.retry),
         ),
       );
     }
     if (_items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cloud_outlined, size: 34, color: cs.outlineVariant),
-            const SizedBox(height: 10),
-            Text(
-              Lc.current.cloudPickEmpty,
-              style: TextStyle(fontSize: 13, color: cs.outline),
-            ),
-          ],
-        ),
+      return EmptyView(
+        icon: Icons.cloud_outlined,
+        title: Lc.current.cloudPickEmpty,
       );
     }
     return ListView.builder(
@@ -219,7 +220,9 @@ class _CloudPickPageState extends State<CloudPickPage> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: Material(
-            color: on ? cs.primaryContainer : cs.surfaceContainerHighest.withValues(alpha: 0.5),
+            color: on
+                ? cs.primaryContainer
+                : cs.surfaceContainerHighest.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(14),
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
@@ -262,9 +265,7 @@ class _CloudPickPageState extends State<CloudPickPage> {
                     ),
                     const SizedBox(width: 8),
                     Icon(
-                      on
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
+                      on ? Icons.check_circle : Icons.radio_button_unchecked,
                       size: 22,
                       color: on ? cs.primary : cs.outlineVariant,
                     ),

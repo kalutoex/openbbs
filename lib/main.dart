@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'site_config.dart';
+
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
@@ -102,13 +103,12 @@ void _onNotifyTap(String payload) {
     final id = int.tryParse(parts[1]);
     if (id == null) return;
     final name = parts.sublist(2).join(':');
-    nav.push(MaterialPageRoute(
-      builder: (_) => ChatPage(peer: {
-        'id': id,
-        'name': name,
-        'nickname': name,
-      }),
-    ));
+    nav.push(
+      MaterialPageRoute(
+        builder: (_) =>
+            ChatPage(peer: {'id': id, 'name': name, 'nickname': name}),
+      ),
+    );
   }
 }
 

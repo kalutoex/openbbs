@@ -33,8 +33,11 @@ Future<void> openSaved(SavedFile f) async {}
 ///
 /// 以前是开新窗口让浏览器自己下，但云盘里的私人文件要凭证，
 /// `<a href>` 带不上 header，只能自己先拿回来。
-Future<SavedFile> downloadToDevice(String url, String name,
-    {void Function(double)? onProgress}) async {
+Future<SavedFile> downloadToDevice(
+  String url,
+  String name, {
+  void Function(double)? onProgress,
+}) async {
   final client = http.Client();
   try {
     final req = http.Request('GET', Uri.parse(url));

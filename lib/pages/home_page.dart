@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../widgets/fade_indexed_stack.dart';
+
 import 'package:flutter/material.dart';
 
 import '../permissions.dart';
@@ -147,7 +149,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               if (meta != null && meta.tooNew) _tooNewBanner(context, meta.api),
               Expanded(
-                child: IndexedStack(
+                child: FadeIndexedStack(
                   index: _index,
                   children: [
                     FeedTab(onMenu: _menu),

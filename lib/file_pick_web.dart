@@ -83,7 +83,8 @@ Future<Map<String, dynamic>> postFile(
     if (!done.isCompleted) done.completeError(Exception('network error'));
   });
   req.onTimeout.listen((_) {
-    if (!done.isCompleted) done.completeError(TimeoutException('upload timed out'));
+    if (!done.isCompleted)
+      done.completeError(TimeoutException('upload timed out'));
   });
   req.send(form);
   return done.future;

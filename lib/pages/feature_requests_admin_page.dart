@@ -1,3 +1,6 @@
+import '../widgets/empty_view.dart';
+import '../widgets/app_card.dart';
+
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -93,7 +96,6 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
               decoration: InputDecoration(
                 labelText: Lc.current.replyOptional,
                 hintText: Lc.current.adminReplyHint,
-                border: OutlineInputBorder(),
               ),
             ),
           ],
@@ -195,16 +197,16 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
       );
     }
     if (_items.isEmpty) {
-      return Center(
-        child: Text(
-          _done ? Lc.current.nothingHandled : Lc.current.noPendingRequests,
-        ),
+      return EmptyView(
+        icon: Icons.inbox_outlined,
+        title: _done ? Lc.current.nothingHandled : Lc.current.noPendingRequests,
       );
     }
     return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
       itemCount: _items.length + 1,
       separatorBuilder: (_, i) => i < _items.length - 1
-          ? const Divider(height: 1, indent: 16, endIndent: 16)
+          ? const SizedBox(height: 8)
           : const SizedBox.shrink(),
       itemBuilder: (ctx, i) {
         if (i == _items.length) {
@@ -225,8 +227,8 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
         final it = _items[i];
         final status = (it['status'] ?? 0) as int;
         final note = (it['note'] ?? '') as String;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+        return AppCard(
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -546,10 +546,7 @@ class _ThreadPageState extends State<ThreadPage> {
           minLines: 3,
           maxLines: 8,
           maxLength: 20000,
-          decoration: InputDecoration(
-            hintText: Lc.current.saySomething,
-            border: OutlineInputBorder(),
-          ),
+          decoration: InputDecoration(hintText: Lc.current.saySomething),
         ),
         actions: [
           TextButton(

@@ -18,6 +18,8 @@ import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/app_card.dart';
+import '../widgets/page_width.dart';
 import '../widgets/toast.dart';
 import '../cloud.dart';
 import '../file_browser.dart';
@@ -657,32 +659,48 @@ class _ComposePageState extends State<ComposePage> {
         body: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => FocusScope.of(context).unfocus(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            children: [
-              if (_targets.isNotEmpty) ...[
-                _siteRow(cs),
-                const SizedBox(height: 12),
-              ],
-              _titleBox(cs),
-              const SizedBox(height: 12),
-              _bodyBox(cs),
-              if (_imgs.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                _imagesHeader(cs),
-                const SizedBox(height: 10),
-                _imagesStrip(cs),
-              ],
-              if (_files.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                EditableFileCards(
-                  files: _files,
-                  busy: _busy,
-                  onRemove: (f) => setState(() => _files.remove(f)),
+          child: PageWidth(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              children: [
+                if (_targets.isNotEmpty) ...[
+                  _siteRow(cs),
+                  const SizedBox(height: 12),
+                ],
+                // 标题和正文是同一篇东西，放进同一张卡片；中间留一条细线，
+                // 不用两个圆角框摞着。
+                AppCard(
+                  padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _titleBox(cs),
+                      Container(
+                        height: 1,
+                        margin: const EdgeInsets.symmetric(horizontal: 14),
+                        color: cs.outlineVariant.withValues(alpha: 0.35),
+                      ),
+                      _bodyBox(cs),
+                    ],
+                  ),
                 ),
+                if (_imgs.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  _imagesHeader(cs),
+                  const SizedBox(height: 10),
+                  _imagesStrip(cs),
+                ],
+                if (_files.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  EditableFileCards(
+                    files: _files,
+                    busy: _busy,
+                    onRemove: (f) => setState(() => _files.remove(f)),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
         bottomNavigationBar: _bottomBar(cs),
@@ -735,7 +753,8 @@ class _ComposePageState extends State<ComposePage> {
     return InputDecoration(
       hintText: hint,
       filled: true,
-      fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.42),
+      // 底色由外层卡片给，输入框自己不再铺一层，免得两层叠出色差。
+      fillColor: Colors.transparent,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

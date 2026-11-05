@@ -1,3 +1,7 @@
+import '../widgets/page_width.dart';
+import '../widgets/empty_view.dart';
+import '../widgets/app_card.dart';
+
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -91,89 +95,95 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: Text(Lc.current.featureRequests)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
-          Text(
-            Lc.current.requestIntro,
-            style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _title,
-            maxLength: 60,
-            textInputAction: TextInputAction.next,
-            decoration: InputDecoration(
-              labelText: Lc.current.requestTitleLabel,
-              hintText: Lc.current.requestTitleHint,
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 4),
-          TextField(
-            controller: _body,
-            maxLength: 2000,
-            maxLines: 6,
-            minLines: 4,
-            decoration: InputDecoration(
-              labelText: Lc.current.requestDetailLabel,
-              hintText: Lc.current.requestDetailHint,
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 46,
-            child: FilledButton(
-              onPressed: _busy ? null : _submit,
-              child: _busy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(Lc.current.submit),
-            ),
-          ),
-          const SizedBox(height: 28),
-          Row(
-            children: [
-              Text(
-                Lc.current.myRequests,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-              const Spacer(),
-              if (_loaded && _mine.isNotEmpty)
-                Text(
-                  Lc.current.requestCount('${_mine.length}'),
-                  style: TextStyle(fontSize: 12, color: cs.outline),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (!_loaded)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_mine.isEmpty)
+      body: PageWidth(
+        max: 620,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
+          children: [
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Text(
-                  Lc.current.noRequestsYet,
-                  style: TextStyle(color: cs.outline, fontSize: 13),
-                ),
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+              child: Text(
+                Lc.current.requestIntro,
+                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
               ),
-            )
-          else
-            for (final it in _mine) _card(cs, it),
-        ],
+            ),
+            AppCard(
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _title,
+                    maxLength: 60,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: Lc.current.requestTitleLabel,
+                      hintText: Lc.current.requestTitleHint,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _body,
+                    maxLength: 2000,
+                    maxLines: 6,
+                    minLines: 4,
+                    decoration: InputDecoration(
+                      labelText: Lc.current.requestDetailLabel,
+                      hintText: Lc.current.requestDetailHint,
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: _busy ? null : _submit,
+                    child: _busy
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(Lc.current.submit),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  Text(
+                    Lc.current.myRequests,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_loaded && _mine.isNotEmpty)
+                    Text(
+                      Lc.current.requestCount('${_mine.length}'),
+                      style: TextStyle(fontSize: 12, color: cs.outline),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (!_loaded)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_mine.isEmpty)
+              EmptyView(
+                icon: Icons.assignment_outlined,
+                title: Lc.current.noRequestsYet,
+              )
+            else
+              for (final it in _mine) _card(cs, it),
+          ],
+        ),
       ),
     );
   }
@@ -186,13 +196,9 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
       _ => (Lc.current.statusPending, cs.outline),
     };
     final note = (it['note'] ?? '') as String;
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

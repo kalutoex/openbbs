@@ -1,9 +1,12 @@
+import '../widgets/app_card.dart';
+
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../permissions.dart';
 
 import '../l10n/l10n.dart';
+
 /// 权限页：通知、相册各自显示状态，点一下就能申请或去系统设置。
 /// 联网权限装完就有，运行时没有弹窗，这里只做说明。
 class PermissionsPage extends StatefulWidget {
@@ -46,44 +49,49 @@ class _PermissionsPageState extends State<PermissionsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.only(bottom: 32),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
                   child: Text(
                     Lc.current.permIntro,
                     style: TextStyle(fontSize: 13, color: cs.outline),
                   ),
                 ),
-                const SizedBox(height: 8),
-                ListTile(
-                  leading: const Icon(Icons.wifi),
-                  title: Text(Lc.current.network),
-                  subtitle: Text(Lc.current.networkGranted),
-                  trailing: Text(
-                    Lc.current.allowed,
-                    style: TextStyle(fontSize: 13, color: cs.outline),
+                AppCard(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.wifi),
+                        title: Text(Lc.current.network),
+                        subtitle: Text(Lc.current.networkGranted),
+                        trailing: Text(
+                          Lc.current.allowed,
+                          style: TextStyle(fontSize: 13, color: cs.outline),
+                        ),
+                      ),
+                      for (final p in AppPerms.list)
+                        ListTile(
+                          leading: Icon(
+                            p == Permission.notification
+                                ? Icons.notifications_none
+                                : Icons.photo_library_outlined,
+                          ),
+                          title: Text(AppPerms.label(p)),
+                          subtitle: Text(AppPerms.subtitle(p)),
+                          trailing: Text(
+                            AppPerms.text(_st[p] ?? PermissionStatus.denied),
+                            style: TextStyle(fontSize: 12, color: cs.outline),
+                          ),
+                          onTap: () => _ask(p),
+                        ),
+                    ],
                   ),
                 ),
-                const Divider(height: 24),
-                for (final p in AppPerms.list)
-                  ListTile(
-                    leading: Icon(
-                      p == Permission.notification
-                          ? Icons.notifications_none
-                          : Icons.photo_library_outlined,
-                    ),
-                    title: Text(AppPerms.label(p)),
-                    subtitle: Text(AppPerms.subtitle(p)),
-                    trailing: Text(
-                      AppPerms.text(_st[p] ?? PermissionStatus.denied),
-                      style: TextStyle(fontSize: 12, color: cs.outline),
-                    ),
-                    onTap: () => _ask(p),
-                  ),
                 const SizedBox(height: 16),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
                     Lc.current.permOptionalNote,
                     style: TextStyle(fontSize: 12, color: cs.outline),

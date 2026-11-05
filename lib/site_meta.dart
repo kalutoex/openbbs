@@ -103,7 +103,8 @@ class SiteMeta {
   static SiteMeta? fromJson(Object? raw) {
     if (raw is! Map) return null;
     final endpoints = <SiteEndpoint>[];
-    for (final e in (raw['endpoints'] is List ? raw['endpoints'] as List : const [])) {
+    for (final e
+        in (raw['endpoints'] is List ? raw['endpoints'] as List : const [])) {
       final ep = SiteEndpoint.parse(e);
       if (ep != null) endpoints.add(ep);
     }
@@ -126,7 +127,10 @@ class SiteMeta {
       capabilities: _strList(raw['capabilities']),
       endpoints: endpoints,
       master: raw['master'] is bool ? raw['master'] as bool : null,
-      masterUrl: '${raw['master_url'] ?? ''}'.trim().replaceAll(RegExp(r'/+$'), ''),
+      masterUrl: '${raw['master_url'] ?? ''}'.trim().replaceAll(
+        RegExp(r'/+$'),
+        '',
+      ),
     );
   }
 

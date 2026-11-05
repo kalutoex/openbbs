@@ -1,3 +1,6 @@
+import '../widgets/page_width.dart';
+import '../widgets/app_card.dart';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,75 +21,99 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(Lc.current.about)),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 40),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-            child: Text(
-              SiteConfig.brand,
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+      body: PageWidth(
+        max: 560,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 40),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
+              child: Text(
+                SiteConfig.brand,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
-          ),
 
-          _label(context, Lc.current.openSource),
-          ListTile(
-            leading: const Icon(Icons.favorite_border),
-            title: Text(Lc.current.thanksFriends),
-            subtitle: Text(Lc.current.thanksFriendsSub),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const FriendsPage())),
-          ),
-          ListTile(
-            leading: const Icon(Icons.description_outlined),
-            title: Text(Lc.current.thirdPartyLicenses),
-            subtitle: Text(Lc.current.thirdPartyLicensesSub),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => showLicensePage(
-              context: context,
-              applicationName: SiteConfig.brand,
+            _label(context, Lc.current.openSource),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.favorite_border),
+                    title: Text(Lc.current.thanksFriends),
+                    subtitle: Text(Lc.current.thanksFriendsSub),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const FriendsPage()),
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.description_outlined),
+                    title: Text(Lc.current.thirdPartyLicenses),
+                    subtitle: Text(Lc.current.thirdPartyLicensesSub),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => showLicensePage(
+                      context: context,
+                      applicationName: SiteConfig.brand,
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.balance),
+                    title: Text(Lc.current.gplLicense),
+                    subtitle: Text(Lc.current.gplLicenseSub),
+                    trailing: const Icon(Icons.open_in_new, size: 18),
+                    onTap: () => _open(
+                      context,
+                      'https://www.gnu.org/licenses/gpl-3.0.txt',
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.balance),
-            title: Text(Lc.current.gplLicense),
-            subtitle: Text(Lc.current.gplLicenseSub),
-            trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () =>
-                _open(context, 'https://www.gnu.org/licenses/gpl-3.0.txt'),
-          ),
-
-          _label(context, Lc.current.links),
-          if (_repo.isNotEmpty)
-            ListTile(
-              leading: const Icon(Icons.code),
-              title: Text(Lc.current.sourceCode),
-              subtitle: Text(_repo.replaceFirst(RegExp(r'^https?://'), '')),
-              trailing: const Icon(Icons.open_in_new, size: 18),
-              onTap: () => _open(context, _repo),
+            _label(context, Lc.current.links),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Column(
+                children: [
+                  if (_repo.isNotEmpty)
+                    ListTile(
+                      leading: const Icon(Icons.code),
+                      title: Text(Lc.current.sourceCode),
+                      subtitle: Text(
+                        _repo.replaceFirst(RegExp(r'^https?://'), ''),
+                      ),
+                      trailing: const Icon(Icons.open_in_new, size: 18),
+                      onTap: () => _open(context, _repo),
+                    ),
+                  ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: Text(Lc.current.issues),
+                    subtitle: Text(Lc.current.issuesSub),
+                    trailing: const Icon(Icons.open_in_new, size: 18),
+                    onTap: () => _open(context, '$_repo/issues'),
+                  ),
+                ],
+              ),
             ),
-          ListTile(
-            leading: const Icon(Icons.bug_report_outlined),
-            title: Text(Lc.current.issues),
-            subtitle: Text(Lc.current.issuesSub),
-            trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () => _open(context, '$_repo/issues'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   static Widget _label(BuildContext context, String s) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+    padding: const EdgeInsets.fromLTRB(12, 18, 12, 6),
     child: Text(
       s,
       style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.5,
-        color: Theme.of(context).colorScheme.primary,
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.3,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     ),
   );

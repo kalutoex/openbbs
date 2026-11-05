@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../store.dart';
+import '../widgets/app_card.dart';
+import '../widgets/page_width.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -142,7 +145,10 @@ class _LoginPageState extends State<LoginPage> {
     try {
       if (_register) {
         await AppState.instance.register(
-          n, p, e, code,
+          n,
+          p,
+          e,
+          code,
           challengeId: _chId,
           challengeAnswer: _chAns.text.trim(),
           challengeSig: _chSig,
@@ -155,7 +161,8 @@ class _LoginPageState extends State<LoginPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _err = errorText(context, e));
-      if (_register && _chQ.isNotEmpty && e.message.contains('题')) _loadChallenge();
+      if (_register && _chQ.isNotEmpty && e.message.contains('题'))
+        _loadChallenge();
     } catch (e) {
       // 不是 ApiException 的意外（解析、存储写入失败之类）以前会漏出去，
       // _busy 停在 true，看着就是登录页一直转圈。
@@ -170,132 +177,206 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final title = _reset
+        ? Lc.current.resetTitle
+        : (_register ? Lc.current.register : Lc.current.login);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_reset ? Lc.current.resetTitle : (_register ? Lc.current.register : Lc.current.login)),
-      ),
+      appBar: AppBar(title: Text(title)),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-          children: [
-            Icon(Icons.forum_rounded, size: 56, color: cs.primary),
-            const SizedBox(height: 24),
-            if (!_reset) ...[
-              TextField(
-                controller: _name,
-                autocorrect: false,
-                decoration: InputDecoration(
-                  labelText: Lc.current.username,
-                  border: OutlineInputBorder(),
+        child: PageWidth(
+          max: 460,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+            children: [
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.forum_rounded, size: 34, color: cs.primary),
                 ),
               ),
-              const SizedBox(height: 14),
-            ],
-            TextField(
-              controller: _pw,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: _reset ? Lc.current.newPassword : Lc.current.password,
-                helperText: (_register || _reset) ? Lc.current.atLeast8 : null,
-                border: const OutlineInputBorder(),
-              ),
-              onSubmitted: (_) => _submit(),
-            ),
-            if (_register || _reset) ...[
-              const SizedBox(height: 14),
-              TextField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                autocorrect: false,
-                decoration: InputDecoration(
-                  labelText: Lc.current.email,
-                  hintText: _reset ? Lc.current.emailUsedToRegister : Lc.current.emailForCode,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _code,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: Lc.current.code,
-                  border: const OutlineInputBorder(),
-                  suffixIcon: TextButton(
-                    onPressed: (_sending || _cooldown > 0 || _busy)
-                        ? null
-                        : _sendCode,
-                    child: Text(
-                      _cooldown > 0
-                          ? '${_cooldown}s'
-                          : (_sending ? Lc.current.sending : Lc.current.getCode),
-                    ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              if (_register && _chQ.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _chAns,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: _chQ,
-                    helperText: Lc.current.humanCheck,
-                    border: const OutlineInputBorder(),
+              const SizedBox(height: 22),
+              AppCard(
+                padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (!_reset) ...[
+                      TextField(
+                        controller: _name,
+                        autocorrect: false,
+                        decoration: InputDecoration(
+                          labelText: Lc.current.username,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                      controller: _pw,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: _reset
+                            ? Lc.current.newPassword
+                            : Lc.current.password,
+                        helperText: (_register || _reset)
+                            ? Lc.current.atLeast8
+                            : null,
+                      ),
+                      onSubmitted: (_) => _submit(),
+                    ),
+                    if (_register || _reset) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        decoration: InputDecoration(
+                          labelText: Lc.current.email,
+                          hintText: _reset
+                              ? Lc.current.emailUsedToRegister
+                              : Lc.current.emailForCode,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _code,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: Lc.current.code,
+                          suffixIcon: TextButton(
+                            onPressed: (_sending || _cooldown > 0 || _busy)
+                                ? null
+                                : _sendCode,
+                            child: Text(
+                              _cooldown > 0
+                                  ? '${_cooldown}s'
+                                  : (_sending
+                                        ? Lc.current.sending
+                                        : Lc.current.getCode),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_register && _chQ.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _chAns,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: _chQ,
+                            helperText: Lc.current.humanCheck,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+              if (_err != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.errorContainer,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 16,
+                        color: cs.onErrorContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _err!,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: cs.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ],
-            if (_err != null) ...[
-              const SizedBox(height: 12),
-              Text(_err!, style: TextStyle(color: cs.error, fontSize: 13)),
-            ],
-            const SizedBox(height: 22),
-            FilledButton(
-              onPressed: _busy ? null : _submit,
-              child: _busy
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(_reset ? Lc.current.changePasswordAndLogin : (_register ? Lc.current.registerAndLogin : Lc.current.login)),
-            ),
-            const SizedBox(height: 6),
-            if (_reset)
-              TextButton(
-                onPressed: _busy
-                    ? null
-                    : () => setState(() {
-                        _reset = false;
-                        _err = null;
-                      }),
-                child: Text(Lc.current.backToLogin),
-              )
-            else ...[
-              TextButton(
-                onPressed: _busy
-                    ? null
-                    : () {
-                        setState(() {
-                          _register = !_register;
-                          _err = null;
-                        });
-                        if (_register) _loadChallenge();
-                      },
-                child: Text(_register ? Lc.current.haveAccountLogin : Lc.current.noAccountRegister),
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: _busy ? null : _submit,
+                child: _busy
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        _reset
+                            ? Lc.current.changePasswordAndLogin
+                            : (_register
+                                  ? Lc.current.registerAndLogin
+                                  : Lc.current.login),
+                      ),
               ),
-              if (!_register)
+              const SizedBox(height: 4),
+              if (_reset)
                 TextButton(
                   onPressed: _busy
                       ? null
                       : () => setState(() {
-                          _reset = true;
+                          _reset = false;
                           _err = null;
                         }),
-                  child: Text(Lc.current.forgotPasswordQuestion),
+                  child: Text(Lc.current.backToLogin),
+                )
+              else ...[
+                TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () {
+                          setState(() {
+                            _register = !_register;
+                            _err = null;
+                          });
+                          if (_register) _loadChallenge();
+                        },
+                  child: Text(
+                    _register
+                        ? Lc.current.haveAccountLogin
+                        : Lc.current.noAccountRegister,
+                  ),
                 ),
+                if (!_register)
+                  TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () => setState(() {
+                            _reset = true;
+                            _err = null;
+                          }),
+                    child: Text(Lc.current.forgotPasswordQuestion),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

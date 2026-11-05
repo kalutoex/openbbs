@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import '../widgets/page_width.dart';
+import '../widgets/app_card.dart';
+
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -105,110 +108,126 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text(Lc.current.accountSecurity)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (bound.isEmpty)
-            Card(
-              color: cs.errorContainer,
-              elevation: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: cs.onErrorContainer,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        Lc.current.noEmailWarning,
-                        style: TextStyle(color: cs.onErrorContainer),
+      body: PageWidth(
+        max: 520,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            if (bound.isEmpty)
+              Card(
+                color: cs.errorContainer,
+                elevation: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: cs.onErrorContainer,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          Lc.current.noEmailWarning,
+                          style: TextStyle(color: cs.onErrorContainer),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            )
-          else
-            Card(
-              color: cs.secondaryContainer,
-              elevation: 0,
-              child: ListTile(
-                leading: Icon(
-                  Icons.mark_email_read_outlined,
-                  color: cs.onSecondaryContainer,
-                ),
-                title: Text(
-                  bound,
-                  style: TextStyle(color: cs.onSecondaryContainer),
-                ),
-                subtitle: Text(
-                  Lc.current.emailBoundHint,
-                  style: TextStyle(color: cs.onSecondaryContainer),
-                ),
-              ),
-            ),
-          const SizedBox(height: 22),
-          Text(
-            bound.isEmpty ? Lc.current.bindEmail : Lc.current.changeEmail,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _email,
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              labelText: Lc.current.email,
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _code,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  decoration: InputDecoration(
-                    labelText: Lc.current.code,
-                    counterText: '',
-                    border: OutlineInputBorder(),
+              )
+            else
+              Card(
+                color: cs.secondaryContainer,
+                elevation: 0,
+                child: ListTile(
+                  leading: Icon(
+                    Icons.mark_email_read_outlined,
+                    color: cs.onSecondaryContainer,
+                  ),
+                  title: Text(
+                    bound,
+                    style: TextStyle(color: cs.onSecondaryContainer),
+                  ),
+                  subtitle: Text(
+                    Lc.current.emailBoundHint,
+                    style: TextStyle(color: cs.onSecondaryContainer),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              SizedBox(
-                height: 48,
-                child: OutlinedButton(
-                  onPressed: _busy || _cool > 0 ? null : _send,
-                  child: Text(_cool > 0 ? '${_cool}s' : Lc.current.sendCode),
-                ),
+            const SizedBox(height: 22),
+            AppCard(
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    bound.isEmpty
+                        ? Lc.current.bindEmail
+                        : Lc.current.changeEmail,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(labelText: Lc.current.email),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _code,
+                          keyboardType: TextInputType.number,
+                          maxLength: 6,
+                          decoration: InputDecoration(
+                            labelText: Lc.current.code,
+                            counterText: '',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        height: 48,
+                        child: OutlinedButton(
+                          onPressed: _busy || _cool > 0 ? null : _send,
+                          child: Text(
+                            _cool > 0 ? '${_cool}s' : Lc.current.sendCode,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_err != null) ...[
+                    const SizedBox(height: 10),
+                    Text(_err!, style: TextStyle(color: cs.error)),
+                  ],
+                  const SizedBox(height: 18),
+                  FilledButton(
+                    onPressed: _busy ? null : _bind,
+                    child: Text(
+                      _busy
+                          ? Lc.current.processing
+                          : (bound.isEmpty
+                                ? Lc.current.bind
+                                : Lc.current.rebind),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          if (_err != null) ...[
-            const SizedBox(height: 10),
-            Text(_err!, style: TextStyle(color: cs.error)),
-          ],
-          const SizedBox(height: 18),
-          FilledButton(
-            onPressed: _busy ? null : _bind,
-            child: Text(
-              _busy
-                  ? Lc.current.processing
-                  : (bound.isEmpty ? Lc.current.bind : Lc.current.rebind),
             ),
-          ),
-          const SizedBox(height: 22),
-          Text(
-            Lc.current.bindEmailWhy,
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-        ],
+            const SizedBox(height: 22),
+            Text(
+              Lc.current.bindEmailWhy,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }

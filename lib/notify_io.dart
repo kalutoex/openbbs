@@ -33,7 +33,10 @@ class SysNotify {
       final p = launch?.notificationResponse?.payload;
       if (p != null && p.isNotEmpty) {
         // 等第一帧之后再跳，否则 Navigator 还没挂上。
-        Future.delayed(const Duration(milliseconds: 600), () => _onTap?.call(p));
+        Future.delayed(
+          const Duration(milliseconds: 600),
+          () => _onTap?.call(p),
+        );
       }
     }
     return _ready;
@@ -41,16 +44,20 @@ class SysNotify {
 
   /// Android 13 起要问，问过就不再弹窗。
   static Future<bool> ask() async {
-    final a = _p.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final a = _p
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (a == null) return false;
     return await a.requestNotificationsPermission() ?? false;
   }
 
   /// 系统设置里关掉了就是 false，用来在设置页给个提示。
   static Future<bool> granted() async {
-    final a = _p.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final a = _p
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (a == null) return false;
     return await a.areNotificationsEnabled() ?? false;
   }

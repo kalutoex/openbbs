@@ -6,5 +6,4 @@ Future<SavedFile> openRemoteFile(
   String name, {
   void Function(double)? onProgress,
   bool? openAfter,
-}) =>
-    downloadToDevice(url, name, onProgress: onProgress);
+}) => downloadToDevice(url, name, onProgress: onProgress);

@@ -170,7 +170,11 @@ class SiteEntry {
   );
 
   /// 手动填一个地址：先当单入口站点用，读到 /meta 再补名字和入口。
-  factory SiteEntry.fromUrl(String url, {String name = '', bool master = false}) {
+  factory SiteEntry.fromUrl(
+    String url, {
+    String name = '',
+    bool master = false,
+  }) {
     final u = normalizeUrl(url);
     return SiteEntry(
       name: name.trim(),

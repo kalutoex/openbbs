@@ -12,6 +12,7 @@ import 'site_meta.dart';
 import 'sites.dart';
 
 import '../l10n/l10n.dart';
+
 /// 服务端返回的错误，直接拿去显示。
 ///
 /// [code] 只在「客户端自己造的错误」上有值：那种 message 是写死的中文，
@@ -265,8 +266,6 @@ class Api {
     );
   }
 
-
-
   /// 对着指定的站点发 GET，不碰当前出口。
   ///
   /// 站点管理页拉主站目录用它：目录属于登录站，跟当前在看哪座站无关。
@@ -315,7 +314,8 @@ class Api {
     Uint8List bytes, {
     String name = 'a.jpg',
   }) async {
-    if (!configured) throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
+    if (!configured)
+      throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
     final body = jsonEncode({'name': name, 'data': base64Encode(bytes)});
     try {
       final r = await _withFailover(
@@ -326,26 +326,33 @@ class Api {
       );
       final d = _decode(r);
       final url = (d is Map ? d['url'] : null) as String?;
-      if (url == null || url.isEmpty) throw ApiException('upload returned no url', code: 'uploadNoUrl');
+      if (url == null || url.isEmpty)
+        throw ApiException('upload returned no url', code: 'uploadNoUrl');
       return url;
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException(Lc.current.uploadFailedWith('${e}'), code: 'uploadFailed', detail: '$e');
+      throw ApiException(
+        Lc.current.uploadFailedWith('${e}'),
+        code: 'uploadFailed',
+        detail: '$e',
+      );
     }
   }
 
   /// 传附件。手机上边读盘边发，网页版交给浏览器，都不整个进内存。
   /// 名字和大小以服务端回来为准——客户端报的不可信。
   static Future<Map<String, dynamic>> uploadFile(PickedFile f) async {
-    if (!configured) throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
+    if (!configured)
+      throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
     try {
       final d = await _withFailover(
         retryOnTimeout: false,
         () => postFile(_uri('/file').toString(), _headers, f),
       );
       final url = '${d['url'] ?? ''}';
-      if (url.isEmpty) throw ApiException('upload returned no url', code: 'uploadNoUrl');
+      if (url.isEmpty)
+        throw ApiException('upload returned no url', code: 'uploadNoUrl');
       return {
         'url': url,
         'name': '${d['name'] ?? f.name}',
@@ -354,18 +361,18 @@ class Api {
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException(Lc.current.uploadFailedWith('$e'), code: 'uploadFailed', detail: '$e');
+      throw ApiException(
+        Lc.current.uploadFailedWith('$e'),
+        code: 'uploadFailed',
+        detail: '$e',
+      );
     }
   }
 
   static Uri _uri(String path, [Map<String, String>? query]) =>
       _uriAt(base, path, query);
 
-  static Uri _uriAt(
-    String baseUrl,
-    String path, [
-    Map<String, String>? query,
-  ]) {
+  static Uri _uriAt(String baseUrl, String path, [Map<String, String>? query]) {
     final b = baseUrl.endsWith('/')
         ? baseUrl.substring(0, baseUrl.length - 1)
         : baseUrl;
@@ -394,9 +401,7 @@ class Api {
     if (r.statusCode >= 400) {
       final d = body is Map ? body['detail'] : null;
       // 封号：接口层统一回 403 + 固定文案，客户端据此切全局封禁页。
-      if (r.statusCode == 403 &&
-          d is String &&
-          d.contains(bannedMessage)) {
+      if (r.statusCode == 403 && d is String && d.contains(bannedMessage)) {
         onBanned?.call();
       }
       // 令牌废了：清本地登录状态，别让人在页面里反复撞「请先登录」。
@@ -440,9 +445,11 @@ class Api {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
     final key = cache ? _cacheKey(path, query) : '';
     try {
-      final r = await _withFailover(() => http
-          .get(_uri(path, query), headers: _headers)
-          .timeout(const Duration(seconds: 15)));
+      final r = await _withFailover(
+        () => http
+            .get(_uri(path, query), headers: _headers)
+            .timeout(const Duration(seconds: 15)),
+      );
       final d = _decode(r);
       lastFromCache = false;
       if (cache) unawaited(DiskCache.write(key, d));
@@ -457,7 +464,11 @@ class Api {
           return old;
         }
       }
-      throw ApiException(Lc.current.connectFailed('${e}'), code: 'connectFailed', detail: '$e');
+      throw ApiException(
+        Lc.current.connectFailed('${e}'),
+        code: 'connectFailed',
+        detail: '$e',
+      );
     }
   }
 
@@ -474,7 +485,11 @@ class Api {
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException(Lc.current.connectFailed('${e}'), code: 'connectFailed', detail: '$e');
+      throw ApiException(
+        Lc.current.connectFailed('${e}'),
+        code: 'connectFailed',
+        detail: '$e',
+      );
     }
   }
 
@@ -491,7 +506,11 @@ class Api {
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException(Lc.current.connectFailed('${e}'), code: 'connectFailed', detail: '$e');
+      throw ApiException(
+        Lc.current.connectFailed('${e}'),
+        code: 'connectFailed',
+        detail: '$e',
+      );
     }
   }
 
@@ -508,7 +527,11 @@ class Api {
     } on ApiException {
       rethrow;
     } catch (e) {
-      throw ApiException(Lc.current.connectFailed('${e}'), code: 'connectFailed', detail: '$e');
+      throw ApiException(
+        Lc.current.connectFailed('${e}'),
+        code: 'connectFailed',
+        detail: '$e',
+      );
     }
   }
 }

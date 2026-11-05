@@ -14,8 +14,10 @@ class SiteConfig {
   const SiteConfig._();
 
   /// 站点名。目前是编译期常量，以后服务端下发会覆盖它。
-  static const String brand =
-      String.fromEnvironment('BRAND', defaultValue: 'OpenBBS');
+  static const String brand = String.fromEnvironment(
+    'BRAND',
+    defaultValue: 'OpenBBS',
+  );
 
   /// 关于页里显示的项目地址。空就不显示那一行。
   static const String repo = String.fromEnvironment('REPO', defaultValue: '');

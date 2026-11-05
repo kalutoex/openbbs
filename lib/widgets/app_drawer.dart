@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 import '../site_config.dart';
 import '../api.dart';
 import '../pages/admin_users_page.dart';
@@ -18,6 +17,7 @@ import 'name_tag.dart';
 
 import '../l10n/l10n.dart';
 import '../pages/cloud_page.dart';
+
 /// 左侧抽屉：身份、导航、我的入口。
 class AppDrawer extends StatefulWidget {
   /// 当前底部 tab，用来标出选中项。
@@ -332,7 +332,9 @@ class _Top extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final u = st.user;
-    final nick = st.loggedIn ? '${u?['nickname'] ?? u?['name'] ?? ''}' : Lc.current.notLoggedIn;
+    final nick = st.loggedIn
+        ? '${u?['nickname'] ?? u?['name'] ?? ''}'
+        : Lc.current.notLoggedIn;
     final handle = st.loggedIn ? '${u?['handle'] ?? ''}' : '';
 
     return Padding(
@@ -358,9 +360,7 @@ class _Top extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 SiteConfig.brand,
-                style: tt.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
             ],
           ),

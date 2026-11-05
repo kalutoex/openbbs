@@ -13,6 +13,7 @@ import 'sites.dart';
 import 'token_store.dart';
 
 import '../l10n/l10n.dart';
+
 /// 全局状态：服务器地址、登录状态。页面用它判断要不要显示「我的」内容。
 class AppState extends ChangeNotifier {
   AppState._();
@@ -530,7 +531,9 @@ class AppState extends ChangeNotifier {
     if (hit >= 0) {
       return switchSite(sites[hit]);
     }
-    sites = mergeSites(sites, [SiteEntry(urls: [u])]);
+    sites = mergeSites(sites, [
+      SiteEntry(urls: [u]),
+    ]);
     final s = sites.firstWhere((x) => x.urls.contains(u));
     await SiteStore.write(sites);
     return switchSite(s);

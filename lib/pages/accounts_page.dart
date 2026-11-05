@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../accounts.dart';
 import '../store.dart';
+import '../widgets/app_card.dart';
 import '../widgets/avatar.dart';
 import 'login_page.dart';
 
@@ -81,43 +82,56 @@ class AccountsPage extends StatelessWidget {
           final list = st.accounts;
           final active = st.activeAccount;
           return ListView(
-            padding: const EdgeInsets.only(bottom: 32),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 32),
             children: [
               if (list.isEmpty)
-                Padding(
-                  padding: EdgeInsets.fromLTRB(16, 32, 16, 16),
-                  child: Text(Lc.current.noAccounts),
+                AppCard(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    leading: const Icon(Icons.people_outline),
+                    title: Text(Lc.current.noAccounts),
+                  ),
                 ),
-              for (final a in list)
-                ListTile(
-                  leading: CircleAvatarImg(
-                    url: a.avatar,
-                    name: a.nickname,
-                    radius: 22,
-                  ),
-                  title: Text(a.nickname),
-                  subtitle: Text(
-                    [
-                      if (a.uid.isNotEmpty) 'UID ${a.uid}',
-                      if (a.handle.isNotEmpty) '@${a.handle}',
-                    ].join(' · '),
-                  ),
-                  trailing: a.token == active?.token
-                      ? Icon(Icons.check_circle, color: cs.primary)
-                      : IconButton(
-                          tooltip: Lc.current.remove,
-                          icon: const Icon(Icons.close),
-                          onPressed: () => _remove(context, a),
+              AppCard(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Column(
+                  children: [
+                    for (final a in list)
+                      ListTile(
+                        leading: CircleAvatarImg(
+                          url: a.avatar,
+                          name: a.nickname,
+                          radius: 22,
                         ),
-                  onTap: () => _switch(context, a),
-                  onLongPress: () => _remove(context, a),
+                        title: Text(a.nickname),
+                        subtitle: Text(
+                          [
+                            if (a.uid.isNotEmpty) 'UID ${a.uid}',
+                            if (a.handle.isNotEmpty) '@${a.handle}',
+                          ].join(' · '),
+                        ),
+                        trailing: a.token == active?.token
+                            ? Icon(Icons.check_circle, color: cs.primary)
+                            : IconButton(
+                                tooltip: Lc.current.remove,
+                                icon: const Icon(Icons.close),
+                                onPressed: () => _remove(context, a),
+                              ),
+                        onTap: () => _switch(context, a),
+                        onLongPress: () => _remove(context, a),
+                      ),
+                  ],
                 ),
-              const Divider(height: 24),
-              ListTile(
-                leading: const Icon(Icons.person_add_alt_1_outlined),
-                title: Text(Lc.current.addAccount),
-                subtitle: Text(Lc.current.addAccountHint),
-                onTap: () => _add(context),
+              ),
+              const SizedBox(height: 12),
+              AppCard(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: ListTile(
+                  leading: const Icon(Icons.person_add_alt_1_outlined),
+                  title: Text(Lc.current.addAccount),
+                  subtitle: Text(Lc.current.addAccountHint),
+                  onTap: () => _add(context),
+                ),
               ),
             ],
           );

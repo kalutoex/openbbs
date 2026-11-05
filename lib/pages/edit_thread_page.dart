@@ -1,5 +1,8 @@
 import 'dart:typed_data';
 
+import '../widgets/page_width.dart';
+import '../widgets/app_card.dart';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart'
     show ImageRenderMethodForWeb;
@@ -331,83 +334,100 @@ class _EditThreadPageState extends State<EditThreadPage> {
             ),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          children: [
-            TextField(
-              controller: _title,
-              maxLength: 120,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-              decoration: _deco(cs, Lc.current.title),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _body,
-              minLines: 7,
-              maxLines: null,
-              maxLength: 20000,
-              keyboardType: TextInputType.multiline,
-              style: const TextStyle(fontSize: 15, height: 1.55),
-              decoration: _deco(cs, Lc.current.body),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Text(
-                  Lc.current.imageCountShort('${_count}', '${_maxImgs}'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
+        body: PageWidth(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            children: [
+              AppCard(
+                padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _title,
+                      maxLength: 120,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: _deco(cs, Lc.current.title),
+                    ),
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 14),
+                      color: cs.outlineVariant.withValues(alpha: 0.35),
+                    ),
+                    TextField(
+                      controller: _body,
+                      minLines: 7,
+                      maxLines: null,
+                      maxLength: 20000,
+                      keyboardType: TextInputType.multiline,
+                      style: const TextStyle(fontSize: 15, height: 1.55),
+                      decoration: _deco(cs, Lc.current.body),
+                    ),
+                  ],
                 ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _busy || _count >= _maxImgs ? null : _addImages,
-                  icon: const Icon(
-                    Icons.add_photo_alternate_outlined,
-                    size: 18,
-                  ),
-                  label: Text(Lc.current.addImageShort),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            _imgsGrid(cs),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                TextButton.icon(
-                  onPressed: _busy || _files.length >= 5 ? null : _addFile,
-                  icon: const Icon(Icons.attach_file, size: 18),
-                  label: Text(Lc.current.attachFile),
-                ),
-              ],
-            ),
-            EditableFileCards(
-              files: _files,
-              busy: _busy,
-              onRemove: (f) => setState(() => _files.remove(f)),
-            ),
-            if (_busy) ...[
-              const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 18),
               Row(
                 children: [
-                  const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  const SizedBox(width: 10),
                   Text(
-                    _status,
-                    style: TextStyle(fontSize: 12, color: cs.outline),
+                    Lc.current.imageCountShort('${_count}', '${_maxImgs}'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _busy || _count >= _maxImgs ? null : _addImages,
+                    icon: const Icon(
+                      Icons.add_photo_alternate_outlined,
+                      size: 18,
+                    ),
+                    label: Text(Lc.current.addImageShort),
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+              _imgsGrid(cs),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: _busy || _files.length >= 5 ? null : _addFile,
+                    icon: const Icon(Icons.attach_file, size: 18),
+                    label: Text(Lc.current.attachFile),
+                  ),
+                ],
+              ),
+              EditableFileCards(
+                files: _files,
+                busy: _busy,
+                onRemove: (f) => setState(() => _files.remove(f)),
+              ),
+              if (_busy) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      _status,
+                      style: TextStyle(fontSize: 12, color: cs.outline),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -416,7 +436,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
   InputDecoration _deco(ColorScheme cs, String hint) => InputDecoration(
     hintText: hint,
     filled: true,
-    fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.42),
+    fillColor: Colors.transparent,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
