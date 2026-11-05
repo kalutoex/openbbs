@@ -84,6 +84,18 @@ ORDER BY t.is_top DESC, (CASE ...) ASC, t.created_at DESC LIMIT ? OFFSET ?
 - 邮件验证码全链路（需要真发信）
 - 静态资源与部署相关项（第 5 段）
 
+## 修复记录（20:12 已上线）
+
+| 问题 | 改法 | 验证 |
+|---|---|---|
+| 管理接口未登录 500 | 删掉 api.py 里 2127 / 2774 两处重复的 `_need_admin`，只留 917 那份（带 `not user` 判断） | `/admin/users`、`/admin/cloud/usage` 未登录 → 403；普通用户 → 403；管理员 → 200 |
+| feed 同秒排序不稳 | `order` 末尾加 `, t.id DESC` | 重启后 `/api/feed` 200，20 条正常 |
+
+四个 uvicorn 已重启（8080 v4/v6、26016 v4/v6），三个口全 200。
+提交：bbs `361b422`。
+
+未动：`openbbs/server` 副本里的同名函数有两份，但都带空值判断，不会 500，属历史副本，不改。
+
 ## 建议动手顺序
 
 1. `_need_admin` 去重（1 行改动，风险最低）
