@@ -51,31 +51,46 @@ class MainActivity : FlutterActivity() {
      * 桌面图标要等启动器自己刷新（一般几秒）。
      */
     /**
-     * 别名组件名不能自己拼。
+     * 别名组件的全名。
      *
-     * 清单里的 .IconMint 是按 namespace（org.openbbs.app）展开的，
-     * 而运行时 packageName 给的是 applicationId（com.kalutoex.shijianxian），
-     * 拿它拼出来的名字系统里根本不存在——所以这里直接问系统要一遍，缓存住。
+     * 清单里的 .IconMint 是按 namespace（org.openbbs.app）展开的，不是 applicationId
+     * （com.kalutoex.shijianxian）——这两个在这项目里不一样，拿 packageName 拼必然落空。
+     * namespace 就是 MainActivity 自己所在的那个包，从类名截出来即可，编译期就定死了。
+     *
+     * 先问系统要一遍（getPackageInfo 有时不列 alias），要不到再按 namespace 拼。
      */
     @Suppress("DEPRECATION")
     private fun aliasMap(): Map<String, ComponentName> {
         aliasCache?.let { return it }
         val out = HashMap<String, ComponentName>()
-        val info = packageManager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
-        for (a in info.activities ?: emptyArray()) {
-            val i = a.name.lastIndexOf(".Icon")
-            if (i < 0) continue
-            val k = a.name.substring(i + 5).lowercase()
-            if (k in ICONS) out[k] = ComponentName(a.packageName, a.name)
+        try {
+            val info = packageManager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
+            for (a in info.activities ?: emptyArray()) {
+                val i = a.name.lastIndexOf(".Icon")
+                if (i < 0) continue
+                val k = a.name.substring(i + 5).lowercase()
+                if (k in ICONS) out[k] = ComponentName(a.packageName, a.name)
+            }
+        } catch (_: Exception) {
+            // 拿不到就走下面的 namespace 兜底
         }
         aliasCache = out
         return out
     }
 
+    /** 清单解析用的包名（namespace），不是 applicationId。 */
+    private val namespace: String
+        get() = MainActivity::class.java.name.substringBeforeLast('.')
+
+    private fun aliasOf(key: String): ComponentName {
+        aliasMap()[key]?.let { return it }
+        val full = "$namespace.Icon${key.replaceFirstChar { it.uppercase() }}"
+        return ComponentName(namespace, full)
+    }
+
     private fun currentIcon(): String {
-        val map = aliasMap()
         for (k in ICONS) {
-            val c = map[k] ?: continue
+            val c = aliasOf(k)
             val state = packageManager.getComponentEnabledSetting(c)
             val on = when (state) {
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
@@ -93,12 +108,7 @@ class MainActivity : FlutterActivity() {
             result.error("unknownIcon", "没有这套图标：$key", null)
             return
         }
-        val map = aliasMap()
-        val target = map[key]
-        if (target == null) {
-            result.error("noAlias", "清单里没有 Icon$key", null)
-            return
-        }
+        val target = aliasOf(key)
         try {
             // 先开新的再关旧的，中间不会出现"一个都没有"的空档。
             packageManager.setComponentEnabledSetting(
@@ -108,9 +118,8 @@ class MainActivity : FlutterActivity() {
             )
             for (k in ICONS) {
                 if (k == key) continue
-                val c = map[k] ?: continue
                 packageManager.setComponentEnabledSetting(
-                    c,
+                    aliasOf(k),
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                     PackageManager.DONT_KILL_APP,
                 )
