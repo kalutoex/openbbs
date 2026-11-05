@@ -658,10 +658,6 @@ class LEn extends L {
   String get backupEndpoint => 'Backup address';
 
   @override
-  String get endpointHint =>
-      'Both addresses are the same site. When the primary one won\'t connect, the backup takes over.';
-
-  @override
   String get addressCopied => 'Address copied';
 
   @override
@@ -1191,18 +1187,10 @@ class LEn extends L {
   String get handle => 'Handle';
 
   @override
-  String get handleHint =>
-      'Others find you with @; lowercase letters, digits, underscore, 3–16 characters';
-
-  @override
   String get bio => 'Bio';
 
   @override
   String get bioHint => 'Up to 80 characters, can be empty';
-
-  @override
-  String get profileSavedHint =>
-      'Takes effect right away — refresh the home page to see it.';
 
   @override
   String get openSource => 'Open source';
@@ -1396,10 +1384,6 @@ class LEn extends L {
   String get rebind => 'Rebind';
 
   @override
-  String get bindEmailWhy =>
-      'Once bound, a forgotten password needs no help: tap the reset link on the login page, get a code, set a new one.';
-
-  @override
   String get titleEmpty => 'Title can\'t be empty';
 
   @override
@@ -1488,10 +1472,6 @@ class LEn extends L {
   String newPasswordFor(String v1) {
     return 'New password for “$v1”:';
   }
-
-  @override
-  String get newPasswordOnce =>
-      'Close it and it\'s gone. Have them log in and change it right away.';
 
   @override
   String get copyAndClose => 'Copy and close';
@@ -1594,11 +1574,6 @@ class LEn extends L {
   String get nobodyYet => 'Nobody yet';
 
   @override
-  String creditsAdminOnly(String v1) {
-    return 'Only admins can change this list (logged in as $v1).';
-  }
-
-  @override
   String unfollowed(String v1) {
     return 'Unfollowed $v1';
   }
@@ -1689,10 +1664,6 @@ class LEn extends L {
   String get networkGranted => 'Granted at install, nothing to do';
 
   @override
-  String get permOptionalNote =>
-      'You can leave these off — you\'ll just have to pick images through the system picker.';
-
-  @override
   String get downloadImage => 'Download this image';
 
   @override
@@ -1755,15 +1726,7 @@ class LEn extends L {
   String get siteAdd => 'Add site';
 
   @override
-  String get siteAddHint =>
-      'Enter the address you were given; http:// is optional';
-
-  @override
   String get siteImportPaste => 'Paste a manifest';
-
-  @override
-  String get siteImportPasteHint =>
-      'Paste the contents of bbs.json — one file can list many sites';
 
   @override
   String get siteImportMaster => 'Fetch from the master site';
@@ -1914,9 +1877,6 @@ class LEn extends L {
   String get siteNoPosts => 'No posts on this site yet';
 
   @override
-  String get siteReadOnly => 'Read-only - reply on that site';
-
-  @override
   String get searchThreads => 'Posts';
 
   @override
@@ -1924,9 +1884,6 @@ class LEn extends L {
 
   @override
   String get searchUsers => 'Users';
-
-  @override
-  String get humanCheck => 'Answer to finish sign-up';
 
   @override
   String get dmTitle => 'Messages';
@@ -2356,10 +2313,6 @@ class LEn extends L {
 
   @override
   String get revokeOtherDevices => 'Sign out other devices';
-
-  @override
-  String get revokeOtherHint =>
-      'This device stays signed in; every other session stops working. Use it if you lost a phone or shared your password.';
 
   @override
   String get revokedOther => 'Other devices signed out';

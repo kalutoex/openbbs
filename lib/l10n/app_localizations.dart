@@ -1298,12 +1298,6 @@ abstract class L {
   /// **'备用入口'**
   String get backupEndpoint;
 
-  /// No description provided for @endpointHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'两个地址是同一个站。主入口连不上时会自己走备用那条。'**
-  String get endpointHint;
-
   /// No description provided for @addressCopied.
   ///
   /// In zh, this message translates to:
@@ -2204,12 +2198,6 @@ abstract class L {
   /// **'标识'**
   String get handle;
 
-  /// No description provided for @handleHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'别人用 @ 找到你；小写字母、数字、下划线，3–16 位'**
-  String get handleHint;
-
   /// No description provided for @bio.
   ///
   /// In zh, this message translates to:
@@ -2221,12 +2209,6 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'最多 80 个字，可以留空'**
   String get bioHint;
-
-  /// No description provided for @profileSavedHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'改完立刻生效，回主页刷新就能看到。'**
-  String get profileSavedHint;
 
   /// No description provided for @openSource.
   ///
@@ -2564,12 +2546,6 @@ abstract class L {
   /// **'换绑'**
   String get rebind;
 
-  /// No description provided for @bindEmailWhy.
-  ///
-  /// In zh, this message translates to:
-  /// **'绑了之后，忘记密码不用找人：登录页点「忘记密码」，收个验证码就能改。'**
-  String get bindEmailWhy;
-
   /// No description provided for @titleEmpty.
   ///
   /// In zh, this message translates to:
@@ -2725,12 +2701,6 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'给「{v1}」的新密码：'**
   String newPasswordFor(String v1);
-
-  /// No description provided for @newPasswordOnce.
-  ///
-  /// In zh, this message translates to:
-  /// **'关掉就看不到了。让本人登录后马上改成自己记得的。'**
-  String get newPasswordOnce;
 
   /// No description provided for @copyAndClose.
   ///
@@ -2900,12 +2870,6 @@ abstract class L {
   /// **'还没有人'**
   String get nobodyYet;
 
-  /// No description provided for @creditsAdminOnly.
-  ///
-  /// In zh, this message translates to:
-  /// **'这份名单只有管理员能改（当前登录：{v1}）。'**
-  String creditsAdminOnly(String v1);
-
   /// No description provided for @unfollowed.
   ///
   /// In zh, this message translates to:
@@ -3068,12 +3032,6 @@ abstract class L {
   /// **'安装时自动授予，不用管'**
   String get networkGranted;
 
-  /// No description provided for @permOptionalNote.
-  ///
-  /// In zh, this message translates to:
-  /// **'不想开的可以一直关着，只是发图时得手动去系统里选。'**
-  String get permOptionalNote;
-
   /// No description provided for @downloadImage.
   ///
   /// In zh, this message translates to:
@@ -3182,23 +3140,11 @@ abstract class L {
   /// **'添加站点'**
   String get siteAdd;
 
-  /// No description provided for @siteAddHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'填对方给的地址，带不带 http:// 都行'**
-  String get siteAddHint;
-
   /// No description provided for @siteImportPaste.
   ///
   /// In zh, this message translates to:
   /// **'粘贴清单'**
   String get siteImportPaste;
-
-  /// No description provided for @siteImportPasteHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'把 bbs.json 的内容贴进来，一个文件可以有多座站'**
-  String get siteImportPasteHint;
 
   /// No description provided for @siteImportMaster.
   ///
@@ -3458,12 +3404,6 @@ abstract class L {
   /// **'这座站还没有帖子'**
   String get siteNoPosts;
 
-  /// No description provided for @siteReadOnly.
-  ///
-  /// In zh, this message translates to:
-  /// **'只读浏览 · 回复请到这座站上说'**
-  String get siteReadOnly;
-
   /// No description provided for @searchThreads.
   ///
   /// In zh, this message translates to:
@@ -3481,12 +3421,6 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'用户'**
   String get searchUsers;
-
-  /// No description provided for @humanCheck.
-  ///
-  /// In zh, this message translates to:
-  /// **'答对了才能注册'**
-  String get humanCheck;
 
   /// No description provided for @dmTitle.
   ///
@@ -4237,12 +4171,6 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'退出其他设备'**
   String get revokeOtherDevices;
-
-  /// No description provided for @revokeOtherHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'这台保持登录，别处的登录凭证全部作废。换过手机、丢过设备的话用这个。'**
-  String get revokeOtherHint;
 
   /// No description provided for @revokedOther.
   ///

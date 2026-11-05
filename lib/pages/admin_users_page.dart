@@ -121,8 +121,6 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(Lc.current.newPasswordOnce, style: TextStyle(fontSize: 12)),
             ],
           ),
           actions: [

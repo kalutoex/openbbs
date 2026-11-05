@@ -618,16 +618,6 @@ class _WebEntryRow extends StatelessWidget {
             trailing: const Icon(Icons.copy, size: 18),
             onTap: () => _copy(context, _alt),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: Text(
-              Lc.current.endpointHint,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).hintColor,
-              ),
-            ),
-          ),
         ],
       ],
     );

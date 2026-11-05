@@ -206,12 +206,6 @@ class _SiteThreadPageState extends State<SiteThreadPage> {
                     style: const TextStyle(fontSize: 14.5, height: 1.65),
                   ),
                 ],
-                const SizedBox(height: 24),
-                Text(
-                  Lc.current.siteReadOnly,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: cs.outline),
-                ),
               ],
             ),
     );

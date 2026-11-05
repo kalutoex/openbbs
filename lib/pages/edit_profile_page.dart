@@ -290,7 +290,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     decoration: InputDecoration(
                       labelText: Lc.current.handle,
                       prefixText: '@',
-                      helperText: Lc.current.handleHint,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -313,11 +312,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ],
                 ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              Lc.current.profileSavedHint,
-              style: TextStyle(fontSize: 12, color: cs.outline),
             ),
           ],
         ),

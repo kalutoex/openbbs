@@ -340,7 +340,6 @@
   },
   "primaryEndpoint": "当前入口",
   "backupEndpoint": "备用入口",
-  "endpointHint": "两个地址是同一个站。主入口连不上时会自己走备用那条。",
   "addressCopied": "地址已复制",
   "clearing": "正在清…",
   "calculating": "正在算…",
@@ -777,10 +776,8 @@
   "nickname": "昵称",
   "nicknameMax": "最多 20 个字",
   "handle": "标识",
-  "handleHint": "别人用 @ 找到你；小写字母、数字、下划线，3–16 位",
   "bio": "签名",
   "bioHint": "最多 80 个字，可以留空",
-  "profileSavedHint": "改完立刻生效，回主页刷新就能看到。",
   "openSource": "开源",
   "thanksFriends": "致谢我的朋友们",
   "thanksFriendsSub": "这里是他们的账号",
@@ -889,7 +886,6 @@
   "processing": "处理中…",
   "bind": "绑定",
   "rebind": "换绑",
-  "bindEmailWhy": "绑了之后，忘记密码不用找人：登录页点「忘记密码」，收个验证码就能改。",
   "titleEmpty": "标题不能空",
   "bodyOrImageRequired": "正文或图片至少留一样",
   "uploadingNewStart": "上传新图 0/{v1}",
@@ -964,7 +960,6 @@
       }
     }
   },
-  "newPasswordOnce": "关掉就看不到了。让本人登录后马上改成自己记得的。",
   "copyAndClose": "复制并关闭",
   "searchUsername": "搜用户名",
   "noEmail": "没绑邮箱",
@@ -1049,14 +1044,6 @@
   "removeFriendBody": "只是从这页去掉，账号还在。",
   "credits": "致谢",
   "nobodyYet": "还没有人",
-  "creditsAdminOnly": "这份名单只有管理员能改（当前登录：{v1}）。",
-  "@creditsAdminOnly": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      }
-    }
-  },
   "unfollowed": "已取消关注 {v1}",
   "@unfollowed": {
     "placeholders": {
@@ -1112,7 +1099,6 @@
   "permIntro": "联网权限安装时已经给了，这里只剩通知和相册需要你点头。",
   "network": "联网",
   "networkGranted": "安装时自动授予，不用管",
-  "permOptionalNote": "不想开的可以一直关着，只是发图时得手动去系统里选。",
   "downloadImage": "下载这张图",
   "backToTop": "回到顶部",
   "offlineCacheFeed": "连不上服务器，这是上次的缓存",
@@ -1138,9 +1124,7 @@
   "sitesManage": "站点管理",
   "sitesManageHint": "一个入口管多个站，连不上的自动跳过",
   "siteAdd": "添加站点",
-  "siteAddHint": "填对方给的地址，带不带 http:// 都行",
   "siteImportPaste": "粘贴清单",
-  "siteImportPasteHint": "把 bbs.json 的内容贴进来，一个文件可以有多座站",
   "siteImportMaster": "从主站拉目录",
   "importIt": "导入",
   "siteImportFailed": "读不出清单：{v1}",
@@ -1246,11 +1230,9 @@
   "siteCatalogEmpty": "还没有别的站",
   "siteCatalogEmptyHint": "在设置里的「站点管理」加一座，或者等主站收录。",
   "siteNoPosts": "这座站还没有帖子",
-  "siteReadOnly": "只读浏览 · 回复请到这座站上说",
   "searchThreads": "帖子",
   "searchReplies": "回复",
   "searchUsers": "用户",
-  "humanCheck": "答对了才能注册",
   "dmTitle": "私信",
   "dmEmpty": "还没有私信",
   "messagesTab": "消息",
@@ -1545,7 +1527,6 @@
   "passwordMismatch": "两次输入的新密码不一样",
   "passwordChanged": "密码改好了，别的设备得重新登录",
   "revokeOtherDevices": "退出其他设备",
-  "revokeOtherHint": "这台保持登录，别处的登录凭证全部作废。换过手机、丢过设备的话用这个。",
   "revokedOther": "已退出其他设备",
   "revokeFailed": "没退成：{v1}",
   "@revokeFailed": {

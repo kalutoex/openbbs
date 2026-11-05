@@ -80,14 +80,6 @@ class MeTab extends StatelessWidget {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    Lc.current.loginBenefits,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: cs.outline,
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),

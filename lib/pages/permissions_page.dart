@@ -89,14 +89,6 @@ class _PermissionsPageState extends State<PermissionsPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    Lc.current.permOptionalNote,
-                    style: TextStyle(fontSize: 12, color: cs.outline),
-                  ),
-                ),
               ],
             ),
     );

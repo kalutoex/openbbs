@@ -207,20 +207,7 @@ class _FriendsPageState extends State<FriendsPage> {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
             itemCount: items.length + 1,
             itemBuilder: (context, i) {
-              if (i >= items.length) {
-                if (_isAdmin) return const SizedBox.shrink();
-                final me = AppState.instance.user;
-                final who = me == null
-                    ? Lc.current.notLoggedIn
-                    : ((me['nickname'] ?? me['name'] ?? '') as String);
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 16, 4, 0),
-                  child: Text(
-                    Lc.current.creditsAdminOnly('${who}'),
-                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                  ),
-                );
-              }
+              if (i >= items.length) return const SizedBox.shrink();
               final u = items[i] as Map;
               final nick = (u['nickname'] ?? u['name'] ?? '') as String;
               final handle = (u['handle'] ?? '') as String;

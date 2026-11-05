@@ -182,8 +182,6 @@ class _SitesPageState extends State<SitesPage> {
           autocorrect: false,
           decoration: InputDecoration(
             hintText: 'http://192.168.1.10:8080',
-            helperText: Lc.current.siteAddHint,
-            helperMaxLines: 3,
           ),
           onSubmitted: (v) => Navigator.of(ctx).pop(v),
         ),
@@ -306,8 +304,6 @@ class _SitesPageState extends State<SitesPage> {
             style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
             decoration: InputDecoration(
               hintText: '{"schema":1,"sites":[{"url":"http://…"}]}',
-              helperText: Lc.current.siteImportPasteHint,
-              helperMaxLines: 3,
             ),
           ),
         ),

@@ -294,7 +294,6 @@ class _LoginPageState extends State<LoginPage> {
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
                             labelText: _chQ,
-                            helperText: Lc.current.humanCheck,
                           ),
                         ),
                       ],

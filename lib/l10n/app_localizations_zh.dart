@@ -650,9 +650,6 @@ class LZh extends L {
   String get backupEndpoint => '备用入口';
 
   @override
-  String get endpointHint => '两个地址是同一个站。主入口连不上时会自己走备用那条。';
-
-  @override
   String get addressCopied => '地址已复制';
 
   @override
@@ -1177,16 +1174,10 @@ class LZh extends L {
   String get handle => '标识';
 
   @override
-  String get handleHint => '别人用 @ 找到你；小写字母、数字、下划线，3–16 位';
-
-  @override
   String get bio => '签名';
 
   @override
   String get bioHint => '最多 80 个字，可以留空';
-
-  @override
-  String get profileSavedHint => '改完立刻生效，回主页刷新就能看到。';
 
   @override
   String get openSource => '开源';
@@ -1371,9 +1362,6 @@ class LZh extends L {
   String get rebind => '换绑';
 
   @override
-  String get bindEmailWhy => '绑了之后，忘记密码不用找人：登录页点「忘记密码」，收个验证码就能改。';
-
-  @override
   String get titleEmpty => '标题不能空';
 
   @override
@@ -1462,9 +1450,6 @@ class LZh extends L {
   String newPasswordFor(String v1) {
     return '给「$v1」的新密码：';
   }
-
-  @override
-  String get newPasswordOnce => '关掉就看不到了。让本人登录后马上改成自己记得的。';
 
   @override
   String get copyAndClose => '复制并关闭';
@@ -1567,11 +1552,6 @@ class LZh extends L {
   String get nobodyYet => '还没有人';
 
   @override
-  String creditsAdminOnly(String v1) {
-    return '这份名单只有管理员能改（当前登录：$v1）。';
-  }
-
-  @override
   String unfollowed(String v1) {
     return '已取消关注 $v1';
   }
@@ -1661,9 +1641,6 @@ class LZh extends L {
   String get networkGranted => '安装时自动授予，不用管';
 
   @override
-  String get permOptionalNote => '不想开的可以一直关着，只是发图时得手动去系统里选。';
-
-  @override
   String get downloadImage => '下载这张图';
 
   @override
@@ -1723,13 +1700,7 @@ class LZh extends L {
   String get siteAdd => '添加站点';
 
   @override
-  String get siteAddHint => '填对方给的地址，带不带 http:// 都行';
-
-  @override
   String get siteImportPaste => '粘贴清单';
-
-  @override
-  String get siteImportPasteHint => '把 bbs.json 的内容贴进来，一个文件可以有多座站';
 
   @override
   String get siteImportMaster => '从主站拉目录';
@@ -1877,9 +1848,6 @@ class LZh extends L {
   String get siteNoPosts => '这座站还没有帖子';
 
   @override
-  String get siteReadOnly => '只读浏览 · 回复请到这座站上说';
-
-  @override
   String get searchThreads => '帖子';
 
   @override
@@ -1887,9 +1855,6 @@ class LZh extends L {
 
   @override
   String get searchUsers => '用户';
-
-  @override
-  String get humanCheck => '答对了才能注册';
 
   @override
   String get dmTitle => '私信';
@@ -2309,9 +2274,6 @@ class LZh extends L {
 
   @override
   String get revokeOtherDevices => '退出其他设备';
-
-  @override
-  String get revokeOtherHint => '这台保持登录，别处的登录凭证全部作废。换过手机、丢过设备的话用这个。';
 
   @override
   String get revokedOther => '已退出其他设备';

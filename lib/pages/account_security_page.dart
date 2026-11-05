@@ -367,11 +367,6 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    Lc.current.revokeOtherHint,
-                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                  ),
                   const SizedBox(height: 14),
                   OutlinedButton(
                     onPressed: _rvBusy ? null : _revokeOthers,
@@ -384,11 +379,6 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 22),
-            Text(
-              Lc.current.bindEmailWhy,
-              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
             ),
           ],
         ),
