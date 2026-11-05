@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../cloud.dart';
 import '../download_index.dart';
@@ -37,6 +38,7 @@ class _Entry {
 class _DownloadsPageState extends State<DownloadsPage> {
   List<_Entry> _items = const [];
   bool _loading = true;
+  bool _noAccess = false;
 
   @override
   void initState() {
@@ -44,8 +46,32 @@ class _DownloadsPageState extends State<DownloadsPage> {
     _load();
   }
 
+  /// 读下载目录得先有权限。没给就先问，问不到就让页面上留个按钮。
+  Future<bool> _ensureAccess({bool ask = true}) async {
+    if (!fileBrowserSupported) return true;
+    var st = await Permission.manageExternalStorage.status;
+    if (!st.isGranted && ask) {
+      st = await Permission.manageExternalStorage.request();
+    }
+    if (!st.isGranted) {
+      var s2 = await Permission.storage.status;
+      if (!s2.isGranted && ask) s2 = await Permission.storage.request();
+      if (s2.isGranted) st = s2;
+    }
+    return st.isGranted;
+  }
+
   Future<void> _load() async {
     if (mounted) setState(() => _loading = true);
+    if (fileBrowserSupported && !await _ensureAccess()) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _noAccess = true;
+      });
+      return;
+    }
+    if (mounted) setState(() => _noAccess = false);
     final recs = [...await loadLocalDownloads()];
     // 扫一遍默认目录，把老版本下载、没留记录的也算进来。
     final seen = recs.map((e) => e.display).toSet();
@@ -221,6 +247,20 @@ class _DownloadsPageState extends State<DownloadsPage> {
 
   Widget _body() {
     if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_noAccess) {
+      return EmptyView(
+        icon: Icons.folder_off_outlined,
+        title: Lc.current.allFilesAccess,
+        hint: Lc.current.allFilesWhy,
+        action: FilledButton(
+          onPressed: () async {
+            await _ensureAccess();
+            _load();
+          },
+          child: Text(Lc.current.allFilesOpen),
+        ),
+      ).scrollable();
+    }
     if (!fileBrowserSupported) {
       return EmptyView(
         icon: Icons.download_outlined,
