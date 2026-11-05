@@ -4195,6 +4195,84 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'说两句，让楼主知道有人看。'**
   String get noRepliesHint;
+
+  /// No description provided for @usernameOrEmail.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户名或邮箱'**
+  String get usernameOrEmail;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改密码'**
+  String get changePassword;
+
+  /// No description provided for @currentPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'原密码'**
+  String get currentPassword;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'再输一次新密码'**
+  String get confirmPassword;
+
+  /// No description provided for @passwordMismatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'两次输入的新密码不一样'**
+  String get passwordMismatch;
+
+  /// No description provided for @passwordChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'密码改好了，别的设备得重新登录'**
+  String get passwordChanged;
+
+  /// No description provided for @revokeOtherDevices.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出其他设备'**
+  String get revokeOtherDevices;
+
+  /// No description provided for @revokeOtherHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这台保持登录，别处的登录凭证全部作废。换过手机、丢过设备的话用这个。'**
+  String get revokeOtherHint;
+
+  /// No description provided for @revokedOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'已退出其他设备'**
+  String get revokedOther;
+
+  /// No description provided for @revokeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'没退成：{v1}'**
+  String revokeFailed(String v1);
+
+  /// No description provided for @currentPasswordRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'先填原密码'**
+  String get currentPasswordRequired;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示密码'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏密码'**
+  String get hidePassword;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

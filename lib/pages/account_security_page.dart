@@ -26,6 +26,14 @@ class AccountSecurityPage extends StatefulWidget {
 class _AccountSecurityPageState extends State<AccountSecurityPage> {
   final _email = TextEditingController();
   final _code = TextEditingController();
+  // 改密码那块自己一套状态，和绑邮箱互不干扰。
+  final _oldPw = TextEditingController();
+  final _newPw = TextEditingController();
+  final _newPw2 = TextEditingController();
+  bool _seePw = false;
+  bool _pwBusy = false;
+  bool _rvBusy = false;
+  String? _pwErr;
   Timer? _tick;
   int _cool = 0;
   bool _busy = false;
@@ -36,6 +44,9 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
     _tick?.cancel();
     _email.dispose();
     _code.dispose();
+    _oldPw.dispose();
+    _newPw.dispose();
+    _newPw2.dispose();
     super.dispose();
   }
 
@@ -98,6 +109,59 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
       if (mounted) setState(() => _err = errorText(context, e2));
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _changePw() async {
+    final oldPw = _oldPw.text;
+    final newPw = _newPw.text;
+    if (oldPw.isEmpty) {
+      setState(() => _pwErr = Lc.current.currentPasswordRequired);
+      return;
+    }
+    if (newPw.length < 8) {
+      setState(() => _pwErr = Lc.current.passwordTooShort);
+      return;
+    }
+    if (newPw != _newPw2.text) {
+      setState(() => _pwErr = Lc.current.passwordMismatch);
+      return;
+    }
+    setState(() {
+      _pwBusy = true;
+      _pwErr = null;
+    });
+    try {
+      await AppState.instance.changePassword(oldPw, newPw);
+      if (!mounted) return;
+      _oldPw.clear();
+      _newPw.clear();
+      _newPw2.clear();
+      setState(() => _seePw = false);
+      toast(context, Lc.current.passwordChanged);
+    } on ApiException catch (e2) {
+      if (mounted) setState(() => _pwErr = errorText(context, e2));
+    } catch (e2) {
+      if (mounted) {
+        setState(() => _pwErr = Lc.current.passwordChangeFailed('$e2'));
+      }
+    } finally {
+      if (mounted) setState(() => _pwBusy = false);
+    }
+  }
+
+  Future<void> _revokeOthers() async {
+    setState(() => _rvBusy = true);
+    try {
+      await AppState.instance.revokeOtherSessions();
+      if (!mounted) return;
+      toast(context, Lc.current.revokedOther);
+    } on ApiException catch (e2) {
+      if (mounted) toast(context, Lc.current.revokeFailed(errorText(context, e2)));
+    } catch (e2) {
+      if (mounted) toast(context, Lc.current.revokeFailed('$e2'));
+    } finally {
+      if (mounted) setState(() => _rvBusy = false);
     }
   }
 
@@ -216,6 +280,106 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                           : (bound.isEmpty
                                 ? Lc.current.bind
                                 : Lc.current.rebind),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            AppCard(
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    Lc.current.changePassword,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _oldPw,
+                    obscureText: !_seePw,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    decoration: InputDecoration(
+                      labelText: Lc.current.currentPassword,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _newPw,
+                    obscureText: !_seePw,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    decoration: InputDecoration(
+                      labelText: Lc.current.newPassword,
+                      helperText: Lc.current.atLeast8,
+                      suffixIcon: IconButton(
+                        tooltip: _seePw ? Lc.current.hidePassword : Lc.current.showPassword,
+                        onPressed: () => setState(() => _seePw = !_seePw),
+                        icon: Icon(
+                          _seePw
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _newPw2,
+                    obscureText: !_seePw,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    decoration: InputDecoration(
+                      labelText: Lc.current.confirmPassword,
+                    ),
+                    onSubmitted: (_) => _pwBusy ? null : _changePw(),
+                  ),
+                  if (_pwErr != null) ...[
+                    const SizedBox(height: 10),
+                    Text(_pwErr!, style: TextStyle(color: cs.error)),
+                  ],
+                  const SizedBox(height: 18),
+                  FilledButton(
+                    onPressed: _pwBusy ? null : _changePw,
+                    child: Text(
+                      _pwBusy ? Lc.current.processing : Lc.current.changePassword,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            AppCard(
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    Lc.current.revokeOtherDevices,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    Lc.current.revokeOtherHint,
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 14),
+                  OutlinedButton(
+                    onPressed: _rvBusy ? null : _revokeOthers,
+                    style: OutlinedButton.styleFrom(foregroundColor: cs.error),
+                    child: Text(
+                      _rvBusy
+                          ? Lc.current.processing
+                          : Lc.current.revokeOtherDevices,
                     ),
                   ),
                 ],

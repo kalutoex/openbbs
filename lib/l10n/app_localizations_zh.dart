@@ -2288,4 +2288,45 @@ class LZh extends L {
 
   @override
   String get noRepliesHint => '说两句，让楼主知道有人看。';
+
+  @override
+  String get usernameOrEmail => '用户名或邮箱';
+
+  @override
+  String get changePassword => '修改密码';
+
+  @override
+  String get currentPassword => '原密码';
+
+  @override
+  String get confirmPassword => '再输一次新密码';
+
+  @override
+  String get passwordMismatch => '两次输入的新密码不一样';
+
+  @override
+  String get passwordChanged => '密码改好了，别的设备得重新登录';
+
+  @override
+  String get revokeOtherDevices => '退出其他设备';
+
+  @override
+  String get revokeOtherHint => '这台保持登录，别处的登录凭证全部作废。换过手机、丢过设备的话用这个。';
+
+  @override
+  String get revokedOther => '已退出其他设备';
+
+  @override
+  String revokeFailed(String v1) {
+    return '没退成：$v1';
+  }
+
+  @override
+  String get currentPasswordRequired => '先填原密码';
+
+  @override
+  String get showPassword => '显示密码';
+
+  @override
+  String get hidePassword => '隐藏密码';
 }

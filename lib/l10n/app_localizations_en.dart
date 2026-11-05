@@ -2334,4 +2334,47 @@ class LEn extends L {
 
   @override
   String get noRepliesHint => 'Be the first to say something.';
+
+  @override
+  String get usernameOrEmail => 'Username or email';
+
+  @override
+  String get changePassword => 'Change password';
+
+  @override
+  String get currentPassword => 'Current password';
+
+  @override
+  String get confirmPassword => 'Repeat new password';
+
+  @override
+  String get passwordMismatch => 'The new passwords don\'t match';
+
+  @override
+  String get passwordChanged =>
+      'Password changed. Other devices are signed out.';
+
+  @override
+  String get revokeOtherDevices => 'Sign out other devices';
+
+  @override
+  String get revokeOtherHint =>
+      'This device stays signed in; every other session stops working. Use it if you lost a phone or shared your password.';
+
+  @override
+  String get revokedOther => 'Other devices signed out';
+
+  @override
+  String revokeFailed(String v1) {
+    return 'Couldn\'t sign out: $v1';
+  }
+
+  @override
+  String get currentPasswordRequired => 'Enter your current password';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
 }

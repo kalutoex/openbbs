@@ -642,11 +642,11 @@
   "connect": "Connect",
   "themeColorTitle": "Accent color",
   "accentColorHint": "Buttons, selections and input focus rings all follow this color band.",
-    "appIconTitle": "App icon",
+  "appIconTitle": "App icon",
   "appIconHint": "The launcher icon is fixed when the app is built; these are the sets shipped with it. The home screen may take a few seconds to refresh.",
   "appIconChanged": "Done — check your home screen",
   "appIconUnavailable": "Not supported on this platform",
-"moreToLoad": "More to come",
+  "moreToLoad": "More to come",
   "resetPasswordConfirm": "Set “{v1}”'s password to a random string?\n\nThe old one stops working at once. The new one is shown only once — send it to them.",
   "@resetPasswordConfirm": {
     "placeholders": {
@@ -940,5 +940,18 @@
   "sysNotify": "Message alerts",
   "sysNotifyHint": "Show a system notification when a message arrives",
   "sysNotifyOff": "Notifications are blocked in system settings",
-  "noRepliesHint": "Be the first to say something."
+  "noRepliesHint": "Be the first to say something.",
+  "usernameOrEmail": "Username or email",
+  "changePassword": "Change password",
+  "currentPassword": "Current password",
+  "confirmPassword": "Repeat new password",
+  "passwordMismatch": "The new passwords don't match",
+  "passwordChanged": "Password changed. Other devices are signed out.",
+  "revokeOtherDevices": "Sign out other devices",
+  "revokeOtherHint": "This device stays signed in; every other session stops working. Use it if you lost a phone or shared your password.",
+  "revokedOther": "Other devices signed out",
+  "revokeFailed": "Couldn't sign out: {v1}",
+  "currentPasswordRequired": "Enter your current password",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password"
 }

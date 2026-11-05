@@ -27,6 +27,7 @@ class _LoginPageState extends State<LoginPage> {
   String _chId = '';
   String _chSig = '';
   String _chQ = '';
+  bool _showPw = false;
   bool _register = false;
   bool _reset = false;
   bool _busy = false;
@@ -219,15 +220,18 @@ class _LoginPageState extends State<LoginPage> {
                       TextField(
                         controller: _name,
                         autocorrect: false,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          labelText: Lc.current.username,
+                          labelText: Lc.current.usernameOrEmail,
                         ),
                       ),
                       const SizedBox(height: 12),
                     ],
                     TextField(
                       controller: _pw,
-                      obscureText: true,
+                      obscureText: !_showPw,
+                      autocorrect: false,
+                      enableSuggestions: false,
                       decoration: InputDecoration(
                         labelText: _reset
                             ? Lc.current.newPassword
@@ -235,6 +239,18 @@ class _LoginPageState extends State<LoginPage> {
                         helperText: (_register || _reset)
                             ? Lc.current.atLeast8
                             : null,
+                        suffixIcon: IconButton(
+                          tooltip: _showPw
+                              ? Lc.current.hidePassword
+                              : Lc.current.showPassword,
+                          onPressed: () => setState(() => _showPw = !_showPw),
+                          icon: Icon(
+                            _showPw
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 20,
+                          ),
+                        ),
                       ),
                       onSubmitted: (_) => _submit(),
                     ),
