@@ -116,8 +116,8 @@ ORDER BY t.is_top DESC, (CASE ...) ASC, t.created_at DESC LIMIT ? OFFSET ?
 
 | 级别 | 问题 | 证据 |
 |---|---|---|
-| **P1** | **私信附件收件人下不了** | A(3) 传文件 → 发私信给 B(20)，库里存 `/f/<digest>`；B 下载 **403「无权访问」**。`serve_file` 私有分支只查 `user_files` 本人账本，收件人不在账本里 |
-| P2 | `_refs` 不查 `dm_messages` | 删文件时「被 N 个帖子用着」漏掉私信引用；`_sync_public` 同源 |
+| **P1** | **私信附件收件人下不了** → 已修 | `serve_file` 私有分支加一条：私信里发过的附件，会话双方都能下。测：发送者 200、收件人 200、无关者 403、未登录 403。提交 `859d3fc` |
+| P2 | `_refs` 不查 `dm_messages` | 删文件时「被 N 个帖子用着」漏掉私信引用。**不能简单加**：`_sync_public` 共用这个函数，一加就会把私信附件标成 public=1，等于公开。要拆参数 |
 | P2 | `purge_trash` 的 `ORDER BY deleted_at` 没有 id 兜底 | 同秒删除的多条谁先删由 SQLite 定 |
 | P2 | 4 个 uvicorn 各跑一份每小时清理任务 | 同一时刻 4 次并发 `purge_trash`，幂等但有 SQLITE_BUSY 概率 |
 | P3 | `/file` 注释写「回收站里的不算占用」，实现算 | 行为符合规则（回收站占额度），注释错的 |
