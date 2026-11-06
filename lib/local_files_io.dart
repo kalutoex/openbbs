@@ -16,7 +16,7 @@ String? publicDownloadPath(String display) {
 Future<String?> localFileOf(LocalDownload d) async {
   final cands = <String>[
     if (d.path != null && d.path!.isNotEmpty) d.path!,
-    if (publicDownloadPath(d.display) case final p?) p,
+    ?publicDownloadPath(d.display),
   ];
   for (final p in cands) {
     try {

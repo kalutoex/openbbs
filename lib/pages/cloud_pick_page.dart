@@ -11,7 +11,7 @@ import '../widgets/toast.dart';
 /// 从云盘里挑文件。
 ///
 /// 发帖、编辑帖子、聊天附件都走这里，省得每次都被系统文件管理器顶出来。
-/// 选中的是已经在云端的文件，直接引用 /f/<digest>，不用再传一遍。
+/// 选中的是已经在云端的文件，直接引用 `/f/<digest>`，不用再传一遍。
 class CloudPickPage extends StatefulWidget {
   const CloudPickPage({super.key, this.maxCount = 5});
 
@@ -31,7 +31,7 @@ class _CloudPickPageState extends State<CloudPickPage> {
   bool _more = false;
   bool _failed = false;
   String _q = '';
-  String _sort = 'time';
+  final String _sort = 'time';
   int _page = 1;
   int _total = 0;
 

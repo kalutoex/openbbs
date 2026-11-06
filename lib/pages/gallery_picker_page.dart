@@ -95,7 +95,7 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _err = Lc.current.galleryReadFailed('${e}');
+          _err = Lc.current.galleryReadFailed('$e');
         });
       }
     }
@@ -118,7 +118,7 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _err = Lc.current.albumOpenFailed('${e}');
+          _err = Lc.current.albumOpenFailed('$e');
         });
       }
     }

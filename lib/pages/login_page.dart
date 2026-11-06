@@ -92,7 +92,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _err = errorText(context, e));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _err = Lc.current.codeSendFailed('${e}'));
+      setState(() => _err = Lc.current.codeSendFailed('$e'));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -125,7 +125,7 @@ class _LoginPageState extends State<LoginPage> {
         setState(() => _err = errorText(context, e));
       } catch (e) {
         if (!mounted) return;
-        setState(() => _err = Lc.current.passwordChangeFailed('${e}'));
+        setState(() => _err = Lc.current.passwordChangeFailed('$e'));
       } finally {
         if (mounted) setState(() => _busy = false);
       }
@@ -162,13 +162,14 @@ class _LoginPageState extends State<LoginPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _err = errorText(context, e));
-      if (_register && _chQ.isNotEmpty && e.message.contains('题'))
+      if (_register && _chQ.isNotEmpty && e.message.contains('题')) {
         _loadChallenge();
+      }
     } catch (e) {
       // 不是 ApiException 的意外（解析、存储写入失败之类）以前会漏出去，
       // _busy 停在 true，看着就是登录页一直转圈。
       if (!mounted) return;
-      setState(() => _err = Lc.current.loginFailed('${e}'));
+      setState(() => _err = Lc.current.loginFailed('$e'));
     } finally {
       // 不管成没成，转圈都得停。pop 之后 mounted 为 false，不会碰已销毁的 State。
       if (mounted) setState(() => _busy = false);

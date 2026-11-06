@@ -314,8 +314,9 @@ class Api {
     Uint8List bytes, {
     String name = 'a.jpg',
   }) async {
-    if (!configured)
+    if (!configured) {
       throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
+    }
     final body = jsonEncode({'name': name, 'data': base64Encode(bytes)});
     try {
       final r = await _withFailover(
@@ -326,14 +327,15 @@ class Api {
       );
       final d = _decode(r);
       final url = (d is Map ? d['url'] : null) as String?;
-      if (url == null || url.isEmpty)
+      if (url == null || url.isEmpty) {
         throw ApiException('upload returned no url', code: 'uploadNoUrl');
+      }
       return url;
     } on ApiException {
       rethrow;
     } catch (e) {
       throw ApiException(
-        Lc.current.uploadFailedWith('${e}'),
+        Lc.current.uploadFailedWith('$e'),
         code: 'uploadFailed',
         detail: '$e',
       );
@@ -343,16 +345,18 @@ class Api {
   /// 传附件。手机上边读盘边发，网页版交给浏览器，都不整个进内存。
   /// 名字和大小以服务端回来为准——客户端报的不可信。
   static Future<Map<String, dynamic>> uploadFile(PickedFile f) async {
-    if (!configured)
+    if (!configured) {
       throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
+    }
     try {
       final d = await _withFailover(
         retryOnTimeout: false,
         () => postFile(_uri('/file').toString(), _headers, f),
       );
       final url = '${d['url'] ?? ''}';
-      if (url.isEmpty)
+      if (url.isEmpty) {
         throw ApiException('upload returned no url', code: 'uploadNoUrl');
+      }
       return {
         'url': url,
         'name': '${d['name'] ?? f.name}',
@@ -465,7 +469,7 @@ class Api {
         }
       }
       throw ApiException(
-        Lc.current.connectFailed('${e}'),
+        Lc.current.connectFailed('$e'),
         code: 'connectFailed',
         detail: '$e',
       );
@@ -486,7 +490,7 @@ class Api {
       rethrow;
     } catch (e) {
       throw ApiException(
-        Lc.current.connectFailed('${e}'),
+        Lc.current.connectFailed('$e'),
         code: 'connectFailed',
         detail: '$e',
       );
@@ -507,7 +511,7 @@ class Api {
       rethrow;
     } catch (e) {
       throw ApiException(
-        Lc.current.connectFailed('${e}'),
+        Lc.current.connectFailed('$e'),
         code: 'connectFailed',
         detail: '$e',
       );
@@ -528,7 +532,7 @@ class Api {
       rethrow;
     } catch (e) {
       throw ApiException(
-        Lc.current.connectFailed('${e}'),
+        Lc.current.connectFailed('$e'),
         code: 'connectFailed',
         detail: '$e',
       );

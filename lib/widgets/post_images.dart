@@ -276,7 +276,7 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
       final name = 'openbbs_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final where = await saveImageBytes(r.bodyBytes, name);
       if (!mounted) return;
-      toast(context, Lc.current.savedTo('${where}'), floating: true);
+      toast(context, Lc.current.savedTo(where), floating: true);
     } catch (e) {
       if (!mounted) return;
       toast(context, Lc.current.saveFailed('$e'), floating: true);

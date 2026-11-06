@@ -192,7 +192,7 @@ class _UserPageState extends State<UserPage> {
     } on ApiException catch (e) {
       _snack(errorText(context, e));
     } catch (e) {
-      _snack(Lc.current.coverFailed('${e}'));
+      _snack(Lc.current.coverFailed('$e'));
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -224,7 +224,7 @@ class _UserPageState extends State<UserPage> {
       final r = await http.get(Uri.parse(Api.img(cover)));
       if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
       final where = await saveImageBytes(r.bodyBytes, 'openbbs-cover.jpg');
-      _snack(Lc.current.savedTo('${where}'));
+      _snack(Lc.current.savedTo(where));
     } catch (e) {
       _snack(Lc.current.saveFailed('$e'));
     }
@@ -513,7 +513,7 @@ class _UserPageState extends State<UserPage> {
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    Lc.current.joinedAt('${_since(info['created_at'])}'),
+                    Lc.current.joinedAt(_since(info['created_at'])),
                     style: TextStyle(fontSize: 12, color: cs.outline),
                   ),
                 ],

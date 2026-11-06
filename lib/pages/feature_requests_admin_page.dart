@@ -151,7 +151,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
           _done
               ? Lc.current.requestsDone
               : (_total > 0
-                    ? Lc.current.requestsCount('${_total}')
+                    ? Lc.current.requestsCount('$_total')
                     : Lc.current.requests),
         ),
         actions: [
@@ -287,7 +287,7 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                    Lc.current.replyLine('${note}'),
+                    Lc.current.replyLine(note),
                     style: TextStyle(fontSize: 12, color: cs.primary),
                   ),
                 ),

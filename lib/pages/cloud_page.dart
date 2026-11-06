@@ -507,8 +507,8 @@ class _UsageBar extends StatelessWidget {
             children: [
               Text(
                 usage.unlimited
-                    ? Lc.current.usedSpace('${usedText}')
-                    : Lc.current.usedOfTotal('${usedText}', '${quotaText}'),
+                    ? Lc.current.usedSpace(usedText)
+                    : Lc.current.usedOfTotal(usedText, quotaText),
                 style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
               ),
               const Spacer(),
@@ -804,8 +804,8 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
     final d = Duration(seconds: sec);
     final days = d.inDays;
     final hours = d.inHours;
-    if (days >= 1) return Lc.current.daysLeft('${days}');
-    if (hours >= 1) return Lc.current.hoursLeft('${hours}');
+    if (days >= 1) return Lc.current.daysLeft('$days');
+    if (hours >= 1) return Lc.current.hoursLeft('$hours');
     return Lc.current.expiringSoon;
   }
 

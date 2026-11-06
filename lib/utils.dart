@@ -29,8 +29,8 @@ String bigNum(int n) {
   if (n < 10000) return '$n';
   final w = n / 10000;
   return w >= 10
-      ? Lc.current.bigNumSuffix('${w.toStringAsFixed(0)}')
-      : Lc.current.bigNumSuffix('${w.toStringAsFixed(1)}');
+      ? Lc.current.bigNumSuffix(w.toStringAsFixed(0))
+      : Lc.current.bigNumSuffix(w.toStringAsFixed(1));
 }
 
 /// 容量卡片用的短写法：1.2G / 500M / 12K。

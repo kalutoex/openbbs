@@ -90,7 +90,7 @@ Future<void> _askNotifyOnce() async {
   }
 }
 
-/// 点通知回到 App 里。payload 只有两种：dm:<id>:<名字> 和 notice。
+/// 点通知回到 App 里。payload 只有两种：`dm:<id>:<名字>` 和 notice。
 void _onNotifyTap(String payload) {
   final nav = appNav.currentState;
   if (nav == null) return;

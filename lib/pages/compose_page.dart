@@ -202,7 +202,7 @@ class _ComposePageState extends State<ComposePage> {
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: Text(Lc.current.pickFromAlbum),
-              subtitle: Text(Lc.current.canAddMore('${left}')),
+              subtitle: Text(Lc.current.canAddMore('$left')),
               onTap: () => Navigator.of(c).pop('album'),
             ),
             ListTile(
@@ -359,7 +359,7 @@ class _ComposePageState extends State<ComposePage> {
       if (one == null) return;
       await _ingest([one]);
     } catch (e) {
-      _snack(Lc.current.cameraFailed('${e}'));
+      _snack(Lc.current.cameraFailed('$e'));
     }
   }
 
@@ -387,7 +387,7 @@ class _ComposePageState extends State<ComposePage> {
         }
         if (mounted) setState(() => _compressDone++);
       }
-      if (picked.length > room) _snack(Lc.current.tooManyImages('${_maxImgs}'));
+      if (picked.length > room) _snack(Lc.current.tooManyImages('$_maxImgs'));
     } catch (e) {
       _snack(Lc.current.readImageFailed('$e'));
     } finally {
@@ -565,7 +565,7 @@ class _ComposePageState extends State<ComposePage> {
     } on ApiException catch (e) {
       _fail(e);
     } catch (e) {
-      _fail(Lc.current.postFailed('${e}'));
+      _fail(Lc.current.postFailed('$e'));
     }
   }
 
@@ -817,7 +817,7 @@ class _ComposePageState extends State<ComposePage> {
     return Row(
       children: [
         Text(
-          Lc.current.imageCount('${_imgs.length}', '${_maxImgs}'),
+          Lc.current.imageCount('${_imgs.length}', '$_maxImgs'),
           style: TextStyle(
             fontSize: 12,
             color: cs.onSurfaceVariant,
@@ -991,11 +991,11 @@ class _ComposePageState extends State<ComposePage> {
                         _busy
                             ? _status
                             : _imgs.isEmpty
-                            ? Lc.current.titleRequiredMaxImages('${_maxImgs}')
+                            ? Lc.current.titleRequiredMaxImages('$_maxImgs')
                             : Lc.current.imageCountPrefix(
                                 '${_imgs.length}',
-                                '${_maxImgs}',
-                                '${ImgCompress.kb(_imgs.fold(0, (a, b) => a + b.bytes.length))}',
+                                '$_maxImgs',
+                                ImgCompress.kb(_imgs.fold(0, (a, b) => a + b.bytes.length)),
                               ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1006,7 +1006,7 @@ class _ComposePageState extends State<ComposePage> {
                       Padding(
                         padding: const EdgeInsets.only(right: 10),
                         child: Text(
-                          Lc.current.bodyLength('${bodyLen}'),
+                          Lc.current.bodyLength('$bodyLen'),
                           style: TextStyle(fontSize: 11.5, color: cs.outline),
                         ),
                       ),

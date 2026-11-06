@@ -123,8 +123,9 @@ Future<SavedFile> saveDownloaded(String tmpPath, String name) async {
 }
 
 String _unique(Directory dir, String name) {
-  if (!File('${dir.path}${Platform.pathSeparator}$name').existsSync())
+  if (!File('${dir.path}${Platform.pathSeparator}$name').existsSync()) {
     return name;
+  }
   final dot = name.lastIndexOf('.');
   final stem = dot > 0 ? name.substring(0, dot) : name;
   final ext = dot > 0 ? name.substring(dot) : '';

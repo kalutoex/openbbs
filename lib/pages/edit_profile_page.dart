@@ -96,7 +96,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (u is Map<String, dynamic>) AppState.instance.applyUser(u);
       if (!mounted) return;
       setState(() => _avatar.text = url);
-      _snack(Lc.current.avatarUpdated('${ImgCompress.kb(out.length)}'));
+      _snack(Lc.current.avatarUpdated(ImgCompress.kb(out.length)));
     } on ApiException catch (e) {
       _snack(errorText(context, e));
     } catch (e) {

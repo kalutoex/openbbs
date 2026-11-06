@@ -138,7 +138,7 @@ class _FriendsPageState extends State<FriendsPage> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(Lc.current.removeFriendConfirm('${nick}')),
+        title: Text(Lc.current.removeFriendConfirm(nick)),
         content: Text(Lc.current.removeFriendBody),
         actions: [
           TextButton(

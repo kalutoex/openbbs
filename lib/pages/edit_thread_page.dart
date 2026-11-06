@@ -266,7 +266,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
     } on ApiException catch (e) {
       _fail(errorText(context, e));
     } catch (e) {
-      _fail(Lc.current.saveFailed('${e}'));
+      _fail(Lc.current.saveFailed('$e'));
     }
   }
 
@@ -375,7 +375,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
               Row(
                 children: [
                   Text(
-                    Lc.current.imageCountShort('${_count}', '${_maxImgs}'),
+                    Lc.current.imageCountShort('$_count', '$_maxImgs'),
                     style: TextStyle(
                       fontSize: 12,
                       color: cs.onSurfaceVariant,

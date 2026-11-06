@@ -157,8 +157,9 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
       if (!mounted) return;
       toast(context, Lc.current.revokedOther);
     } on ApiException catch (e2) {
-      if (mounted)
+      if (mounted) {
         toast(context, Lc.current.revokeFailed(errorText(context, e2)));
+      }
     } catch (e2) {
       if (mounted) toast(context, Lc.current.revokeFailed('$e2'));
     } finally {

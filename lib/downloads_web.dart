@@ -1,3 +1,7 @@
+// 网页端的实现，只在 web 编译时进来。dart:html 已标记废弃，但换成
+// package:web 要把这里的 Stream 写法全改成 addEventListener，
+// 改坏了网页版的上传下载是哑巴故障，先留着，等 Flutter 真移除再一并迁。
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'dart:typed_data';
 

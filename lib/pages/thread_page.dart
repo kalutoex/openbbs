@@ -217,8 +217,8 @@ class _ThreadPageState extends State<ThreadPage> {
     if (idx < 0) {
       _toast(
         _page <= _pages
-            ? Lc.current.notReachedFloor('${n}')
-            : Lc.current.noSuchFloor('${n}'),
+            ? Lc.current.notReachedFloor('$n')
+            : Lc.current.noSuchFloor('$n'),
       );
       return;
     }
@@ -769,7 +769,7 @@ class _ThreadPageState extends State<ThreadPage> {
                       const SizedBox(width: 10),
                       Text(
                         _pages > 1
-                            ? Lc.current.jumpToFloorPages('${_pages}')
+                            ? Lc.current.jumpToFloorPages('$_pages')
                             : Lc.current.jumpToFloor,
                       ),
                     ],
@@ -1022,7 +1022,7 @@ class _ThreadPageState extends State<ThreadPage> {
               Text(
                 [
                   postTime(created),
-                  Lc.current.viewsCount('${bigNum(views)}'),
+                  Lc.current.viewsCount(bigNum(views)),
                   if (((op['edited_at'] ?? 0) as int) > 0) Lc.current.edited,
                 ].join(' · '),
                 style: TextStyle(fontSize: 12, color: cs.outline),
@@ -1086,7 +1086,7 @@ class _ThreadPageState extends State<ThreadPage> {
               const Spacer(),
               Text(
                 replies > 0
-                    ? Lc.current.repliesCount('${bigNum(replies)}')
+                    ? Lc.current.repliesCount(bigNum(replies))
                     : Lc.current.noReplies,
                 style: TextStyle(fontSize: 12, color: cs.outline),
               ),
@@ -1218,7 +1218,7 @@ class _ThreadPageState extends State<ThreadPage> {
                   children: [
                     Text(
                       Lc.current.replyTo(
-                        '${(_replyTo!['author'] ?? '') as String}',
+                        (_replyTo!['author'] ?? '') as String,
                       ),
                       style: TextStyle(fontSize: 12, color: cs.primary),
                     ),

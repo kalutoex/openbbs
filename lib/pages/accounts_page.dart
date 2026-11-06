@@ -26,8 +26,8 @@ class AccountsPage extends StatelessWidget {
     toast(
       context,
       ok
-          ? Lc.current.switchedTo('${a.nickname}')
-          : Lc.current.accountExpiredRemoved('${a.nickname}'),
+          ? Lc.current.switchedTo(a.nickname)
+          : Lc.current.accountExpiredRemoved(a.nickname),
     );
     if (ok) nav.pop();
   }
@@ -37,7 +37,7 @@ class AccountsPage extends StatelessWidget {
       context: context,
       builder: (c) => AlertDialog(
         title: Text(Lc.current.removeAccount),
-        content: Text(Lc.current.removeAccountConfirm('${a.nickname}')),
+        content: Text(Lc.current.removeAccountConfirm(a.nickname)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c, false),
@@ -64,7 +64,7 @@ class AccountsPage extends StatelessWidget {
       toast(
         context,
         Lc.current.accountAdded(
-          '${st.activeAccount?.nickname ?? Lc.current.accounts}',
+          st.activeAccount?.nickname ?? Lc.current.accounts,
         ),
       );
     }

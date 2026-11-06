@@ -232,7 +232,7 @@ class SettingsPage extends StatelessWidget {
                 const _VersionRow(),
                 ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: Text(Lc.current.aboutBrand('${SiteConfig.brand}')),
+                  title: Text(Lc.current.aboutBrand(SiteConfig.brand)),
                   subtitle: Text(Lc.current.aboutSubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(
@@ -537,7 +537,7 @@ class _VersionRowState extends State<_VersionRow> {
     if (r.build == _localBuild) {
       await _tell(
         Lc.current.checkUpdate,
-        Lc.current.upToDate('${_pkg?.version ?? ''}'),
+        Lc.current.upToDate(_pkg?.version ?? ''),
       );
       return;
     }
@@ -683,7 +683,7 @@ class _ClearCacheTileState extends State<_ClearCacheTile> {
     toast(
       context,
       before > 0
-          ? Lc.current.clearedAmount('${AppCache.human(before)}')
+          ? Lc.current.clearedAmount(AppCache.human(before))
           : Lc.current.cleared,
     );
   }
@@ -696,7 +696,7 @@ class _ClearCacheTileState extends State<_ClearCacheTile> {
         ? Lc.current.calculating
         : _size == 0
         ? Lc.current.cacheEmpty
-        : Lc.current.cacheSize('${AppCache.human(_size!)}');
+        : Lc.current.cacheSize(AppCache.human(_size!));
     return ListTile(
       leading: const Icon(Icons.cleaning_services_outlined),
       title: Text(Lc.current.clearCache),

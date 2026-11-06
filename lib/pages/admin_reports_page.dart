@@ -123,7 +123,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _total > 0 ? Lc.current.reportsCount('${_total}') : Lc.current.report,
+          _total > 0 ? Lc.current.reportsCount('$_total') : Lc.current.report,
         ),
         actions: [
           IconButton(

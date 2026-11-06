@@ -82,7 +82,7 @@ Future<List<LocalDownload>> loadLocalDownloads() async {
     if (list is! List) return const [];
     return [
       for (final e in list)
-        if (LocalDownload.fromJson(e) case final d?) d,
+        ?LocalDownload.fromJson(e),
     ];
   } catch (_) {
     return const [];

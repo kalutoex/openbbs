@@ -104,7 +104,7 @@ class _FollowPageState extends State<FollowPage> {
     });
     try {
       await Api.delete('/u/${Uri.encodeComponent(name)}/follow');
-      _say(Lc.current.unfollowed('${_nameOf(u)}'));
+      _say(Lc.current.unfollowed(_nameOf(u)));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -131,7 +131,7 @@ class _FollowPageState extends State<FollowPage> {
           _following.items.insert(0, u);
         }
       });
-      _say(Lc.current.followedBack('${_nameOf(u)}'));
+      _say(Lc.current.followedBack(_nameOf(u)));
     } on ApiException catch (e) {
       _say(errorText(context, e));
     }
