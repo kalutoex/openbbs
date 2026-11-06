@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../store.dart';
+import '../widgets/page_width.dart';
 
 import '../l10n/l10n.dart';
 
@@ -15,35 +16,37 @@ class BannedPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(Icons.block_rounded, size: 64, color: cs.error),
-                const SizedBox(height: 20),
-                Text(
-                  Lc.current.bannedTitle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  Lc.current.bannedBody,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: cs.onSurfaceVariant),
-                ),
-                const SizedBox(height: 28),
-                FilledButton(
-                  // 退出就清掉封禁标记，回到没登录的首页。
-                  onPressed: () => AppState.instance.logout(),
-                  child: Text(Lc.current.logout),
-                ),
-              ],
+      body: PageWidth(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(Icons.block_rounded, size: 64, color: cs.error),
+                  const SizedBox(height: 20),
+                  Text(
+                    Lc.current.bannedTitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    Lc.current.bannedBody,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 28),
+                  FilledButton(
+                    // 退出就清掉封禁标记，回到没登录的首页。
+                    onPressed: () => AppState.instance.logout(),
+                    child: Text(Lc.current.logout),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

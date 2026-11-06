@@ -161,9 +161,8 @@ class _IconPickerState extends State<_IconPicker> {
         _current = key;
         _busy = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t.appIconChanged)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(t.appIconChanged)));
     } on PlatformException catch (e) {
       // 带上错误码：换不了的时候得能一眼看出是没找到别名，还是系统拒了。
       if (!mounted) return;
@@ -172,15 +171,14 @@ class _IconPickerState extends State<_IconPicker> {
       final tail = detail == null || detail.isEmpty
           ? e.code
           : '${e.code}: ${detail.length > 40 ? detail.substring(0, 40) : detail}';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${t.appIconUnavailable}（$tail）')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${t.appIconUnavailable}（$tail）')));
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t.appIconUnavailable)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(t.appIconUnavailable)));
     }
   }
 
@@ -276,8 +274,8 @@ class _IconTile extends StatelessWidget {
             Text(
               option.label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                  ),
+                color: selected ? scheme.primary : scheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

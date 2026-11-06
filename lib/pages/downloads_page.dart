@@ -9,6 +9,7 @@ import '../local_files.dart';
 import '../l10n/l10n.dart';
 import '../utils.dart';
 import '../widgets/empty_view.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/file_card.dart';
 import '../widgets/page_width.dart';
 import '../widgets/toast.dart';
@@ -156,18 +157,22 @@ class _DownloadsPageState extends State<DownloadsPage> {
     }
     await forgetLocalDownload(e.rec.display);
     if (mounted) {
-      setState(() => _items = [..._items]..removeWhere(
-        (x) => x.rec.display == e.rec.display,
-      ));
+      setState(
+        () =>
+            _items = [..._items]
+              ..removeWhere((x) => x.rec.display == e.rec.display),
+      );
     }
   }
 
   Future<void> _removeRecord(_Entry e) async {
     await forgetLocalDownload(e.rec.display);
     if (mounted) {
-      setState(() => _items = [..._items]..removeWhere(
-        (x) => x.rec.display == e.rec.display,
-      ));
+      setState(
+        () =>
+            _items = [..._items]
+              ..removeWhere((x) => x.rec.display == e.rec.display),
+      );
     }
   }
 
@@ -182,7 +187,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
 
   void _menu(_Entry e) {
     final cs = Theme.of(context).colorScheme;
-    showModalBottomSheet<void>(
+    showAppSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
@@ -316,10 +321,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
         e.rec.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 14.5,
-          color: e.alive ? null : cs.outline,
-        ),
+        style: TextStyle(fontSize: 14.5, color: e.alive ? null : cs.outline),
       ),
       subtitle: Text(
         sub.join(' · '),

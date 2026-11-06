@@ -157,7 +157,8 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
       if (!mounted) return;
       toast(context, Lc.current.revokedOther);
     } on ApiException catch (e2) {
-      if (mounted) toast(context, Lc.current.revokeFailed(errorText(context, e2)));
+      if (mounted)
+        toast(context, Lc.current.revokeFailed(errorText(context, e2)));
     } catch (e2) {
       if (mounted) toast(context, Lc.current.revokeFailed('$e2'));
     } finally {
@@ -318,7 +319,9 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                       labelText: Lc.current.newPassword,
                       helperText: Lc.current.atLeast8,
                       suffixIcon: IconButton(
-                        tooltip: _seePw ? Lc.current.hidePassword : Lc.current.showPassword,
+                        tooltip: _seePw
+                            ? Lc.current.hidePassword
+                            : Lc.current.showPassword,
                         onPressed: () => setState(() => _seePw = !_seePw),
                         icon: Icon(
                           _seePw
@@ -348,7 +351,9 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                   FilledButton(
                     onPressed: _pwBusy ? null : _changePw,
                     child: Text(
-                      _pwBusy ? Lc.current.processing : Lc.current.changePassword,
+                      _pwBusy
+                          ? Lc.current.processing
+                          : Lc.current.changePassword,
                     ),
                   ),
                 ],

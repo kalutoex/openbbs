@@ -823,23 +823,14 @@ class AppState extends ChangeNotifier {
 
   /// 登录状态下改密码。服务端给这台设备发新 token，别的设备全部失效。
   Future<void> changePassword(String oldPw, String newPw) async {
-    final d = await Api.post('/account/password', {
-      'old': oldPw,
-      'new': newPw,
-    });
-    await _saveToken(
-      d['token'] as String,
-      d['user'] as Map<String, dynamic>,
-    );
+    final d = await Api.post('/account/password', {'old': oldPw, 'new': newPw});
+    await _saveToken(d['token'] as String, d['user'] as Map<String, dynamic>);
   }
 
   /// 退出其他设备。当前这台换新 token 继续用。
   Future<void> revokeOtherSessions() async {
     final d = await Api.post('/account/sessions/revoke', const {});
-    await _saveToken(
-      d['token'] as String,
-      d['user'] as Map<String, dynamic>,
-    );
+    await _saveToken(d['token'] as String, d['user'] as Map<String, dynamic>);
   }
 
   /// 找回密码：发重置验证码。返回冷却秒数。

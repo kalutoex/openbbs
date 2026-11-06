@@ -4,6 +4,7 @@ import '../api.dart';
 import '../store.dart';
 import '../utils.dart';
 import '../widgets/app_card.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
@@ -224,7 +225,7 @@ class _MessagesPageState extends State<MessagesPage> {
     }
 
     if (actions.isEmpty) return;
-    await showModalBottomSheet<void>(
+    await showAppSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(

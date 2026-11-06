@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../widgets/page_width.dart';
 import '../store.dart';
 import '../utils.dart';
 import 'thread_page.dart';
@@ -132,9 +133,11 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
           ),
         ],
       ),
-      body: _first
-          ? const Center(child: CircularProgressIndicator())
-          : _buildBody(cs),
+      body: PageWidth(
+        child: _first
+            ? const Center(child: CircularProgressIndicator())
+            : _buildBody(cs),
+      ),
     );
   }
 

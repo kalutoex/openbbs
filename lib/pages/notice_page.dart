@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../widgets/page_width.dart';
 import '../store.dart';
 import '../utils.dart';
 import '../widgets/app_card.dart';
@@ -82,7 +83,7 @@ class _NoticePageState extends State<NoticePage> {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      body: _buildBody(context),
+      body: PageWidth(child: _buildBody(context)),
     );
   }
 

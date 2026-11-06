@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:photo_manager/photo_manager.dart';
 
 import '../plat.dart';
+import '../widgets/page_width.dart';
 
 import '../l10n/l10n.dart';
 import '../widgets/empty_view.dart';
@@ -205,7 +206,7 @@ class _GalleryPickerPageState extends State<GalleryPickerPage> {
           ),
         ],
       ),
-      body: _body(cs),
+      body: PageWidth(child: _body(cs)),
     );
   }
 

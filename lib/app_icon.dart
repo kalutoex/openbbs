@@ -1,5 +1,6 @@
 import 'app_icon_io.dart'
-    if (dart.library.js_interop) 'app_icon_web.dart' as impl;
+    if (dart.library.js_interop) 'app_icon_web.dart'
+    as impl;
 
 /// 一套可选图标。
 class AppIconOption {

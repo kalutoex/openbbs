@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../widgets/page_width.dart';
 import '../widgets/app_card.dart';
 import '../widgets/empty_view.dart';
 import '../store.dart';
@@ -177,96 +178,98 @@ class _FriendsPageState extends State<FriendsPage> {
             ),
         ],
       ),
-      body: Builder(
-        builder: (context) {
-          if (_err != null) {
-            return EmptyView(
-              icon: Icons.cloud_off_rounded,
-              title: _err!,
-              error: true,
-              action: FilledButton.tonal(
-                onPressed: () {
-                  setState(() => _err = null);
-                  _load();
-                },
-                child: Text(Lc.current.tryAgain),
-              ),
-            );
-          }
-          final items = _items;
-          if (items == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (items.isEmpty) {
-            return EmptyView(
-              icon: Icons.group_outlined,
-              title: Lc.current.nobodyYet,
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-            itemCount: items.length + 1,
-            itemBuilder: (context, i) {
-              if (i >= items.length) return const SizedBox.shrink();
-              final u = items[i] as Map;
-              final nick = (u['nickname'] ?? u['name'] ?? '') as String;
-              final handle = (u['handle'] ?? '') as String;
-              final sig = (u['signature'] ?? '') as String;
-              final sub = sig.isNotEmpty
-                  ? sig
-                  : (handle.isNotEmpty ? '@$handle' : '');
-              return AppCard(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  leading: CircleAvatarImg(
-                    url: (u['avatar'] ?? '') as String,
-                    name: nick,
-                    radius: 20,
-                  ),
-                  title: Text(
-                    nick,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: sub.isEmpty
-                      ? null
-                      : Text(
-                          sub,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                  trailing: _isAdmin
-                      ? IconButton(
-                          tooltip: Lc.current.takeDown,
-                          icon: Icon(
-                            Icons.remove_circle_outline,
-                            size: 20,
-                            color: cs.onSurfaceVariant,
-                          ),
-                          onPressed: () => _remove(u),
-                        )
-                      : null,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          UserPage(name: (u['name'] ?? '') as String),
-                    ),
-                  ),
+      body: PageWidth(
+        child: Builder(
+          builder: (context) {
+            if (_err != null) {
+              return EmptyView(
+                icon: Icons.cloud_off_rounded,
+                title: _err!,
+                error: true,
+                action: FilledButton.tonal(
+                  onPressed: () {
+                    setState(() => _err = null);
+                    _load();
+                  },
+                  child: Text(Lc.current.tryAgain),
                 ),
               );
-            },
-          );
-        },
+            }
+            final items = _items;
+            if (items == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (items.isEmpty) {
+              return EmptyView(
+                icon: Icons.group_outlined,
+                title: Lc.current.nobodyYet,
+              );
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+              itemCount: items.length + 1,
+              itemBuilder: (context, i) {
+                if (i >= items.length) return const SizedBox.shrink();
+                final u = items[i] as Map;
+                final nick = (u['nickname'] ?? u['name'] ?? '') as String;
+                final handle = (u['handle'] ?? '') as String;
+                final sig = (u['signature'] ?? '') as String;
+                final sub = sig.isNotEmpty
+                    ? sig
+                    : (handle.isNotEmpty ? '@$handle' : '');
+                return AppCard(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    leading: CircleAvatarImg(
+                      url: (u['avatar'] ?? '') as String,
+                      name: nick,
+                      radius: 20,
+                    ),
+                    title: Text(
+                      nick,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: sub.isEmpty
+                        ? null
+                        : Text(
+                            sub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                    trailing: _isAdmin
+                        ? IconButton(
+                            tooltip: Lc.current.takeDown,
+                            icon: Icon(
+                              Icons.remove_circle_outline,
+                              size: 20,
+                              color: cs.onSurfaceVariant,
+                            ),
+                            onPressed: () => _remove(u),
+                          )
+                        : null,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            UserPage(name: (u['name'] ?? '') as String),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

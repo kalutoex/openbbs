@@ -7,6 +7,7 @@ import '../api.dart';
 import '../file_pick.dart';
 import '../plat.dart';
 import '../widgets/app_card.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/page_width.dart';
 import '../widgets/mention.dart';
 import '../store.dart';
@@ -418,7 +419,7 @@ class _ThreadPageState extends State<ThreadPage> {
 
   /// 选个举报理由，取消返回 null。
   Future<String?> _pickReason() {
-    return showModalBottomSheet<String>(
+    return showAppSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
@@ -1432,7 +1433,7 @@ class _PostCardState extends State<_PostCard> {
   bool _all = false;
 
   Future<void> _moreSheet() async {
-    final act = await showModalBottomSheet<String>(
+    final act = await showAppSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (c) => SafeArea(

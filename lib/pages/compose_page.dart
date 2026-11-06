@@ -13,6 +13,7 @@ import '../draft_images.dart';
 import '../file_pick.dart';
 import '../img_compress.dart';
 import '../widgets/file_card.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/mention.dart';
 import 'gallery_picker_page.dart';
 
@@ -191,7 +192,7 @@ class _ComposePageState extends State<ComposePage> {
       return;
     }
     final left = _maxImgs - _imgs.length;
-    final choice = await showModalBottomSheet<String>(
+    final choice = await showAppSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (c) => SafeArea(
@@ -307,7 +308,7 @@ class _ComposePageState extends State<ComposePage> {
   /// 附件从哪来：云盘里现成的，还是设备上挑一个新的。
   /// 云盘的不用再传一遍，地址直接能用。
   Future<String?> _fileSource() {
-    return showModalBottomSheet<String>(
+    return showAppSheet<String>(
       context: context,
       builder: (c) => SafeArea(
         child: Column(
@@ -592,7 +593,7 @@ class _ComposePageState extends State<ComposePage> {
       await _leaveAfter();
       return;
     }
-    final act = await showModalBottomSheet<String>(
+    final act = await showAppSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (c) => SafeArea(

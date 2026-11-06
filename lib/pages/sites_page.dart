@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../widgets/page_width.dart';
 import '../site_meta.dart';
 import '../sites.dart';
 import '../store.dart';
@@ -180,9 +181,7 @@ class _SitesPageState extends State<SitesPage> {
           autofocus: true,
           keyboardType: TextInputType.url,
           autocorrect: false,
-          decoration: InputDecoration(
-            hintText: 'http://192.168.1.10:8080',
-          ),
+          decoration: InputDecoration(hintText: 'http://192.168.1.10:8080'),
           onSubmitted: (v) => Navigator.of(ctx).pop(v),
         ),
         actions: [
@@ -430,16 +429,18 @@ class _SitesPageState extends State<SitesPage> {
               ),
             ],
           ),
-          body: sites.isEmpty
-              ? _empty()
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 96),
-                  itemCount: sites.length,
-                  itemBuilder: (_, i) => AppCard(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: _tile(sites[i], cs),
+          body: PageWidth(
+            child: sites.isEmpty
+                ? _empty()
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 96),
+                    itemCount: sites.length,
+                    itemBuilder: (_, i) => AppCard(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: _tile(sites[i], cs),
+                    ),
                   ),
-                ),
+          ),
           floatingActionButton: sites.isEmpty
               ? null
               : FloatingActionButton.extended(

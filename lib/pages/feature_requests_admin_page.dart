@@ -1,4 +1,5 @@
 import '../widgets/empty_view.dart';
+import '../widgets/page_width.dart';
 import '../widgets/app_card.dart';
 
 import 'package:flutter/material.dart';
@@ -171,9 +172,11 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
           ),
         ],
       ),
-      body: _first
-          ? const Center(child: CircularProgressIndicator())
-          : _buildBody(cs),
+      body: PageWidth(
+        child: _first
+            ? const Center(child: CircularProgressIndicator())
+            : _buildBody(cs),
+      ),
     );
   }
 

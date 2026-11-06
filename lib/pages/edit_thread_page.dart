@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../widgets/page_width.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/app_card.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -87,7 +88,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
   /// 附件从哪来：云盘里现成的，还是设备上挑一个新的。
   /// 云盘的不用再传一遍，地址直接能用。
   Future<String?> _fileSource() {
-    return showModalBottomSheet<String>(
+    return showAppSheet<String>(
       context: context,
       builder: (c) => SafeArea(
         child: Column(
@@ -284,7 +285,7 @@ class _EditThreadPageState extends State<EditThreadPage> {
       Navigator.of(context).pop();
       return;
     }
-    final act = await showModalBottomSheet<String>(
+    final act = await showAppSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (c) => SafeArea(

@@ -15,6 +15,7 @@ import '../l10n/l10n.dart';
 import '../plat.dart';
 import '../store.dart';
 import '../widgets/empty_view.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
 import '../widgets/file_card.dart';
@@ -196,7 +197,7 @@ class _ChatPageState extends State<ChatPage> {
 
   /// 加号：微信那种小面板，图片和文件分开走。
   Future<void> _attachMenu() async {
-    await showModalBottomSheet<void>(
+    await showAppSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
@@ -288,7 +289,7 @@ class _ChatPageState extends State<ChatPage> {
 
   /// 文件从哪来：云盘里现成的，还是设备上挑新的。
   Future<String?> _fileSource() {
-    return showModalBottomSheet<String>(
+    return showAppSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (c) => SafeArea(
@@ -629,7 +630,7 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _msgMenu(Map<String, dynamic> m) async {
     final body = (m['body'] ?? '') as String;
-    await showModalBottomSheet<void>(
+    await showAppSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(

@@ -12,6 +12,7 @@ import '../file_pick.dart';
 import '../l10n/error_text.dart';
 import '../utils.dart';
 import '../widgets/empty_view.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/page_width.dart';
 import '../widgets/file_card.dart';
 
@@ -265,7 +266,7 @@ class _CloudPageState extends State<CloudPage> {
   }
 
   void _menu(CloudFile f) {
-    showModalBottomSheet<void>(
+    showAppSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
@@ -309,7 +310,7 @@ class _CloudPageState extends State<CloudPage> {
       await _upload();
       return;
     }
-    final v = await showModalBottomSheet<String>(
+    final v = await showAppSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(

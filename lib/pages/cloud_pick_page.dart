@@ -1,4 +1,5 @@
 import '../widgets/empty_view.dart';
+import '../widgets/page_width.dart';
 
 import 'package:flutter/material.dart';
 
@@ -143,35 +144,37 @@ class _CloudPickPageState extends State<CloudPickPage> {
           const SizedBox(width: 6),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-            child: TextField(
-              controller: _search,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: Lc.current.search,
-                prefixIcon: const Icon(Icons.search, size: 20),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(22),
+      body: PageWidth(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+              child: TextField(
+                controller: _search,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: Lc.current.search,
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
                 ),
+                onSubmitted: (v) {
+                  _q = v.trim();
+                  _load();
+                },
+                onChanged: (v) {
+                  if (v.trim() == _q) return;
+                  _q = v.trim();
+                  _load();
+                },
               ),
-              onSubmitted: (v) {
-                _q = v.trim();
-                _load();
-              },
-              onChanged: (v) {
-                if (v.trim() == _q) return;
-                _q = v.trim();
-                _load();
-              },
             ),
-          ),
-          Expanded(child: _body(cs)),
-        ],
+            Expanded(child: _body(cs)),
+          ],
+        ),
       ),
     );
   }

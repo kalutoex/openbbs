@@ -292,9 +292,7 @@ class _LoginPageState extends State<LoginPage> {
                         TextField(
                           controller: _chAns,
                           keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: _chQ,
-                          ),
+                          decoration: InputDecoration(labelText: _chQ),
                         ),
                       ],
                     ],
