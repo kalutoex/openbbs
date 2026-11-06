@@ -1690,6 +1690,13 @@ class LEn extends L {
       'Buttons, selections and input focus rings all follow this color band.';
 
   @override
+  String get followWallpaper => 'Wallpaper colors';
+
+  @override
+  String get followWallpaperHint =>
+      'Android 12 and up. Colors come from your wallpaper; the band below has no effect.';
+
+  @override
   String get appIconTitle => 'App icon';
 
   @override

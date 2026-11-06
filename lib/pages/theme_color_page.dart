@@ -30,100 +30,129 @@ class ThemeColorPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(Lc.current.accentColor)),
-      body: ValueListenableBuilder<double>(
-        valueListenable: st.accentHue,
-        builder: (context, hue, _) => PageWidth(
-          max: 520,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  Lc.current.themeColorTitle,
-                  style: t.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                RepaintBoundary(
-                  child: SizedBox(
-                    height: 100,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          top: 34,
-                          bottom: 34,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: _rainbow),
-                                border: Border.all(color: sBorder, width: 1.5),
-                              ),
+      body: ListenableBuilder(
+        listenable: st.useDynamicColor,
+        builder: (context, _) {
+          final dyn = st.useDynamicColor.value;
+          return ValueListenableBuilder<double>(
+            valueListenable: st.accentHue,
+            builder: (context, hue, _) => PageWidth(
+              max: 520,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Lc.current.themeColorTitle,
+                      style: t.textTheme.titleMedium,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: dyn,
+                      onChanged: st.setUseDynamicColor,
+                      title: Text(Lc.current.followWallpaper),
+                      subtitle: Text(
+                        Lc.current.followWallpaperHint,
+                        style: t.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Opacity(
+                      opacity: dyn ? .35 : 1,
+                      child: IgnorePointer(
+                        ignoring: dyn,
+                        child: RepaintBoundary(
+                          child: SizedBox(
+                            height: 100,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  top: 34,
+                                  bottom: 34,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: _rainbow,
+                                        ),
+                                        border: Border.all(
+                                          color: sBorder,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // 轨道压成 0 高度、透明，只留拇指，拖的是那条彩虹。
+                                Positioned.fill(
+                                  child: SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      trackHeight: 0,
+                                      activeTrackColor: Colors.transparent,
+                                      inactiveTrackColor: Colors.transparent,
+                                      thumbColor: tFill,
+                                      overlayColor: Colors.transparent,
+                                      thumbShape: const RoundSliderThumbShape(
+                                        enabledThumbRadius: 12.5,
+                                      ),
+                                    ),
+                                    child: Slider(
+                                      value: hue,
+                                      min: AppState.minHue,
+                                      max: AppState.maxHue,
+                                      onChanged: st.previewHue,
+                                      onChangeEnd: st.setAccentHue,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        // 轨道压成 0 高度、透明，只留拇指，拖的是那条彩虹。
-                        Positioned.fill(
-                          child: SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              trackHeight: 0,
-                              activeTrackColor: Colors.transparent,
-                              inactiveTrackColor: Colors.transparent,
-                              thumbColor: tFill,
-                              overlayColor: Colors.transparent,
-                              thumbShape: const RoundSliderThumbShape(
-                                enabledThumbRadius: 12.5,
-                              ),
-                            ),
-                            child: Slider(
-                              value: hue,
-                              min: AppState.minHue,
-                              max: AppState.maxHue,
-                              onChanged: st.previewHue,
-                              onChangeEnd: st.setAccentHue,
-                            ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: st.colorOfHue(hue),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: sBorder, width: 1.5),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          AppState.hueName(hue),
+                          style: t.textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: st.colorOfHue(hue),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: sBorder, width: 1.5),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
+                    const SizedBox(height: 28),
                     Text(
-                      AppState.hueName(hue),
-                      style: t.textTheme.bodyMedium?.copyWith(
+                      Lc.current.accentColorHint,
+                      style: t.textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
+                    const _IconPicker(),
                   ],
                 ),
-                const SizedBox(height: 28),
-                Text(
-                  Lc.current.accentColorHint,
-                  style: t.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const _IconPicker(),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

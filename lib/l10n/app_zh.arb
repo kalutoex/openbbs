@@ -1107,6 +1107,8 @@
   "connect": "连上去",
   "themeColorTitle": "主题颜色",
   "accentColorHint": "上面的按钮、选中状态、输入框焦点圈都会跟着这条色带走。",
+  "followWallpaper": "跟随壁纸取色",
+  "followWallpaperHint": "Android 12 及以上可用。开启后主题色由系统壁纸决定，下面的色带不起作用。",
   "appIconTitle": "应用图标",
   "appIconHint": "桌面图标和名字是打包时定死的，这里换的是预先做好的几套。选完桌面要等几秒才变，个别启动器还得重启一下。",
   "appIconChanged": "换好了，看桌面",

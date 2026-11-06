@@ -25,6 +25,7 @@ class AppState extends ChangeNotifier {
   static const _kFont = 'font_scale';
   static const _kTheme = 'theme_mode';
   static const _kHue = 'accent_hue';
+  static const _kDyn = 'use_dynamic_color';
   static const _kDensity = 'density';
   static const _kThumbs = 'thumbs';
   static const _kFeedSort = 'feed_sort';
@@ -203,6 +204,16 @@ class AppState extends ChangeNotifier {
   static const double defaultHue = 174;
 
   final ValueNotifier<double> accentHue = ValueNotifier(defaultHue);
+
+  /// 跟随系统壁纸取色（Android 12+ / 网页版不支持）。
+  /// 开着时主题色由系统给，色相滑块不起作用。
+  final ValueNotifier<bool> useDynamicColor = ValueNotifier(false);
+
+  Future<void> setUseDynamicColor(bool on) async {
+    useDynamicColor.value = on;
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kDyn, on);
+  }
 
   static List<String> get _hueNames => [
     Lc.current.hueRed,
@@ -399,6 +410,7 @@ class AppState extends ChangeNotifier {
     accounts = await AccountStore.read();
     fontScale.value = p.getDouble(_kFont) ?? 1.0;
     accentHue.value = normalizeHue(p.getDouble(_kHue) ?? defaultHue);
+    useDynamicColor.value = p.getBool(_kDyn) ?? false;
     density.value = (p.getInt(_kDensity) ?? 1).clamp(0, 2);
     thumbs.value = p.getBool(_kThumbs) ?? true;
     final fs = p.getString(_kFeedSort);

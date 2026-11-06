@@ -1665,6 +1665,12 @@ class LZh extends L {
   String get accentColorHint => '上面的按钮、选中状态、输入框焦点圈都会跟着这条色带走。';
 
   @override
+  String get followWallpaper => '跟随壁纸取色';
+
+  @override
+  String get followWallpaperHint => 'Android 12 及以上可用。开启后主题色由系统壁纸决定，下面的色带不起作用。';
+
+  @override
   String get appIconTitle => '应用图标';
 
   @override

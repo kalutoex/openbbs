@@ -10,7 +10,12 @@ ThemeData buildAppTheme(Brightness brightness, Color seed) {
     seedColor: seed,
     brightness: brightness,
   ).copyWith(primary: seed);
+  return buildAppThemeFromScheme(scheme, brightness);
+}
 
+/// 配色已经定好时走这条：壁纸取色给的就是一整套 scheme，
+/// 不再从种子往下推（推出来的 primary 会被调和，和壁纸不是一回事）。
+ThemeData buildAppThemeFromScheme(ColorScheme scheme, Brightness brightness) {
   // 只为了取一份基准 TextTheme，组件主题要引用它。
   final text = ThemeData(useMaterial3: true, colorScheme: scheme).textTheme;
 

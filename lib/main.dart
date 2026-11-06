@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 
 import 'site_config.dart';
@@ -161,6 +162,7 @@ class _ShijianxianAppState extends State<ShijianxianApp>
   late final Listenable _themeKeys = Listenable.merge([
     AppState.instance.themeMode,
     AppState.instance.accentHue,
+    AppState.instance.useDynamicColor,
     AppState.instance.localeCode,
   ]);
 
@@ -173,52 +175,62 @@ class _ShijianxianAppState extends State<ShijianxianApp>
     return const Locale('zh');
   }
 
-  ThemeData _theme(Brightness b) {
-    final hue = AppState.instance.accentHue.value;
-    final key = '${b.index}:$hue';
+  ThemeData _theme(Brightness b, [ColorScheme? dyn]) {
+    final st = AppState.instance;
+    // 壁纸色优先，没开或系统不给就退回自选色相。
+    final useDyn = st.useDynamicColor.value && dyn != null;
+    final hue = st.accentHue.value;
+    final key = useDyn
+        ? 'dyn:${b.index}:${dyn.primary.toARGB32()}'
+        : '${b.index}:$hue';
     return _cache.putIfAbsent(
       key,
-      () => buildAppTheme(b, AppState.instance.colorOfHue(hue)),
+      () => useDyn
+          ? buildAppThemeFromScheme(dyn, b)
+          : buildAppTheme(b, st.colorOfHue(hue)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _themeKeys,
-      builder: (_, _) => MaterialApp(
-        title: SiteConfig.brand,
-        debugShowCheckedModeBanner: false,
-        // 界面文案走 ARB；系统组件（长按菜单、日期选择）跟着语言走。
-        locale: _resolveLocale(
-          AppState.instance.localeCode.value,
-          WidgetsBinding.instance.platformDispatcher.locale,
+    // 壁纸取色：Android 12+ 给两份 scheme，别的平台给 null。
+    return DynamicColorBuilder(
+      builder: (lightDyn, darkDyn) => ListenableBuilder(
+        listenable: _themeKeys,
+        builder: (_, _) => MaterialApp(
+          title: SiteConfig.brand,
+          debugShowCheckedModeBanner: false,
+          // 界面文案走 ARB；系统组件（长按菜单、日期选择）跟着语言走。
+          locale: _resolveLocale(
+            AppState.instance.localeCode.value,
+            WidgetsBinding.instance.platformDispatcher.locale,
+          ),
+          supportedLocales: L.supportedLocales,
+          localizationsDelegates: const [
+            L.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          // 切明暗、拖色相时不让 MaterialApp 自己跑一段颜色补间：
+          // 补间会连带整棵树插值重建，边界处容易看见一闪。
+          themeAnimationDuration: Duration.zero,
+          theme: _theme(Brightness.light, lightDyn),
+          darkTheme: _theme(Brightness.dark, darkDyn),
+          themeMode: AppState.instance.themeMode.value,
+          navigatorKey: appNav,
+          builder: (ctx, child) => ValueListenableBuilder<double>(
+            valueListenable: AppState.instance.fontScale,
+            builder: (_, scale, _) {
+              final mq = MediaQuery.of(ctx);
+              return MediaQuery(
+                data: mq.copyWith(textScaler: TextScaler.linear(scale)),
+                child: child!,
+              );
+            },
+          ),
+          home: const _Root(),
         ),
-        supportedLocales: L.supportedLocales,
-        localizationsDelegates: const [
-          L.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        // 切明暗、拖色相时不让 MaterialApp 自己跑一段颜色补间：
-        // 补间会连带整棵树插值重建，边界处容易看见一闪。
-        themeAnimationDuration: Duration.zero,
-        theme: _theme(Brightness.light),
-        darkTheme: _theme(Brightness.dark),
-        themeMode: AppState.instance.themeMode.value,
-        navigatorKey: appNav,
-        builder: (ctx, child) => ValueListenableBuilder<double>(
-          valueListenable: AppState.instance.fontScale,
-          builder: (_, scale, _) {
-            final mq = MediaQuery.of(ctx);
-            return MediaQuery(
-              data: mq.copyWith(textScaler: TextScaler.linear(scale)),
-              child: child!,
-            );
-          },
-        ),
-        home: const _Root(),
       ),
     );
   }

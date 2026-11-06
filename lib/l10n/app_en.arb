@@ -635,6 +635,8 @@
   "connect": "Connect",
   "themeColorTitle": "Accent color",
   "accentColorHint": "Buttons, selections and input focus rings all follow this color band.",
+  "followWallpaper": "Wallpaper colors",
+  "followWallpaperHint": "Android 12 and up. Colors come from your wallpaper; the band below has no effect.",
   "appIconTitle": "App icon",
   "appIconHint": "The launcher icon is fixed when the app is built; these are the sets shipped with it. The home screen may take a few seconds to refresh.",
   "appIconChanged": "Done — check your home screen",

@@ -3080,6 +3080,18 @@ abstract class L {
   /// **'上面的按钮、选中状态、输入框焦点圈都会跟着这条色带走。'**
   String get accentColorHint;
 
+  /// No description provided for @followWallpaper.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随壁纸取色'**
+  String get followWallpaper;
+
+  /// No description provided for @followWallpaperHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'Android 12 及以上可用。开启后主题色由系统壁纸决定，下面的色带不起作用。'**
+  String get followWallpaperHint;
+
   /// No description provided for @appIconTitle.
   ///
   /// In zh, this message translates to:
