@@ -33,11 +33,18 @@ class ThreadPage extends StatefulWidget {
   /// 从通知进来时带楼层 id，加载完自动滚过去。
   final int? focusPostId;
 
+  /// 宽屏时嵌在列表右边，不占一整条路由：不显示返回箭头，
+  /// 关掉它走 onClose，而不是 pop。
+  final bool embedded;
+  final VoidCallback? onClose;
+
   const ThreadPage({
     super.key,
     required this.threadId,
     required this.title,
     this.focusPostId,
+    this.embedded = false,
+    this.onClose,
   });
 
   @override
@@ -371,6 +378,15 @@ class _ThreadPageState extends State<ThreadPage> {
     toast(context, t);
   }
 
+  /// 嵌入模式下没有路由可退，交给外面关掉；整页模式照旧 pop。
+  void _close([bool? result]) {
+    if (widget.embedded) {
+      widget.onClose?.call();
+    } else {
+      Navigator.of(context).pop(result);
+    }
+  }
+
   void _beginReply(Map<String, dynamic> post) {
     if (!AppState.instance.loggedIn) {
       _toast(Lc.current.needLogin);
@@ -607,7 +623,7 @@ class _ThreadPageState extends State<ThreadPage> {
       await Api.delete('/t/${widget.threadId}');
       if (!mounted) return;
       _toast(Lc.current.postDeleted);
-      Navigator.of(context).pop(true);
+      _close(true);
     } on ApiException catch (e) {
       _toast(e);
     }
@@ -630,7 +646,7 @@ class _ThreadPageState extends State<ThreadPage> {
         await Api.delete('/t/${widget.threadId}');
         if (!mounted) return;
         _toast(Lc.current.postDeleted);
-        Navigator.of(context).pop(true);
+        _close(true);
       } else {
         await Api.delete('/c/$id');
         await _reload();
@@ -689,6 +705,15 @@ class _ThreadPageState extends State<ThreadPage> {
 
     return Scaffold(
       appBar: AppBar(
+        // 嵌在右栏时不装返回箭头，改成一个关掉右栏的叉。
+        automaticallyImplyLeading: !widget.embedded,
+        leading: widget.embedded
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _close,
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              )
+            : null,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

@@ -42,6 +42,13 @@ class _FeedTabState extends State<FeedTab> {
   /// 滑过一屏就把「回到顶部」露出来。
   bool _showTop = false;
 
+  /// 宽屏右栏正在看的帖子；空着就是单栏。
+  int? _selId;
+  String _selTitle = '';
+
+  /// MD3 的 expanded 档：右栏放得下详情。
+  bool get _wide => MediaQuery.sizeOf(context).width >= 840;
+
   void _onScroll() {
     if (_scroll.position.pixels > _scroll.position.maxScrollExtent - _ahead) {
       _load();
@@ -166,6 +173,14 @@ class _FeedTabState extends State<FeedTab> {
   }
 
   void _open(Map<String, dynamic> it) {
+    // 宽屏右栏放得下详情，就不跳页了。
+    if (_wide) {
+      setState(() {
+        _selId = it['id'] as int;
+        _selTitle = (it['title'] ?? '') as String;
+      });
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ThreadPage(
@@ -181,151 +196,193 @@ class _FeedTabState extends State<FeedTab> {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: widget.onMenu,
-          icon: const Icon(Icons.menu),
-          tooltip: Lc.current.menu,
-        ),
-        titleSpacing: 0,
-        title: Text(
-          SiteConfig.brand,
-          style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const SearchPage())),
-            icon: const Icon(Icons.search),
-            tooltip: Lc.current.search,
+    return PopScope(
+      // 右栏开着时，返回键先关右栏，不退出页面。
+      canPop: !(_wide && _selId != null),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _selId = null);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: widget.onMenu,
+            icon: const Icon(Icons.menu),
+            tooltip: Lc.current.menu,
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (v) {
-              if (v == 'refresh') _reload();
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(value: 'refresh', child: Text(Lc.current.refresh)),
-            ],
+          titleSpacing: 0,
+          title: Text(
+            SiteConfig.brand,
+            style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
-        ],
-      ),
-      floatingActionButton: _showTop
-          ? FloatingActionButton.small(
-              onPressed: () => _scroll.animateTo(
-                0,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              ),
-              tooltip: Lc.current.backToTop,
-              child: const Icon(Icons.arrow_upward, size: 20),
-            )
-          : null,
-      body: PageWidth(
-        child: Column(
-          children: [
-            if (_offline)
-              Material(
-                color: cs.tertiaryContainer,
-                child: InkWell(
-                  onTap: _reload,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.cloud_off,
-                          size: 15,
-                          color: cs.onTertiaryContainer,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            Lc.current.offlineCacheFeed,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: cs.onTertiaryContainer,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          Lc.current.retry,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: cs.onTertiaryContainer,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+          actions: [
+            IconButton(
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const SearchPage())),
+              icon: const Icon(Icons.search),
+              tooltip: Lc.current.search,
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (v) {
+                if (v == 'refresh') _reload();
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'refresh',
+                  child: Text(Lc.current.refresh),
                 ),
-              ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _reload,
-                child: _first
-                    ? const SkeletonList()
-                    : ListView.separated(
-                        controller: _scroll,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        itemCount: _items.length + 1,
-                        // 卡片自带描边和间距，不再要分割线。
-                        separatorBuilder: (_, _) => const SizedBox.shrink(),
-                        itemBuilder: (context, i) {
-                          if (i == _items.length) {
-                            if (_err != null) {
-                              return EmptyView(
-                                icon: Icons.cloud_off_rounded,
-                                title: Lc.current.loadFailed,
-                                hint: _err,
-                                error: true,
-                                action: FilledButton.tonal(
-                                  onPressed: _reload,
-                                  child: Text(Lc.current.retry),
-                                ),
-                              );
-                            }
-                            if (_items.isEmpty) {
-                              return EmptyView(
-                                icon: Icons.forum_outlined,
-                                title: Lc.current.noPostsYet,
-                                hint: Lc.current.noPostsHint,
-                              );
-                            }
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              child: Center(
-                                child: _hasMore
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : Text(
-                                        Lc.current.endOfList,
-                                        style: TextStyle(color: cs.outline),
-                                      ),
-                              ),
-                            );
-                          }
-                          final it = _items[i];
-                          return ThreadTile(
-                            item: it,
-                            onTap: () => _open(it),
-                            onDeleted: _reload,
-                          );
-                        },
-                      ),
-              ),
+              ],
             ),
           ],
+        ),
+        floatingActionButton: _showTop
+            ? FloatingActionButton.small(
+                onPressed: () => _scroll.animateTo(
+                  0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                ),
+                tooltip: Lc.current.backToTop,
+                child: const Icon(Icons.arrow_upward, size: 20),
+              )
+            : null,
+        body: Builder(
+          builder: (context) {
+            // 宽屏且有选中帖子时左右分栏，列表不动，右边看详情。
+            final list = PageWidth(
+              child: Column(
+                children: [
+                  if (_offline)
+                    Material(
+                      color: cs.tertiaryContainer,
+                      child: InkWell(
+                        onTap: _reload,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.cloud_off,
+                                size: 15,
+                                color: cs.onTertiaryContainer,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  Lc.current.offlineCacheFeed,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: cs.onTertiaryContainer,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                Lc.current.retry,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onTertiaryContainer,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _reload,
+                      child: _first
+                          ? const SkeletonList()
+                          : ListView.separated(
+                              controller: _scroll,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemCount: _items.length + 1,
+                              // 卡片自带描边和间距，不再要分割线。
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox.shrink(),
+                              itemBuilder: (context, i) {
+                                if (i == _items.length) {
+                                  if (_err != null) {
+                                    return EmptyView(
+                                      icon: Icons.cloud_off_rounded,
+                                      title: Lc.current.loadFailed,
+                                      hint: _err,
+                                      error: true,
+                                      action: FilledButton.tonal(
+                                        onPressed: _reload,
+                                        child: Text(Lc.current.retry),
+                                      ),
+                                    );
+                                  }
+                                  if (_items.isEmpty) {
+                                    return EmptyView(
+                                      icon: Icons.forum_outlined,
+                                      title: Lc.current.noPostsYet,
+                                      hint: Lc.current.noPostsHint,
+                                    );
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 20,
+                                    ),
+                                    child: Center(
+                                      child: _hasMore
+                                          ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : Text(
+                                              Lc.current.endOfList,
+                                              style: TextStyle(
+                                                color: cs.outline,
+                                              ),
+                                            ),
+                                    ),
+                                  );
+                                }
+                                final it = _items[i];
+                                return ThreadTile(
+                                  item: it,
+                                  onTap: () => _open(it),
+                                  onDeleted: _reload,
+                                );
+                              },
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+            if (!_wide || _selId == null) return list;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 5, child: list),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: cs.outlineVariant.withValues(alpha: .35),
+                ),
+                Expanded(
+                  flex: 7,
+                  child: ThreadPage(
+                    key: ValueKey(_selId),
+                    embedded: true,
+                    threadId: _selId!,
+                    title: _selTitle,
+                    onClose: () => setState(() => _selId = null),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

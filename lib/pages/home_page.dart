@@ -137,112 +137,176 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _sk,
-      drawer: AppDrawer(
-        currentTab: _index,
-        onTimeline: () => _go(0),
-        onSites: () => _go(1),
-        onMe: () => _go(3),
-      ),
-      // 站点比客户端新就顶一条提示。只提示，不拦着用——
-      // 拦了人也没别的客户端可选，不如让人自己看到原因。
-      body: AnimatedBuilder(
-        animation: AppState.instance,
-        builder: (context, _) {
-          final meta = AppState.instance.siteMeta;
-          return Column(
-            children: [
-              if (meta != null && meta.tooNew) _tooNewBanner(context, meta.api),
-              Expanded(
-                child: FadeIndexedStack(
-                  index: _index,
+    return LayoutBuilder(
+      builder: (context, cons) {
+        // MD3 的窗口分级：expanded（>=840dp）把底栏收进左侧导航栏，
+        // 不然内容区就被拉成一条又窄又长的手机屏。
+        final wide = cons.maxWidth >= 840;
+        return Scaffold(
+          key: _sk,
+          drawer: AppDrawer(
+            currentTab: _index,
+            onTimeline: () => _go(0),
+            onSites: () => _go(1),
+            onMe: () => _go(3),
+          ),
+          // 站点比客户端新就顶一条提示。只提示，不拦着用——
+          // 拦了人也没别的客户端可选，不如让人自己看到原因。
+          body: wide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    FeedTab(onMenu: _menu),
-                    if (_started.contains(1))
-                      SiteCatalogPage(onMenu: _menu)
-                    else
-                      const SizedBox.shrink(),
-                    if (_started.contains(2))
-                      MessagesPage(onMenu: _menu)
-                    else
-                      const SizedBox.shrink(),
-                    if (_started.contains(3))
-                      MeTab(onMenu: _menu)
-                    else
-                      const SizedBox.shrink(),
+                    _rail(context),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Theme.of(context).colorScheme.outlineVariant
+                          .withValues(alpha: .35),
+                    ),
+                    Expanded(child: _content(context)),
                   ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-      // 加号只在时间线这一页出现，翻到别的 tab 就收起来
-      floatingActionButton: _index == 0
-          ? FloatingActionButton(
-              onPressed: _compose,
-              tooltip: Lc.current.newThread,
-              child: const Icon(Icons.add),
-            )
-          : null,
-      bottomNavigationBar: AnimatedBuilder(
-        animation: AppState.instance,
-        builder: (context, _) {
-          final cs = Theme.of(context).colorScheme;
-          final unread = AppState.instance.unread + AppState.instance.dmUnread;
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              color: cs.surfaceContainer,
-              border: Border(
-                top: BorderSide(
-                  color: cs.outlineVariant.withValues(alpha: .35),
-                ),
-              ),
-            ),
-            // 宽屏时导航项也收进同一栏，别让四个图标散到屏幕四角。
-            child: PageWidth(
-              max: 760,
-              child: NavigationBar(
-                selectedIndex: _barTabs.contains(_index)
-                    ? _barTabs.indexOf(_index)
-                    : 0,
-                elevation: 0,
-                height: 64,
-                backgroundColor: Colors.transparent,
-                indicatorColor: cs.secondaryContainer,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                onDestinationSelected: (i) => _go(_barTabs[i]),
-                destinations: [
-                  NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home_rounded),
-                    label: Lc.current.home,
-                  ),
-                  NavigationDestination(
-                    icon: Badge(
-                      isLabelVisible: unread > 0,
-                      label: Text(unread > 99 ? '99+' : '$unread'),
-                      child: const Icon(Icons.chat_bubble_outline_rounded),
-                    ),
-                    selectedIcon: Badge(
-                      isLabelVisible: unread > 0,
-                      label: Text(unread > 99 ? '99+' : '$unread'),
-                      child: const Icon(Icons.chat_bubble_rounded),
-                    ),
-                    label: Lc.current.messagesTab,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.person_outline_rounded),
-                    selectedIcon: Icon(Icons.person_rounded),
-                    label: Lc.current.me,
-                  ),
+                )
+              : _content(context),
+          // 加号只在时间线这一页出现，翻到别的 tab 就收起来
+          floatingActionButton: _index == 0
+              ? FloatingActionButton(
+                  onPressed: _compose,
+                  tooltip: Lc.current.newThread,
+                  child: const Icon(Icons.add),
+                )
+              : null,
+          bottomNavigationBar: wide ? null : _bottomBar(context),
+        );
+      },
+    );
+  }
+
+  /// 底栏选中的是 _barTabs 里的位置，不是页面索引。
+  int get _sel => _barTabs.contains(_index) ? _barTabs.indexOf(_index) : 0;
+
+  Widget _content(BuildContext context) {
+    return AnimatedBuilder(
+      animation: AppState.instance,
+      builder: (context, _) {
+        final meta = AppState.instance.siteMeta;
+        return Column(
+          children: [
+            if (meta != null && meta.tooNew) _tooNewBanner(context, meta.api),
+            Expanded(
+              child: FadeIndexedStack(
+                index: _index,
+                children: [
+                  FeedTab(onMenu: _menu),
+                  if (_started.contains(1))
+                    SiteCatalogPage(onMenu: _menu)
+                  else
+                    const SizedBox.shrink(),
+                  if (_started.contains(2))
+                    MessagesPage(onMenu: _menu)
+                  else
+                    const SizedBox.shrink(),
+                  if (_started.contains(3))
+                    MeTab(onMenu: _menu)
+                  else
+                    const SizedBox.shrink(),
                 ],
               ),
             ),
-          );
-        },
-      ),
+          ],
+        );
+      },
     );
+  }
+
+  /// 窄屏底栏。
+  Widget _bottomBar(BuildContext context) {
+    return AnimatedBuilder(
+      animation: AppState.instance,
+      builder: (context, _) {
+        final cs = Theme.of(context).colorScheme;
+        final unread = AppState.instance.unread + AppState.instance.dmUnread;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: cs.surfaceContainer,
+            border: Border(
+              top: BorderSide(color: cs.outlineVariant.withValues(alpha: .35)),
+            ),
+          ),
+          // 宽屏时导航项也收进同一栏，别让四个图标散到屏幕四角。
+          child: PageWidth(
+            max: 760,
+            child: NavigationBar(
+              selectedIndex: _sel,
+              elevation: 0,
+              height: 64,
+              backgroundColor: Colors.transparent,
+              indicatorColor: cs.secondaryContainer,
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              onDestinationSelected: (i) => _go(_barTabs[i]),
+              destinations: [
+                for (final t in _barTabs)
+                  NavigationDestination(
+                    icon: _tabIcon(t, unread, false),
+                    selectedIcon: _tabIcon(t, unread, true),
+                    label: _tabLabel(t),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 宽屏左侧导航栏，MD3 的 NavigationRail。
+  Widget _rail(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AnimatedBuilder(
+      animation: AppState.instance,
+      builder: (context, _) {
+        final unread = AppState.instance.unread + AppState.instance.dmUnread;
+        return NavigationRail(
+          selectedIndex: _sel,
+          onDestinationSelected: (i) => _go(_barTabs[i]),
+          labelType: NavigationRailLabelType.all,
+          backgroundColor: cs.surface,
+          indicatorColor: cs.secondaryContainer,
+          destinations: [
+            for (final t in _barTabs)
+              NavigationRailDestination(
+                icon: _tabIcon(t, unread, false),
+                selectedIcon: _tabIcon(t, unread, true),
+                label: Text(_tabLabel(t)),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _tabIcon(int tab, int unread, bool selected) {
+    if (tab == 2) {
+      return Badge(
+        isLabelVisible: unread > 0,
+        label: Text(unread > 99 ? '99+' : '$unread'),
+        child: Icon(
+          selected
+              ? Icons.chat_bubble_rounded
+              : Icons.chat_bubble_outline_rounded,
+        ),
+      );
+    }
+    if (tab == 3) {
+      return Icon(
+        selected ? Icons.person_rounded : Icons.person_outline_rounded,
+      );
+    }
+    return Icon(selected ? Icons.home_rounded : Icons.home_outlined);
+  }
+
+  String _tabLabel(int tab) {
+    if (tab == 2) return Lc.current.messagesTab;
+    if (tab == 3) return Lc.current.me;
+    return Lc.current.home;
   }
 }
