@@ -16,7 +16,11 @@ import '../widgets/toast.dart';
 /// 指示器和文字对不齐，切一下还整页重载）。两个列表都留在 IndexedStack 里，
 /// 来回切不重发请求、不闪加载。
 class FollowPage extends StatefulWidget {
-  const FollowPage({super.key});
+  const FollowPage({super.key, this.name, this.initialTab = 0});
+
+  /// 看谁的关注/粉丝。null 就是自己。
+  final String? name;
+  final int initialTab;
 
   @override
   State<FollowPage> createState() => _FollowPageState();
@@ -27,6 +31,9 @@ class _Bucket {
   final List<Map<String, dynamic>> items = [];
   bool loading = true;
   String? error;
+
+  /// 对方关了公开。列表接口这时不给数据，页面只放一句说明。
+  bool locked = false;
 
   bool get isEmpty => !loading && error == null && items.isEmpty;
 }
@@ -40,16 +47,20 @@ class _FollowPageState extends State<FollowPage> {
   /// 我关注的人的 handle，用来判断粉丝里谁是互关。
   final _handles = <String>{};
 
+  bool get _others => widget.name != null;
+
   @override
   void initState() {
     super.initState();
+    _tab = widget.initialTab;
     _loadAll();
   }
 
   Future<void> _loadAll() async {
+    final base = _others ? '/u/${Uri.encodeComponent(widget.name!)}' : '/me';
     await Future.wait([
-      _load(_following, '/me/following'),
-      _load(_followers, '/me/followers'),
+      _load(_following, '$base/following'),
+      _load(_followers, '$base/followers'),
     ]);
     _syncHandles();
   }
@@ -66,6 +77,7 @@ class _FollowPageState extends State<FollowPage> {
         b.items
           ..clear()
           ..addAll(items);
+        b.locked = d['locked'] == true;
         b.loading = false;
       });
     } on ApiException catch (e) {
@@ -261,6 +273,9 @@ class _FollowPageState extends State<FollowPage> {
 
   Widget _list(_Bucket b, {required bool following}) {
     if (b.loading && b.items.isEmpty) return const _Skeleton();
+    if (b.locked) {
+      return _hint(Lc.current.followsHidden, icon: Icons.lock_outline);
+    }
     if (b.error != null && b.items.isEmpty) {
       return _hint(
         b.error!,
@@ -342,15 +357,16 @@ class _FollowPageState extends State<FollowPage> {
               ),
             ),
             const SizedBox(width: 8),
-            if (following)
+            // 看别人的列表只读：收藏/关注的操作留给他自己在那儿点。
+            if (!_others && following)
               _pill(
                 Lc.current.following,
                 onTap: () => _unfollow(_following, u),
                 filled: false,
               )
-            else if (mutual)
+            else if (!_others && mutual)
               _pill(Lc.current.mutual, onTap: null, filled: false)
-            else
+            else if (!_others)
               _pill(
                 Lc.current.followBack,
                 onTap: () => _followBack(u),

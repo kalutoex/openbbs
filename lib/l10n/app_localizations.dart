@@ -4279,6 +4279,24 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'清掉不在了的'**
   String get clearMissingRecords;
+
+  /// No description provided for @followsHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'对方没有公开'**
+  String get followsHidden;
+
+  /// No description provided for @showFollows.
+  ///
+  /// In zh, this message translates to:
+  /// **'公开关注和粉丝'**
+  String get showFollows;
+
+  /// No description provided for @showFollowsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'关掉后别人看不到你的关注和粉丝列表'**
+  String get showFollowsHint;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

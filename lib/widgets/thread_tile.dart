@@ -8,6 +8,7 @@ import '../img_cache.dart';
 import '../img_size_store.dart';
 import '../store.dart';
 import '../utils.dart';
+import 'avatar.dart';
 import 'file_card.dart';
 import 'name_tag.dart';
 import 'user_link.dart';
@@ -129,18 +130,12 @@ class ThreadTile extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      if (item['is_top'] == true) ...[
-                        _tag(Lc.current.pinned, cs.primary),
-                        const SizedBox(width: 5),
-                      ],
-                      if (good) ...[
-                        _tag(Lc.current.featured, cs.error),
-                        const SizedBox(width: 5),
-                      ],
-                      if (imgs.length >= 2) ...[
-                        _tag(Lc.current.multiImage, cs.tertiary),
-                        const SizedBox(width: 5),
-                      ],
+                      CircleAvatarImg(
+                        url: '${item['avatar'] ?? ''}',
+                        name: author,
+                        radius: 13,
+                      ),
+                      const SizedBox(width: 8),
                       Flexible(
                         child: NameTag(
                           name: author,
@@ -251,6 +246,19 @@ class ThreadTile extends StatelessWidget {
                         replies == 0 ? Lc.current.comments : bigNum(replies),
                         style: tt.labelSmall?.copyWith(color: cs.outline),
                       ),
+                      // 角标挪到右下：跟作者、时间挤一行太碎，放这儿不抢主信息。
+                      const Spacer(),
+                      if (item['is_top'] == true)
+                        _tag(Lc.current.pinned, cs.primary),
+                      if (good) ...[
+                        if (item['is_top'] == true) const SizedBox(width: 5),
+                        _tag(Lc.current.featured, cs.error),
+                      ],
+                      if (imgs.length >= 2) ...[
+                        if (item['is_top'] == true || good)
+                          const SizedBox(width: 5),
+                        _tag(Lc.current.multiImage, cs.tertiary),
+                      ],
                     ],
                   ),
                 ],

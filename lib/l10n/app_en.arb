@@ -965,5 +965,8 @@
     }
   },
   "downloadsByBrowser": "Downloads are handled by the browser on the web.",
-  "clearMissingRecords": "Clear missing"
+  "clearMissingRecords": "Clear missing",
+  "followsHidden": "Follows are private",
+  "showFollows": "Show follows and followers",
+  "showFollowsHint": "When off, others cannot see who you follow or who follows you"
 }

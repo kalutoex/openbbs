@@ -557,3 +557,6 @@ $usedText / $quotaText	usedOfTotal	{v1} / {v2}
 [图片]	notifyImage	[Photo]
 消息通知	sysNotify	Message alerts
 系统通知权限没开，去手机设置里打开	sysNotifyOff	Notifications are blocked in system settings
+对方没有公开	followsHidden	Follows are private
+公开关注和粉丝	showFollows	Show follows and followers
+关掉后别人看不到你的关注和粉丝列表	showFollowsHint	When off, others cannot see who you follow or who follows you

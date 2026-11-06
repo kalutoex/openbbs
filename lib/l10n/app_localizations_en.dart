@@ -2376,4 +2376,14 @@ class LEn extends L {
 
   @override
   String get clearMissingRecords => 'Clear missing';
+
+  @override
+  String get followsHidden => 'Follows are private';
+
+  @override
+  String get showFollows => 'Show follows and followers';
+
+  @override
+  String get showFollowsHint =>
+      'When off, others cannot see who you follow or who follows you';
 }

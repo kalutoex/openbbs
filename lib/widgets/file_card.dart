@@ -175,101 +175,89 @@ class _FileCardState extends State<_FileCard> {
     final scheme = t.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: LayoutBuilder(
-        builder: (context, cons) {
-          final w =
-              cons.maxWidth.isFinite && cons.maxWidth < PostFileCard.maxWidth
-              ? cons.maxWidth
-              : PostFileCard.maxWidth;
-          return SizedBox(
-            width: w,
-            height: PostFileCard.height,
-            child: Material(
-              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(10),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: widget.onRemove == null ? _open : null,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      _busy
-                          ? const SizedBox(
-                              width: 30,
-                              height: 30,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : Icon(
-                              fileIconFor(widget.file.name),
-                              size: 30,
-                              color: scheme.primary,
-                            ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
+      // 别用 LayoutBuilder：私信气泡外面套着 IntrinsicWidth，它会去问子节点的
+      // 固有宽度，而 LayoutBuilder 答不上来，release 下拿到的就是 0 ——
+      // 卡片宽度 0，看着像没发出去，也点不中。宽度交给父约束去压。
+      child: SizedBox(
+        width: PostFileCard.maxWidth,
+        height: PostFileCard.height,
+        child: Material(
+          color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: widget.onRemove == null ? _open : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  _busy
+                      ? const SizedBox(
+                          width: 30,
+                          height: 30,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : Icon(
+                          fileIconFor(widget.file.name),
+                          size: 30,
+                          color: scheme.primary,
+                        ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          widget.file.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: t.textTheme.bodyMedium?.copyWith(height: 1.25),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
                           children: [
-                            Text(
-                              widget.file.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: t.textTheme.bodyMedium?.copyWith(
-                                height: 1.25,
+                            Expanded(
+                              child: Text(
+                                _busy && _progress > 0
+                                    ? '${(_progress * 100).toStringAsFixed(0)}% · ${widget.file.sizeText}'
+                                    : widget.file.sizeText,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: t.textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    _busy && _progress > 0
-                                        ? '${(_progress * 100).toStringAsFixed(0)}% · ${widget.file.sizeText}'
-                                        : widget.file.sizeText,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: t.textTheme.bodySmall?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                    ),
+                            if (widget.onRemove != null)
+                              InkResponse(
+                                onTap: widget.onRemove,
+                                radius: 16,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(2),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: scheme.outline,
                                   ),
                                 ),
-                                if (widget.onRemove != null)
-                                  InkResponse(
-                                    onTap: widget.onRemove,
-                                    radius: 16,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(2),
-                                      child: Icon(
-                                        Icons.close,
-                                        size: 18,
-                                        color: scheme.outline,
-                                      ),
-                                    ),
-                                  )
-                                else if (!_busy)
-                                  Icon(
-                                    Icons.download_outlined,
-                                    size: 16,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                              ],
-                            ),
+                              )
+                            else if (!_busy)
+                              Icon(
+                                Icons.download_outlined,
+                                size: 16,
+                                color: scheme.onSurfaceVariant,
+                              ),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }

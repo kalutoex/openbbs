@@ -2334,4 +2334,13 @@ class LZh extends L {
 
   @override
   String get clearMissingRecords => '清掉不在了的';
+
+  @override
+  String get followsHidden => '对方没有公开';
+
+  @override
+  String get showFollows => '公开关注和粉丝';
+
+  @override
+  String get showFollowsHint => '关掉后别人看不到你的关注和粉丝列表';
 }

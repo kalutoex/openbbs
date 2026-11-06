@@ -13,6 +13,7 @@ import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
 import '../widgets/thread_tile.dart';
 import 'edit_profile_page.dart';
+import 'follow_page.dart';
 import 'chat_page.dart';
 import 'thread_page.dart';
 import 'gallery_picker_page.dart';
@@ -521,9 +522,19 @@ class _UserPageState extends State<UserPage> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _count(following, Lc.current.followingCount, cs),
+                  _count(
+                    following,
+                    Lc.current.followingCount,
+                    cs,
+                    onTap: () => _openFollows(0),
+                  ),
                   const SizedBox(width: 18),
-                  _count(followers, Lc.current.followers, cs),
+                  _count(
+                    followers,
+                    Lc.current.followers,
+                    cs,
+                    onTap: () => _openFollows(1),
+                  ),
                 ],
               ),
             ],
@@ -634,18 +645,40 @@ class _UserPageState extends State<UserPage> {
     );
   }
 
-  Widget _count(int n, String label, ColorScheme cs) {
-    return Row(
+  /// 关注 / 粉丝数字。n 为 -1 表示对方关了公开，只留一条横线。
+  Widget _count(int n, String label, ColorScheme cs, {VoidCallback? onTap}) {
+    final row = Row(
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
       children: [
         Text(
-          '$n',
+          n < 0 ? '—' : '$n',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
         const SizedBox(width: 4),
         Text(label, style: TextStyle(fontSize: 12, color: cs.outline)),
       ],
+    );
+    if (onTap == null) return row;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
+        child: row,
+      ),
+    );
+  }
+
+  /// 名单页。别人的是只读的，自己那页能顺手取关/回关。
+  void _openFollows(int tab) {
+    final info = _info ?? const <String, dynamic>{};
+    final h = '${info['handle'] ?? ''}';
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            FollowPage(name: h.isNotEmpty ? h : widget.name, initialTab: tab),
+      ),
     );
   }
 

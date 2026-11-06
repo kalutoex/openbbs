@@ -52,6 +52,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool _picking = false;
   String? _err;
 
+  /// 默认公开，跟服务端一致。
+  late bool _showFollows =
+      (AppState.instance.user?['show_follows'] ??
+              widget.info['show_follows'] ??
+              true)
+          as bool;
+
   void _snack(String msg) {
     if (!mounted) return;
     toast(context, msg, floating: true);
@@ -220,6 +227,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         'handle': tag,
         'signature': _sig.text.trim(),
         'avatar': _avatar.text.trim(),
+        'show_follows': _showFollows,
       });
       final u = d is Map ? d['user'] : null;
       if (u is Map<String, dynamic>) {
@@ -301,6 +309,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       labelText: Lc.current.bio,
                       helperText: Lc.current.bioHint,
                       alignLabelWithHint: true,
+                    ),
+                  ),
+                  const Divider(height: 26),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _showFollows,
+                    onChanged: (v) => setState(() => _showFollows = v),
+                    title: Text(
+                      Lc.current.showFollows,
+                      style: const TextStyle(fontSize: 14.5),
+                    ),
+                    subtitle: Text(
+                      Lc.current.showFollowsHint,
+                      style: TextStyle(fontSize: 11.5, color: cs.outline),
                     ),
                   ),
                   if (_err != null) ...[
