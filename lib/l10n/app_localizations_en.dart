@@ -2386,4 +2386,31 @@ class LEn extends L {
   @override
   String get showFollowsHint =>
       'When off, others cannot see who you follow or who follows you';
+
+  @override
+  String get selectMode => 'Select';
+
+  @override
+  String get selectAll => 'Select all';
+
+  @override
+  String get selectNone => 'Select none';
+
+  @override
+  String get deleteSelected => 'Delete selected';
+
+  @override
+  String selectedCount(int n) {
+    return '$n selected';
+  }
+
+  @override
+  String deleteSelectedAsk(int n) {
+    return 'These $n files will be removed from this phone. Copies in the cloud stay.';
+  }
+
+  @override
+  String deletedSelected(int n) {
+    return 'Deleted $n';
+  }
 }

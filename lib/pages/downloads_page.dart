@@ -41,6 +41,10 @@ class _DownloadsPageState extends State<DownloadsPage> {
   bool _loading = true;
   bool _noAccess = false;
 
+  /// 多选：进了选择模式，点条目是勾选，不再打开文件。
+  bool _selecting = false;
+  final Set<String> _sel = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -185,6 +189,79 @@ class _DownloadsPageState extends State<DownloadsPage> {
     }
   }
 
+  void _startSelect() {
+    setState(() {
+      _selecting = true;
+      _sel.clear();
+    });
+  }
+
+  void _endSelect() {
+    setState(() {
+      _selecting = false;
+      _sel.clear();
+    });
+  }
+
+  void _toggle(String display) {
+    setState(() {
+      if (!_sel.remove(display)) _sel.add(display);
+    });
+  }
+
+  /// 全选 / 全不选。已经全选了就反过来。
+  void _toggleAll() {
+    final all = _items.map((e) => e.rec.display).toList();
+    setState(() {
+      if (_sel.length == all.length) {
+        _sel.clear();
+      } else {
+        _sel
+          ..clear()
+          ..addAll(all);
+      }
+    });
+  }
+
+  /// 一次删掉勾上的那些：连着文件一起删，删不着的只把记录清掉。
+  Future<void> _deleteSelected() async {
+    final picked = _items.where((e) => _sel.contains(e.rec.display)).toList();
+    if (picked.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(Lc.current.deleteSelected),
+        content: Text(Lc.current.deleteSelectedAsk(picked.length)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(Lc.current.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(Lc.current.delete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final done = <String>{};
+    for (final e in picked) {
+      final p = e.path;
+      // 文件已经被人挪走的，删不动也无所谓，记录照样清掉。
+      if (p != null) await deleteLocalFile(p);
+      await forgetLocalDownload(e.rec.display);
+      done.add(e.rec.display);
+    }
+    if (!mounted) return;
+    setState(() {
+      _items = _items.where((e) => !done.contains(e.rec.display)).toList();
+      _selecting = false;
+      _sel.clear();
+    });
+    toast(context, Lc.current.deletedSelected(done.length));
+  }
+
   void _menu(_Entry e) {
     final cs = Theme.of(context).colorScheme;
     showAppSheet<void>(
@@ -232,16 +309,49 @@ class _DownloadsPageState extends State<DownloadsPage> {
   @override
   Widget build(BuildContext context) {
     final hasMissing = _items.any((e) => !e.alive);
+    final canSelect = _items.isNotEmpty;
+    final allOn = canSelect && _sel.length == _items.length;
     return Scaffold(
       appBar: AppBar(
-        title: Text(Lc.current.downloadsPage),
+        leading: _selecting
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _endSelect,
+              )
+            : null,
+        title: Text(
+          _selecting
+              ? Lc.current.selectedCount(_sel.length)
+              : Lc.current.downloadsPage,
+        ),
         actions: [
-          if (hasMissing)
+          if (_selecting) ...[
             IconButton(
-              tooltip: Lc.current.clearMissingRecords,
-              icon: const Icon(Icons.cleaning_services_outlined),
-              onPressed: _clearMissing,
+              tooltip: allOn ? Lc.current.selectNone : Lc.current.selectAll,
+              icon: Icon(
+                allOn ? Icons.deselect : Icons.select_all,
+              ),
+              onPressed: canSelect ? _toggleAll : null,
             ),
+            IconButton(
+              tooltip: Lc.current.deleteSelected,
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _sel.isEmpty ? null : _deleteSelected,
+            ),
+          ] else ...[
+            if (canSelect)
+              IconButton(
+                tooltip: Lc.current.selectMode,
+                icon: const Icon(Icons.checklist),
+                onPressed: _startSelect,
+              ),
+            if (hasMissing)
+              IconButton(
+                tooltip: Lc.current.clearMissingRecords,
+                icon: const Icon(Icons.cleaning_services_outlined),
+                onPressed: _clearMissing,
+              ),
+          ],
         ],
       ),
       body: PageWidth(
@@ -306,17 +416,24 @@ class _DownloadsPageState extends State<DownloadsPage> {
 
   Widget _tile(_Entry e) {
     final cs = Theme.of(context).colorScheme;
+    final picked = _sel.contains(e.rec.display);
     final sub = <String>[
       if (e.rec.size > 0) bytesText(e.rec.size),
       if (e.rec.at > 0) timeAgo(e.rec.at),
       if (!e.alive) Lc.current.localFileGone,
     ];
     return ListTile(
-      leading: Icon(
-        fileIconFor(e.rec.name),
-        size: 24,
-        color: e.alive ? cs.onSurfaceVariant : cs.outlineVariant,
-      ),
+      leading: _selecting
+          ? Checkbox(
+              value: picked,
+              onChanged: (_) => _toggle(e.rec.display),
+            )
+          : Icon(
+              fileIconFor(e.rec.name),
+              size: 24,
+              color: e.alive ? cs.onSurfaceVariant : cs.outlineVariant,
+            ),
+      selected: _selecting && picked,
       title: Text(
         e.rec.name,
         maxLines: 1,
@@ -327,13 +444,17 @@ class _DownloadsPageState extends State<DownloadsPage> {
         sub.join(' · '),
         style: TextStyle(fontSize: 11.5, color: cs.outline),
       ),
-      trailing: Icon(
-        Icons.chevron_right,
-        size: 18,
-        color: cs.outline.withValues(alpha: 0.5),
-      ),
-      onTap: () => e.alive ? _open(e) : _menu(e),
-      onLongPress: () => _menu(e),
+      trailing: _selecting
+          ? null
+          : Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: cs.outline.withValues(alpha: 0.5),
+            ),
+      onTap: _selecting
+          ? () => _toggle(e.rec.display)
+          : () => e.alive ? _open(e) : _menu(e),
+      onLongPress: _selecting ? null : () => _menu(e),
     );
   }
 }

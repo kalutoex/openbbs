@@ -560,3 +560,10 @@ $usedText / $quotaText	usedOfTotal	{v1} / {v2}
 对方没有公开	followsHidden	Follows are private
 公开关注和粉丝	showFollows	Show follows and followers
 关掉后别人看不到你的关注和粉丝列表	showFollowsHint	When off, others cannot see who you follow or who follows you
+选择	selectMode	Select
+全选	selectAll	Select all
+全不选	selectNone	Select none
+删除所选	deleteSelected	Delete selected
+已选 {n} 个	selectedCount	{n} selected
+这 {n} 个文件会从手机里删掉，云盘里的还在。	deleteSelectedAsk	These {n} files will be removed from this phone. Copies in the cloud stay.
+已删 {n} 个	deletedSelected	Deleted {n}

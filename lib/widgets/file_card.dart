@@ -80,13 +80,23 @@ IconData fileIconFor(String name) {
 class PostFileCard {
   static const double height = 80;
   static const double maxWidth = 420;
+
+  /// 私信里塞在气泡中的尺寸。气泡本身自带底色和内边距，卡片再按 80 高、
+  /// 420 宽摆，就像气泡里又嵌了一块大板子。跟着气泡里的图片走：
+  /// 矮一点、窄一点，圆角跟图片的 13 对上。
+  static const double compactHeight = 64;
+  static const double compactMaxWidth = 260;
+  static const double compactRadius = 13;
 }
 
 /// 帖子里那一排附件卡片。点一下就下载。
 class FileCards extends StatelessWidget {
-  const FileCards({super.key, required this.files});
+  const FileCards({super.key, required this.files, this.compact = false});
 
   final List<PostFile> files;
+
+  /// 私信气泡里用紧凑版。
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +104,10 @@ class FileCards extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
-        children: [for (final f in files) _FileCard(file: f, onRemove: null)],
+        children: [
+          for (final f in files)
+            _FileCard(file: f, onRemove: null, compact: compact),
+        ],
       ),
     );
   }
@@ -129,10 +142,15 @@ class EditableFileCards extends StatelessWidget {
 }
 
 class _FileCard extends StatefulWidget {
-  const _FileCard({required this.file, required this.onRemove});
+  const _FileCard({
+    required this.file,
+    required this.onRemove,
+    this.compact = false,
+  });
 
   final PostFile file;
   final VoidCallback? onRemove;
+  final bool compact;
 
   @override
   State<_FileCard> createState() => _FileCardState();
@@ -173,36 +191,43 @@ class _FileCardState extends State<_FileCard> {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final scheme = t.colorScheme;
+    final compact = widget.compact;
+    final radius = BorderRadius.circular(
+      compact ? PostFileCard.compactRadius : 10,
+    );
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: compact ? 6 : 8),
       // 别用 LayoutBuilder：私信气泡外面套着 IntrinsicWidth，它会去问子节点的
       // 固有宽度，而 LayoutBuilder 答不上来，release 下拿到的就是 0 ——
       // 卡片宽度 0，看着像没发出去，也点不中。宽度交给父约束去压。
       child: SizedBox(
-        width: PostFileCard.maxWidth,
-        height: PostFileCard.height,
+        width: compact ? PostFileCard.compactMaxWidth : PostFileCard.maxWidth,
+        height: compact ? PostFileCard.compactHeight : PostFileCard.height,
         child: Material(
           color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: radius,
           child: InkWell(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: radius,
             onTap: widget.onRemove == null ? _open : null,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 10 : 12,
+                vertical: compact ? 7 : 10,
+              ),
               child: Row(
                 children: [
                   _busy
-                      ? const SizedBox(
-                          width: 30,
-                          height: 30,
-                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                      ? SizedBox(
+                          width: compact ? 24 : 30,
+                          height: compact ? 24 : 30,
+                          child: const CircularProgressIndicator(strokeWidth: 2.5),
                         )
                       : Icon(
                           fileIconFor(widget.file.name),
-                          size: 30,
+                          size: compact ? 24 : 30,
                           color: scheme.primary,
                         ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: compact ? 8 : 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,7 +235,7 @@ class _FileCardState extends State<_FileCard> {
                       children: [
                         Text(
                           widget.file.name,
-                          maxLines: 2,
+                          maxLines: compact ? 1 : 2,
                           overflow: TextOverflow.ellipsis,
                           style: t.textTheme.bodyMedium?.copyWith(height: 1.25),
                         ),

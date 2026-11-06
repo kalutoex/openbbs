@@ -2343,4 +2343,31 @@ class LZh extends L {
 
   @override
   String get showFollowsHint => '关掉后别人看不到你的关注和粉丝列表';
+
+  @override
+  String get selectMode => '选择';
+
+  @override
+  String get selectAll => '全选';
+
+  @override
+  String get selectNone => '全不选';
+
+  @override
+  String get deleteSelected => '删除所选';
+
+  @override
+  String selectedCount(int n) {
+    return '已选 $n 个';
+  }
+
+  @override
+  String deleteSelectedAsk(int n) {
+    return '这 $n 个文件会从手机里删掉，云盘里的还在。';
+  }
+
+  @override
+  String deletedSelected(int n) {
+    return '已删 $n 个';
+  }
 }

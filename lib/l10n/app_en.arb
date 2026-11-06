@@ -968,5 +968,33 @@
   "clearMissingRecords": "Clear missing",
   "followsHidden": "Follows are private",
   "showFollows": "Show follows and followers",
-  "showFollowsHint": "When off, others cannot see who you follow or who follows you"
+  "showFollowsHint": "When off, others cannot see who you follow or who follows you",
+  "selectMode": "Select",
+  "selectAll": "Select all",
+  "selectNone": "Select none",
+  "deleteSelected": "Delete selected",
+  "selectedCount": "{n} selected",
+  "@selectedCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedAsk": "These {n} files will be removed from this phone. Copies in the cloud stay.",
+  "@deleteSelectedAsk": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "deletedSelected": "Deleted {n}",
+  "@deletedSelected": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
 }

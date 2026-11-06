@@ -702,8 +702,8 @@ class _ChatPageState extends State<ChatPage> {
               if (imgs.isNotEmpty) _images(imgs),
               if (files.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
-                  child: FileCards(files: files),
+                  padding: const EdgeInsets.fromLTRB(3, 3, 3, 0),
+                  child: FileCards(files: files, compact: true),
                 ),
               if (body.isNotEmpty)
                 Padding(

@@ -225,7 +225,17 @@ class _ShijianxianAppState extends State<ShijianxianApp>
               final mq = MediaQuery.of(ctx);
               return MediaQuery(
                 data: mq.copyWith(textScaler: TextScaler.linear(scale)),
-                child: child!,
+                // 点空白处退出输入状态，全站一处管住。
+                // translucent 只是参与命中，真正的点击还是内层先拿走：
+                // 点按钮、点列表项都照常，只有落在空底子上才收键盘。
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () {
+                    final f = FocusManager.instance.primaryFocus;
+                    if (f != null && f.hasFocus) f.unfocus();
+                  },
+                  child: child!,
+                ),
               );
             },
           ),

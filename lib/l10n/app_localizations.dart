@@ -4297,6 +4297,48 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'关掉后别人看不到你的关注和粉丝列表'**
   String get showFollowsHint;
+
+  /// No description provided for @selectMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择'**
+  String get selectMode;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全选'**
+  String get selectAll;
+
+  /// No description provided for @selectNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'全不选'**
+  String get selectNone;
+
+  /// No description provided for @deleteSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除所选'**
+  String get deleteSelected;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选 {n} 个'**
+  String selectedCount(int n);
+
+  /// No description provided for @deleteSelectedAsk.
+  ///
+  /// In zh, this message translates to:
+  /// **'这 {n} 个文件会从手机里删掉，云盘里的还在。'**
+  String deleteSelectedAsk(int n);
+
+  /// No description provided for @deletedSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'已删 {n} 个'**
+  String deletedSelected(int n);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

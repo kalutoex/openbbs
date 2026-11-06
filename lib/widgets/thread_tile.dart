@@ -10,7 +10,6 @@ import '../store.dart';
 import '../utils.dart';
 import 'avatar.dart';
 import 'file_card.dart';
-import 'name_tag.dart';
 import 'user_link.dart';
 
 import '../l10n/error_text.dart';
@@ -74,6 +73,7 @@ class ThreadTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final author = (item['author'] ?? '') as String;
+    final handle = (item['handle'] ?? '') as String;
     final replies = (item['reply_count'] ?? 0) as int;
     final good = item['is_good'] == true;
     final ts = (item['updated_at'] ?? item['created_at'] ?? 0) as int;
@@ -133,17 +133,43 @@ class ThreadTile extends StatelessWidget {
                       CircleAvatarImg(
                         url: '${item['avatar'] ?? ''}',
                         name: author,
-                        radius: 13,
+                        radius: 16,
                       ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: NameTag(
-                          name: author,
-                          handle: '${item['handle'] ?? ''}',
-                          onTap: () =>
-                              openUserPage(context, '${item['handle'] ?? ''}'),
-                          style: tt.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
+                      const SizedBox(width: 9),
+                      // 昵称在上、@账号在下，两行都放大一号。
+                      // 昵称和账号并排时，长名字一挤，@就只剩半个。
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => openUserPage(context, handle),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                author,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: tt.bodyMedium?.copyWith(
+                                  fontSize:
+                                      (tt.bodyMedium?.fontSize ?? 14) + 1,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.2,
+                                ),
+                              ),
+                              if (handle.trim().isNotEmpty)
+                                Text(
+                                  '@${handle.trim().replaceFirst(RegExp(r'^@'), '')}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: tt.bodySmall?.copyWith(
+                                    fontSize:
+                                        (tt.bodySmall?.fontSize ?? 12) + 1,
+                                    color: cs.outline,
+                                    height: 1.2,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
@@ -152,20 +178,19 @@ class ThreadTile extends StatelessWidget {
                         timeAgo(ts),
                         style: tt.labelSmall?.copyWith(color: cs.outline),
                       ),
-                      if (item['can_delete'] == true) ...[
-                        const SizedBox(width: 2),
-                        InkResponse(
-                          onTap: () => _delete(context),
-                          radius: 18,
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.delete_outline,
-                              size: 16,
-                              color: cs.outline,
-                            ),
-                          ),
-                        ),
+                      // 置顶 / 精华 / 多图挪到右上角，跟时间排一行。
+                      if (item['is_top'] == true) ...[
+                        const SizedBox(width: 5),
+                        _tag(Lc.current.pinned, cs.primary),
+                      ],
+                      if (good) ...[
+                        if (item['is_top'] == true || imgs.length >= 2)
+                          const SizedBox(width: 5),
+                        _tag(Lc.current.featured, cs.error),
+                      ],
+                      if (imgs.length >= 2) ...[
+                        const SizedBox(width: 5),
+                        _tag(Lc.current.multiImage, cs.tertiary),
                       ],
                     ],
                   ),
@@ -246,19 +271,21 @@ class ThreadTile extends StatelessWidget {
                         replies == 0 ? Lc.current.comments : bigNum(replies),
                         style: tt.labelSmall?.copyWith(color: cs.outline),
                       ),
-                      // 角标挪到右下：跟作者、时间挤一行太碎，放这儿不抢主信息。
+                      // 删除放右下：跟评论数同一行，手够得着，也不挨着头像。
                       const Spacer(),
-                      if (item['is_top'] == true)
-                        _tag(Lc.current.pinned, cs.primary),
-                      if (good) ...[
-                        if (item['is_top'] == true) const SizedBox(width: 5),
-                        _tag(Lc.current.featured, cs.error),
-                      ],
-                      if (imgs.length >= 2) ...[
-                        if (item['is_top'] == true || good)
-                          const SizedBox(width: 5),
-                        _tag(Lc.current.multiImage, cs.tertiary),
-                      ],
+                      if (item['can_delete'] == true)
+                        InkResponse(
+                          onTap: () => _delete(context),
+                          radius: 16,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(6, 2, 0, 2),
+                            child: Icon(
+                              Icons.delete_outline,
+                              size: 17,
+                              color: cs.outline,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ],

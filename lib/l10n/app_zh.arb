@@ -1565,5 +1565,33 @@
   "clearMissingRecords": "清掉不在了的",
   "followsHidden": "对方没有公开",
   "showFollows": "公开关注和粉丝",
-  "showFollowsHint": "关掉后别人看不到你的关注和粉丝列表"
+  "showFollowsHint": "关掉后别人看不到你的关注和粉丝列表",
+  "selectMode": "选择",
+  "selectAll": "全选",
+  "selectNone": "全不选",
+  "deleteSelected": "删除所选",
+  "selectedCount": "已选 {n} 个",
+  "@selectedCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedAsk": "这 {n} 个文件会从手机里删掉，云盘里的还在。",
+  "@deleteSelectedAsk": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "deletedSelected": "已删 {n} 个",
+  "@deletedSelected": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
 }
