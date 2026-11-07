@@ -134,9 +134,9 @@ class ThreadTile extends StatelessWidget {
                       CircleAvatarImg(
                         url: '${item['avatar'] ?? ''}',
                         name: author,
-                        radius: 22,
+                        radius: 20,
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 9),
                       // 昵称在上、@账号在下，两行都放大一号。
                       // 昵称和账号并排时，长名字一挤，@就只剩半个。
                       Expanded(
@@ -175,38 +175,27 @@ class ThreadTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // 时间顶到卡片右上角，角标排在它下面一行，从右往左填：
-                      // 越靠前的标记越贴右边。
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      // 时间贴卡片右上角，角标排在它左边，从右往左：
+                      // 置顶离时间最近，往后是精华、多图。
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (imgs.length >= 2) ...[
+                            _tag(Lc.current.multiImage, cs.tertiary),
+                            const SizedBox(width: 5),
+                          ],
+                          if (good) ...[
+                            _tag(Lc.current.featured, cs.error),
+                            const SizedBox(width: 5),
+                          ],
+                          if (item['is_top'] == true) ...[
+                            _tag(Lc.current.pinned, cs.primary),
+                            const SizedBox(width: 5),
+                          ],
                           Text(
                             timeAgo(ts),
                             style: tt.labelSmall?.copyWith(color: cs.outline),
                           ),
-                          if (item['is_top'] == true ||
-                              good ||
-                              imgs.length >= 2) ...[
-                            const SizedBox(height: 5),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (imgs.length >= 2)
-                                  _tag(Lc.current.multiImage, cs.tertiary),
-                                if (good) ...[
-                                  if (imgs.length >= 2)
-                                    const SizedBox(width: 5),
-                                  _tag(Lc.current.featured, cs.error),
-                                ],
-                                if (item['is_top'] == true) ...[
-                                  if (good || imgs.length >= 2)
-                                    const SizedBox(width: 5),
-                                  _tag(Lc.current.pinned, cs.primary),
-                                ],
-                              ],
-                            ),
-                          ],
                         ],
                       ),
                     ],
