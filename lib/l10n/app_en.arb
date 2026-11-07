@@ -979,6 +979,8 @@
   "notifyTest": "Send a test notification",
   "notifyTestTitle": "Test notification",
   "notifyTestBody": "If you see this, notifications work",
+  "notifyTestSent": "Sent - check the notification shade",
+  "notifyTestFail": "Send failed",
   "noRepliesHint": "Be the first to say something.",
   "usernameOrEmail": "Username or email",
   "changePassword": "Change password",

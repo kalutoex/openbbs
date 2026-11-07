@@ -5,12 +5,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
 import '../notify.dart';
-import '../power.dart';
 import '../site_config.dart';
 import '../cache_clear.dart';
 import '../store.dart';
@@ -138,11 +136,6 @@ class SettingsPage extends StatelessWidget {
                     },
                   ),
                 ),
-                if (!kIsWeb) ...[
-                  const _NotifyPermTile(),
-                  const _BgKeepAliveTile(),
-                  const SizedBox(height: 6),
-                ],
                 _label(context, Lc.current.cloudSection),
                 ListTile(
                   leading: const Icon(Icons.cloud_outlined),
@@ -639,173 +632,6 @@ class _WebEntryRow extends StatelessWidget {
 ///
 /// 豁免只能由用户在系统弹窗里点「允许」，所以这一行就是个入口，
 /// 点完回来重新读一次状态，不假装已经成功了。
-/// 通知权限。安卓 13 起是运行时权限，没给就一条都弹不出来，
-/// 而且系统不会自己弹窗问——不在这里给出状态，用户只会觉得「通知坏了」。
-///
-/// 顺带放一条测试通知：等真实消息来验证太慢，点一下就知道通没通。
-class _NotifyPermTile extends StatefulWidget {
-  const _NotifyPermTile();
-
-  @override
-  State<_NotifyPermTile> createState() => _NotifyPermTileState();
-}
-
-class _NotifyPermTileState extends State<_NotifyPermTile>
-    with WidgetsBindingObserver {
-  bool? _on;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _load();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  // 权限是在系统设置里改的，回来重新读一遍。
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _load();
-  }
-
-  Future<void> _load() async {
-    final v = await SysNotify.granted();
-    if (!mounted) return;
-    setState(() => _on = v);
-  }
-
-  Future<void> _tap() async {
-    if (_on == true) {
-      await openAppSettings();
-      return;
-    }
-    final ok = await SysNotify.ask();
-    await _load();
-    if (!mounted) return;
-    if (!ok) {
-      // 系统记着上次拒过就不会再弹，只能领到设置里去。
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(Lc.current.notifyPermDenied)));
-    }
-  }
-
-  Future<void> _test() async {
-    await SysNotify.show(
-      id: SysNotify.idTest,
-      title: Lc.current.notifyTestTitle,
-      body: Lc.current.notifyTestBody,
-      payload: '',
-    );
-    if (!mounted) return;
-    if (await SysNotify.granted()) return;
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(Lc.current.notifyPermDenied)));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.notification_important_outlined),
-      title: Text(Lc.current.notifyPerm),
-      subtitle: Text(Lc.current.notifyPermHint),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            _on == true
-                ? Lc.current.notifyPermOn
-                : Lc.current.notifyPermOff,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: _on == true
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.error,
-            ),
-          ),
-          const SizedBox(width: 4),
-          IconButton(
-            tooltip: Lc.current.notifyTest,
-            icon: const Icon(Icons.send_outlined, size: 20),
-            onPressed: _test,
-          ),
-        ],
-      ),
-      onTap: _tap,
-    );
-  }
-}
-
-class _BgKeepAliveTile extends StatefulWidget {
-  const _BgKeepAliveTile();
-
-  @override
-  State<_BgKeepAliveTile> createState() => _BgKeepAliveTileState();
-}
-
-class _BgKeepAliveTileState extends State<_BgKeepAliveTile>
-    with WidgetsBindingObserver {
-  bool? _on;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _load();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  // 系统弹窗挡在 App 上面，回来才知道点没点。
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _load();
-  }
-
-  Future<void> _load() async {
-    final v = await Power.ignoringBattery();
-    if (!mounted) return;
-    setState(() => _on = v);
-  }
-
-  Future<void> _tap() async {
-    if (_on == true) {
-      // 已经豁免了还点，就是想去系统里关掉，直接跳到应用设置。
-      await openAppSettings();
-      return;
-    }
-    await Power.requestIgnore();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.battery_saver_outlined),
-      title: Text(Lc.current.bgKeepAlive),
-      subtitle: Text(Lc.current.bgKeepAliveHint),
-      trailing: Text(
-        _on == true ? Lc.current.bgKeepAliveOn : Lc.current.bgKeepAliveOff,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: _on == true
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-      onTap: _tap,
-    );
-  }
-}
-
 class _ClearCacheTile extends StatefulWidget {
   const _ClearCacheTile();
 

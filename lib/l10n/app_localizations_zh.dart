@@ -2336,6 +2336,12 @@ class LZh extends L {
   String get notifyTestBody => '能看到这条，说明通知是通的';
 
   @override
+  String get notifyTestSent => '已发出，看通知栏';
+
+  @override
+  String get notifyTestFail => '发送失败';
+
+  @override
   String get noRepliesHint => '说两句，让楼主知道有人看。';
 
   @override

@@ -1,10 +1,13 @@
 import '../widgets/app_card.dart';
 import '../widgets/page_width.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../notify.dart';
 import '../permissions.dart';
+import '../widgets/keep_alive_tile.dart';
 
 import '../l10n/l10n.dart';
 
@@ -40,6 +43,29 @@ class _PermissionsPageState extends State<PermissionsPage> {
     final s = await AppPerms.ask(p);
     if (!mounted) return;
     setState(() => _st = {..._st, p: s});
+  }
+
+  /// 点一下：弹一条，然后把系统那边的状态一并说出来。
+  /// 「什么都没发生」是最难查的一种，所以这里不留空白。
+  Future<void> _testNotify() async {
+    final err = await SysNotify.show(
+      id: SysNotify.idTest,
+      title: Lc.current.notifyTestTitle,
+      body: Lc.current.notifyTestBody,
+      payload: '',
+    );
+    final lines = await SysNotify.diagnose();
+    if (!mounted) return;
+    final text = <String>[
+      if (err == null) Lc.current.notifyTestSent else '${Lc.current.notifyTestFail}: $err',
+      ...lines,
+    ].join('\n');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        duration: const Duration(seconds: 8),
+      ),
+    );
   }
 
   @override
@@ -82,12 +108,35 @@ class _PermissionsPageState extends State<PermissionsPage> {
                             ),
                             title: Text(AppPerms.label(p)),
                             subtitle: Text(AppPerms.subtitle(p)),
-                            trailing: Text(
-                              AppPerms.text(_st[p] ?? PermissionStatus.denied),
-                              style: TextStyle(fontSize: 12, color: cs.outline),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  AppPerms.text(
+                                    _st[p] ?? PermissionStatus.denied,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: cs.outline,
+                                  ),
+                                ),
+                                // 等真实消息来验证太慢，点一下就知道通没通。
+                                if (p == Permission.notification) ...[
+                                  const SizedBox(width: 4),
+                                  IconButton(
+                                    tooltip: Lc.current.notifyTest,
+                                    icon: const Icon(
+                                      Icons.send_outlined,
+                                      size: 20,
+                                    ),
+                                    onPressed: _testNotify,
+                                  ),
+                                ],
+                              ],
                             ),
                             onTap: () => _ask(p),
                           ),
+                        if (!kIsWeb) const KeepAliveTile(),
                       ],
                     ),
                   ),

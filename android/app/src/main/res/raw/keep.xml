@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 通知小图标：release 打 R8 时资源可能被剥掉，剥掉了通知就静默不弹，
+     插件文档专门提过这一条。这里钉住它。 -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notify" />

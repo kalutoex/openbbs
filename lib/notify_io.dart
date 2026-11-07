@@ -17,8 +17,11 @@ class SysNotify {
   static Future<bool> init(void Function(String payload) onTap) async {
     _onTap = onTap;
     const settings = InitializationSettings(
-      // 小图标用启动图标，安卓会啃成单色剪影，能用就行。
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      // 专用小图标（drawable/ic_notify.xml，单色铃铛）。
+      // 之前用的是 @mipmap/ic_launcher：那是自适应图标，插件文档明说
+      // release 里可能被剥掉，剥掉之后 initialize 直接失败，每条通知都
+      // 静默丢掉——表面上看就是「消息收到了，通知栏什么都没有」。
+      android: AndroidInitializationSettings('ic_notify'),
     );
     // App 是被通知点开的这一种情况，冷启动时补一次跳转。
     final launch = await _p.getNotificationAppLaunchDetails();
@@ -91,7 +94,11 @@ class SysNotify {
 
   static bool get ready => _ready;
 
-  static Future<void> show({
+  /// 上一次 show 失败的原因。空表示没失败过。
+  /// 通知弹不出来时，系统往往是静默吞掉，只能把异常留在这里给人看。
+  static String? lastError;
+
+  static Future<String?> show({
     required int id,
     required String title,
     required String body,
@@ -102,27 +109,73 @@ class SysNotify {
     if (!_ready) {
       try {
         await init(_onTap ?? (_) {});
-      } catch (_) {
-        return;
+      } catch (e) {
+        lastError = 'init: $e';
+        return lastError;
       }
     }
-    if (!_ready) return;
+    if (!_ready) {
+      lastError = 'init 返回 false';
+      return lastError;
+    }
     final details = AndroidNotificationDetails(
       _channelId,
       '消息',
       channelDescription: '私信与站内消息提醒',
       importance: Importance.high,
       priority: Priority.high,
+      icon: 'ic_notify',
       // 长内容展开能看全，不截成一行。
       styleInformation: BigTextStyleInformation(body),
     );
-    await _p.show(
-      id: id,
-      title: title,
-      body: body,
-      payload: payload,
-      notificationDetails: NotificationDetails(android: details),
-    );
+    try {
+      await _p.show(
+        id: id,
+        title: title,
+        body: body,
+        payload: payload,
+        notificationDetails: NotificationDetails(android: details),
+      );
+      lastError = null;
+      return null;
+    } catch (e) {
+      lastError = '$e';
+      return lastError;
+    }
+  }
+
+  /// 自检：把系统那边看到的状态汇总成一行一行，设置页里直接显示。
+  /// 弹不出来的原因多半在这里——权限、渠道重要级别、插件有没有起来。
+  static Future<List<String>> diagnose() async {
+    final out = <String>[];
+    out.add('插件就绪: ${_ready ? '是' : '否'}');
+    if (lastError != null) out.add('上次失败: $lastError');
+    final a = _p
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (a == null) {
+      out.add('平台实现: 取不到');
+      return out;
+    }
+    try {
+      out.add('系统允许通知: ${await a.areNotificationsEnabled() ?? false}');
+    } catch (e) {
+      out.add('系统允许通知: 查询失败 $e');
+    }
+    try {
+      final ch = await a.getNotificationChannels();
+      if (ch == null || ch.isEmpty) {
+        out.add('渠道: 一个都没有');
+      } else {
+        out.add(
+          '渠道: ${ch.map((c) => '${c.id}/${c.importance.name}').join(' ')}',
+        );
+      }
+    } catch (e) {
+      out.add('渠道: 查询失败 $e');
+    }
+    return out;
   }
 
   static Future<void> cancel(int id) async {

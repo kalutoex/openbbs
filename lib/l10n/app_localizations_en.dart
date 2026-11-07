@@ -2381,6 +2381,12 @@ class LEn extends L {
   String get notifyTestBody => 'If you see this, notifications work';
 
   @override
+  String get notifyTestSent => 'Sent - check the notification shade';
+
+  @override
+  String get notifyTestFail => 'Send failed';
+
+  @override
   String get noRepliesHint => 'Be the first to say something.';
 
   @override

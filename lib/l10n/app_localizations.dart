@@ -4280,6 +4280,18 @@ abstract class L {
   /// **'能看到这条，说明通知是通的'**
   String get notifyTestBody;
 
+  /// No description provided for @notifyTestSent.
+  ///
+  /// In zh, this message translates to:
+  /// **'已发出，看通知栏'**
+  String get notifyTestSent;
+
+  /// No description provided for @notifyTestFail.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送失败'**
+  String get notifyTestFail;
+
   /// No description provided for @noRepliesHint.
   ///
   /// In zh, this message translates to:

@@ -1562,6 +1562,8 @@
   "notifyTest": "发一条测试通知",
   "notifyTestTitle": "测试通知",
   "notifyTestBody": "能看到这条，说明通知是通的",
+  "notifyTestSent": "已发出，看通知栏",
+  "notifyTestFail": "发送失败",
   "noRepliesHint": "说两句，让楼主知道有人看。",
   "usernameOrEmail": "用户名或邮箱",
   "changePassword": "修改密码",

@@ -11,12 +11,16 @@ class SysNotify {
   static Future<bool> ask() async => false;
   static Future<bool> granted() async => false;
 
-  static Future<void> show({
+  static String? lastError;
+
+  static Future<String?> show({
     required int id,
     required String title,
     required String body,
     required String payload,
-  }) async {}
+  }) async => null;
+
+  static Future<List<String>> diagnose() async => ['网页端不弹系统通知'];
 
   static Future<void> cancel(int id) async {}
 }
