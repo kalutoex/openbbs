@@ -61,10 +61,6 @@ class _CloudPageState extends State<CloudPage> {
   /// 搜索防抖。每敲一个字都打一次接口，翻页状态还会互相打架。
   Timer? _debounce;
 
-  /// 多选：选中的 id，以及现在是不是在选择模式。
-  final Set<int> _picked = {};
-  bool _selecting = false;
-
   /// 这次进来已经下完的，行尾给个绿标。还能再下，标不会清。
   final Set<int> _done = {};
 
@@ -280,19 +276,15 @@ class _CloudPageState extends State<CloudPage> {
     return true;
   }
 
-  /// 删几个（多选删除走这里）。删完给一次撤销。
-  /// 多选删除。一次删十几个，就弹一次确认、给一次撤销。
-  Future<void> _deletePicked() async {
-    final ids = _picked.toList();
-    if (ids.isEmpty) return;
-    final refs = _items
-        .where((f) => ids.contains(f.id))
-        .fold<int>(0, (a, f) => a + f.refs);
+  /// 删一个。长按那条进来的，删完给一次撤销。
+  Future<void> _deleteOne(CloudFile f) async {
+    final ids = [f.id];
+    final refs = f.refs;
     final trashHint = Lc.current.goesToTrashHint;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(Lc.current.deleteTheseN('${ids.length}')),
+        title: Text(Lc.current.deleteThisFile),
         content: Text(
           refs > 0 ? '${Lc.current.cloudRefsWarn('$refs')}\n\n$trashHint' : trashHint,
         ),
@@ -309,9 +301,6 @@ class _CloudPageState extends State<CloudPage> {
       ),
     );
     if (ok != true) return;
-    setState(() {
-      _selecting = false;
-    });
     await _removeIds(ids, refs: refs);
   }
 
@@ -324,7 +313,6 @@ class _CloudPageState extends State<CloudPage> {
       if (!mounted) return;
       setState(() {
         _items.removeWhere((x) => ids.contains(x.id));
-        _picked.removeAll(ids);
       });
       _load(reset: false);
       if (!mounted) return;
@@ -431,44 +419,17 @@ class _CloudPageState extends State<CloudPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: !_selecting
-          ? AppBar(
-              // 左上角：多选。长按列表里任意一条也能进。
-              leading: IconButton(
-                tooltip: Lc.current.select,
-                icon: const Icon(Icons.checklist_rounded),
-                onPressed: () => setState(() {
-                  _selecting = true;
-                  _picked.clear();
-                }),
-              ),
-              title: Text(Lc.current.cloudDisk),
-              actions: [
-                // 右上角只留一个：上传队列和已下载都在「传输」里。
-                IconButton(
-                  tooltip: Lc.current.transfers,
-                  icon: const Icon(Icons.swap_vert_rounded),
-                  onPressed: _toTransfers,
-                ),
-              ],
-            )
-          : AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => setState(() {
-                  _selecting = false;
-                  _picked.clear();
-                }),
-              ),
-              title: Text(Lc.current.selectedN('${_picked.length}')),
-              actions: [
-                IconButton(
-                  tooltip: Lc.current.delete,
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: _picked.isEmpty ? null : _deletePicked,
-                ),
-              ],
-            ),
+      appBar: AppBar(
+        title: Text(Lc.current.cloudDisk),
+        actions: [
+          // 右上角只留一个：上传队列和已下载都在「传输」里。
+          IconButton(
+            tooltip: Lc.current.transfers,
+            icon: const Icon(Icons.swap_vert_rounded),
+            onPressed: _toTransfers,
+          ),
+        ],
+      ),
       floatingActionButton: AnimatedBuilder(
         animation: UploadManager.i,
         builder: (context, _) {
@@ -575,28 +536,14 @@ class _CloudPageState extends State<CloudPage> {
         final f = _items[i];
         return _FileRow(
           file: f,
-          onTap: () {
-            if (_selecting) {
-              setState(() {
-                if (!_picked.remove(f.id)) _picked.add(f.id);
-              });
-              return;
-            }
-            _open(f);
-          },
-          onLongPress: () {
-            if (_selecting) return;
-            setState(() {
-              _selecting = true;
-              _picked.add(f.id);
-            });
-          },
+          onTap: () => _open(f),
+          // 长按只删这一条。整页不再有多选。
+          onLongPress: () => _deleteOne(f),
           onCancelDownload: _dl.containsKey(f.id) && _dl[f.id]! > 0
               ? () => _cancelDownload(f)
               : null,
           progress: _dl[f.id],
           downloaded: _done.contains(f.id) || _localOf(f) != null,
-          selected: _selecting ? _picked.contains(f.id) : null,
         );
       },
     );
@@ -719,7 +666,6 @@ class _FileRow extends StatelessWidget {
     this.progress,
     this.downloaded = false,
     this.onCancelDownload,
-    this.selected,
   });
 
   final CloudFile file;
@@ -735,9 +681,6 @@ class _FileRow extends StatelessWidget {
   /// 正下着的时候给个 ×，点它能停。
   final VoidCallback? onCancelDownload;
 
-  /// null = 不在选择模式；true/false = 选中没选中。
-  final bool? selected;
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -749,23 +692,9 @@ class _FileRow extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
-        color: selected == true
-            ? cs.primary.withValues(alpha: 0.08)
-            : null,
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
         child: Row(
           children: [
-            if (selected != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: Icon(
-                  selected!
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
-                  size: 22,
-                  color: selected! ? cs.primary : cs.outline,
-                ),
-              ),
             Icon(
               fileIconFor(file.name),
               size: 26,

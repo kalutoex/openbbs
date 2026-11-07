@@ -34,15 +34,22 @@ class _TransfersPageState extends State<TransfersPage>
         title: Text(Lc.current.transfers),
         bottom: TabBar(
           controller: _tabs,
+          // 底下那道线比字宽一圈，不贴着字
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorPadding: const EdgeInsets.symmetric(horizontal: 28),
+          indicator: const UnderlineTabIndicator(
+            borderSide: BorderSide(width: 3),
+            borderRadius: BorderRadius.all(Radius.circular(2)),
+          ),
           tabs: [
-            Tab(text: Lc.current.uploadsTab),
             Tab(text: Lc.current.downloadsTab),
+            Tab(text: Lc.current.uploadsTab),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabs,
-        children: const [UploadsView(), DownloadsPage(embedded: true)],
+        children: const [DownloadsPage(embedded: true), UploadsView()],
       ),
     );
   }

@@ -12,6 +12,7 @@ import '../widgets/page_width.dart';
 import '../widgets/name_tag.dart';
 import 'admin_trash_page.dart';
 import 'cloud_page.dart';
+import 'downloads_page.dart';
 import 'login_page.dart';
 import 'follow_page.dart';
 import 'settings_page.dart';
@@ -227,6 +228,17 @@ class MeTab extends StatelessWidget {
                                 path: '/history',
                                 emptyText: Lc.current.noHistoryYet,
                               ),
+                            ),
+                          ),
+                        ),
+                        _hairLine(cs),
+                        ListTile(
+                          leading: const Icon(Icons.download_done_outlined),
+                          title: Text(Lc.current.downloadsPage),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const DownloadsPage(),
                             ),
                           ),
                         ),
