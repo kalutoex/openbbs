@@ -4,19 +4,20 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openbbs/api.dart';
 
-/// 写操作超时：不许换入口重发。
+/// 写操作超时：换入口重发，但带同一个幂等号。
 ///
-/// 这条要真等 15 秒（[Api] 的写超时），跑得慢，但它守住的是一个会真出事
-/// 的边界——超时那条入口的服务端多半已经把请求处理完了，客户端没等到回程，
-/// 换条路再发一遍就成了两条帖子、两份上传。
+/// 这条要真等 15 秒（[Api] 的写超时），跑得慢，但它守住的是一段历史：
+/// 以前超时不敢重发——超时那条入口的服务端多半已经把请求处理完了，
+/// 客户端没等到回程，换条路再发一遍就是两条帖子、两份上传。
 ///
-/// 曾经的行为是照换不误（实测：慢入口收到 1 次、快入口也收到 1 次）。
+/// 现在服务端按 X-Request-Id 去重（60 秒内同一个号只执行一次），重发是安全的，
+/// 所以这里要验两件事：真的换过去重发了，以及两次带的号必须一样。
 void main() {
-  test('POST 超时后停在原地，不往第二条入口重发', () async {
-    var slowHits = 0;
+  test('POST 超时后换到第二条入口，带同一个 X-Request-Id', () async {
+    final slowIds = <String?>[];
     final slow = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     slow.listen((req) async {
-      slowHits++;
+      slowIds.add(req.headers.value('x-request-id'));
       // 服务端处理完了，只是响应回来得比客户端耐心更久。
       await Future<void>.delayed(const Duration(seconds: 40));
       try {
@@ -26,10 +27,10 @@ void main() {
       } catch (_) {}
     });
 
-    var fastHits = 0;
+    final fastIds = <String?>[];
     final fast = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     fast.listen((req) async {
-      fastHits++;
+      fastIds.add(req.headers.value('x-request-id'));
       req.response.statusCode = 200;
       req.response.write(jsonEncode({'id': 2}));
       await req.response.close();
@@ -42,10 +43,13 @@ void main() {
     Api.token = 'tok';
 
     try {
-      await expectLater(Api.post('/threads', const {'t': 'x'}), throwsA(isA<ApiException>()));
-      expect(slowHits, 1, reason: '请求发出去了');
-      expect(fastHits, 0, reason: '不该换入口重发');
-      expect(Api.base, a, reason: '出口不该被改掉');
+      final d = await Api.post('/threads', const {'t': 'x'});
+      expect((d as Map)['id'], 2, reason: '第二次才拿到结果');
+      expect(slowIds.length, 1, reason: '请求发出去了');
+      expect(fastIds.length, 1, reason: '换到第二条入口重发了一次');
+      expect(fastIds.single, isNotNull);
+      expect(fastIds.single, slowIds.single, reason: '两次必须是同一个幂等号，服务端才认得出是重发');
+      expect(Api.base, b, reason: '换通了就把出口定在新的这条上');
     } finally {
       Api.token = null;
       await slow.close(force: true);

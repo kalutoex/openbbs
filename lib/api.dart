@@ -200,9 +200,10 @@ class Api {
   /// 靠这个自己换过去，不用人去站点页点。换通了就把 base 定在新的那条上。
   /// 服务器真回了错误（ApiException）不换——那不是路的问题。
   ///
-  /// [retryOnTimeout] 只对幂等请求（GET）给真：写操作超时时，请求多半已经
-  /// 到了服务端，只是回程没等到，换条路重发就是写第二遍——发帖变两条、
-  /// 上传存两份。这种宁可让用户看到失败后自己重试。
+  /// [retryOnTimeout] 给假的情况：请求体是流式上传（重发要重读一遍盘，
+  /// 而且分片自己对 offset，重发没意义）。其余写操作都放心给真——
+  /// 它们带着 X-Request-Id，服务端 60 秒内见到同一个号只执行一次，
+  /// 晚到的重试拿到的是第一次的结果，不会变成发两条帖。
   static Future<T> _withFailover<T>(
     Future<T> Function() run, {
     bool retryOnTimeout = true,
@@ -384,6 +385,24 @@ class Api {
     ).join();
     return '${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}$tail';
   }
+
+  /// 写请求的幂等号。同一次操作的所有重试共用一个：
+  /// 服务端 60 秒内见到同一个号只执行一遍，所以超时换入口重发
+  /// 也不会变成两条帖、两份文件。
+  static String newRequestId() {
+    final r = math.Random();
+    final tail = List.generate(
+      20,
+      (_) => r.nextInt(36).toRadixString(36),
+    ).join();
+    return '${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}$tail';
+  }
+
+  /// 写请求的头：普通的那些，外加幂等号。
+  static Map<String, String> _writeHeaders(String rid) => {
+    ..._headers,
+    'X-Request-Id': rid,
+  };
 
   /// 分片上传，自带断点续传。
   ///
@@ -677,11 +696,11 @@ class Api {
 
   static Future<dynamic> post(String path, Map<String, dynamic> body) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
+    final rid = newRequestId();
     try {
       final r = await _withFailover(
-        retryOnTimeout: false,
         () => http
-            .post(_uri(path), headers: _headers, body: jsonEncode(body))
+            .post(_uri(path), headers: _writeHeaders(rid), body: jsonEncode(body))
             .timeout(const Duration(seconds: 15)),
       );
       final d = _decode(r);
@@ -701,11 +720,11 @@ class Api {
 
   static Future<dynamic> delete(String path) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
+    final rid = newRequestId();
     try {
       final r = await _withFailover(
-        retryOnTimeout: false,
         () => http
-            .delete(_uri(path), headers: _headers)
+            .delete(_uri(path), headers: _writeHeaders(rid))
             .timeout(const Duration(seconds: 15)),
       );
       final d = _decode(r);
@@ -725,11 +744,11 @@ class Api {
 
   static Future<dynamic> patch(String path, Map<String, dynamic> body) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
+    final rid = newRequestId();
     try {
       final r = await _withFailover(
-        retryOnTimeout: false,
         () => http
-            .patch(_uri(path), headers: _headers, body: jsonEncode(body))
+            .patch(_uri(path), headers: _writeHeaders(rid), body: jsonEncode(body))
             .timeout(const Duration(seconds: 15)),
       );
       final d = _decode(r);
