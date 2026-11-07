@@ -672,6 +672,11 @@ class Api {
           await Future<void>.delayed(const Duration(milliseconds: 400));
           final ok = await probe();
           if (ok != null) {
+            // 探到活路就得把出口挪过去。只记 lastGood 不动 base 的话，
+            // 下面这条重发还打在原来那条死路上，等于白探。
+            base = ok;
+            lastGood = ok;
+            onChannelChanged?.call(ok);
             final r = await http
                 .get(_uri(path, query), headers: _headers)
                 .timeout(const Duration(seconds: 15));
@@ -681,6 +686,10 @@ class Api {
             if (cache) unawaited(DiskCache.write(key, d));
             return d;
           }
+        } on ApiException {
+          // 服务端答了话（401 掉登录、403 封禁、500 之类）：这是真错误，
+          // 不能当成「连不上」再报一遍，原样抛给调用方。
+          rethrow;
         } catch (_) {
           // 补救也失败，照旧把原始错误报上去。
         }
