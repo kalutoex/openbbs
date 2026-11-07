@@ -79,6 +79,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   List<PostFile> _failedFiles = const [];
   Map<String, dynamic>? _failedReply;
   String _failedWhy = '';
+  /// 失败重发时，前面已经发出去几条（多图拆成多条，别把发过的再发一遍）。
+  int _failedSent = 0;
   bool _compressing = false;
   bool _hasMore = false;
   bool _loadingEarlier = false;
@@ -625,12 +627,42 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         if (mounted) setState(() => _sendAt++);
         urls.add(await Api.uploadImage(_pending[i]));
       }
-      await Api.post('/dm/$_peerId', {
-        'body': text,
-        'images': urls,
-        if (files.isNotEmpty) 'files': files.map((f) => f.toJson()).toList(),
-        if (reply != null) 'reply_id': reply['id'],
-      });
+      // 一次选好几张纯图，发出去是几条消息，一条一张：点发送只点一次，
+      // 聊天里一条一个气泡，跟逐张发是一样的样子。
+      // 但图带文字（或附件）的时候仍然是同一条——文字得挨着自己的图，
+      // 拆开就分不清说的是哪张了。引用挂在第一条上。
+      final split = urls.length > 1 && text.isEmpty && files.isEmpty;
+      final msgs = <Map<String, dynamic>>[];
+      if (!split) {
+        msgs.add({
+          'body': text,
+          if (urls.isNotEmpty) 'images': urls,
+          if (files.isNotEmpty) 'files': files.map((f) => f.toJson()).toList(),
+          if (reply != null) 'reply_id': reply['id'],
+        });
+      } else {
+        for (var i = 0; i < urls.length; i++) {
+          msgs.add({
+            'body': '',
+            'images': [urls[i]],
+            if (i == 0 && reply != null) 'reply_id': reply['id'],
+          });
+        }
+      }
+      var sent = _failedSent;
+      try {
+        for (; sent < msgs.length; sent++) {
+          await Api.post('/dm/$_peerId', msgs[sent]);
+        }
+      } catch (e) {
+        // 停在哪一条：重发时从这条接着来。
+        if (mounted) {
+          setState(() => _failedSent = sent);
+        } else {
+          _failedSent = sent;
+        }
+        rethrow;
+      }
       if (!mounted) return;
       Haptics.done();
       _input.clear();
@@ -647,6 +679,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         _failedFiles = const [];
         _failedReply = null;
         _failedWhy = '';
+        _failedSent = 0;
       });
       await _load();
       _toBottom(animate: true);
@@ -678,6 +711,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       _failedFiles = const [];
       _failedReply = null;
       _failedWhy = '';
+      _failedSent = 0;
     });
   }
 
@@ -1548,7 +1582,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   /// 图片排版：一张放大，四张以上走三列九宫格。
   Widget _images(List<String> imgs, int id) {
     final one = imgs.length == 1;
-    final side = one ? 200.0 : 104.0;
+    // 多图是三列。手机上气泡最宽也就 0.72 屏，三张 104 塞不进去，
+    // Wrap 就折成 2+1，看着像少了一张。按可用宽度反算边长，够三列为止。
+    final usable =
+        MediaQuery.of(context).size.width * _bubbleRatio - 8; // 减掉气泡内边距
+    final side = one ? 200.0 : ((usable - 8) / 3 - 0.5).clamp(64.0, 104.0);
     void tap(int i) {
       if (_multi) {
         _toggleSel(id);
@@ -1564,7 +1602,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       );
     }
     return SizedBox(
-      width: side * 3 + 8,
+      width: side * 3 + 8 + 0.5,
       child: Wrap(
         spacing: 4,
         runSpacing: 4,
