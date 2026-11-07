@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../cloud.dart';
 import '../download_index.dart';
+import '../download_manager.dart';
 import '../downloads.dart';
 import '../file_browser.dart';
 import '../local_files.dart';
@@ -48,10 +49,29 @@ class _DownloadsPageState extends State<DownloadsPage> {
   bool _selecting = false;
   final Set<String> _sel = <String>{};
 
+  /// 已经在下几个。下完一个就少一个，靠这个数目变少判断该刷新列表了。
+  int _dlCount = 0;
+
   @override
   void initState() {
     super.initState();
+    _dlCount = DownloadManager.i.jobs.length;
+    DownloadManager.i.addListener(_onDl);
     _load();
+  }
+
+  @override
+  void dispose() {
+    DownloadManager.i.removeListener(_onDl);
+    super.dispose();
+  }
+
+  /// 传送页里正在下的下完一个，列表底下就该多出一条。
+  void _onDl() {
+    final n = DownloadManager.i.jobs.length;
+    final finished = n < _dlCount;
+    _dlCount = n;
+    if (finished && mounted) _load();
   }
 
   /// 读下载目录得先有权限。没给就先问，问不到就让页面上留个按钮。
@@ -192,10 +212,12 @@ class _DownloadsPageState extends State<DownloadsPage> {
     }
   }
 
-  void _startSelect() {
+  void _startSelect({String? pick}) {
     setState(() {
       _selecting = true;
-      _sel.clear();
+      _sel
+        ..clear()
+        ..addAll([?pick]);
     });
   }
 
@@ -226,25 +248,60 @@ class _DownloadsPageState extends State<DownloadsPage> {
     });
   }
 
-  /// 一次删掉勾上的那些：连着文件一起删，删不着的只把记录清掉。
+  /// 一次删掉勾上的那些。
+  ///
+  /// 默认只清列表，手机里的文件留着；弹窗里勾了「同时删除已下载的文件」
+  /// 才连文件一起删。
   Future<void> _deleteSelected() async {
     final picked = _items.where((e) => _sel.contains(e.rec.display)).toList();
     if (picked.isEmpty) return;
+    var withFile = false;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(Lc.current.deleteSelected),
-        content: Text(Lc.current.deleteSelectedAsk(picked.length)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(Lc.current.cancel),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text(Lc.current.delete),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                picked.length == 1
+                    ? Lc.current.deleteTaskAsk
+                    : Lc.current.deleteTasksAskN(picked.length),
+              ),
+              const SizedBox(height: 6),
+              InkWell(
+                onTap: () => setLocal(() => withFile = !withFile),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: withFile,
+                      visualDensity: VisualDensity.compact,
+                      onChanged: (v) => setLocal(() => withFile = v ?? false),
+                    ),
+                    Flexible(
+                      child: Text(
+                        Lc.current.alsoDeleteFile,
+                        style: const TextStyle(fontSize: 13.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(Lc.current.delete),
-          ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(Lc.current.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(Lc.current.confirm),
+            ),
+          ],
+        ),
       ),
     );
     if (ok != true) return;
@@ -252,7 +309,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
     for (final e in picked) {
       final p = e.path;
       // 文件已经被人挪走的，删不动也无所谓，记录照样清掉。
-      if (p != null) await deleteLocalFile(p);
+      if (withFile && p != null) await deleteLocalFile(p);
       await forgetLocalDownload(e.rec.display);
       done.add(e.rec.display);
     }
@@ -262,7 +319,12 @@ class _DownloadsPageState extends State<DownloadsPage> {
       _selecting = false;
       _sel.clear();
     });
-    toast(context, Lc.current.deletedSelected(done.length));
+    toast(
+      context,
+      withFile
+          ? Lc.current.deletedSelected(done.length)
+          : Lc.current.clearedFromList(done.length),
+    );
   }
 
   void _menu(_Entry e) {
@@ -493,15 +555,17 @@ class _DownloadsPageState extends State<DownloadsPage> {
       ),
       trailing: _selecting
           ? null
-          : Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: cs.outline.withValues(alpha: 0.5),
+          : IconButton(
+              tooltip: Lc.current.more,
+              icon: const Icon(Icons.more_vert, size: 18),
+              color: cs.outline,
+              onPressed: () => _menu(e),
             ),
       onTap: _selecting
           ? () => _toggle(e.rec.display)
           : () => e.alive ? _open(e) : _menu(e),
-      onLongPress: _selecting ? null : () => _menu(e),
+      // 长按出多选，顺手把这条勾上。要删就再点上面那个删除。
+      onLongPress: _selecting ? null : () => _startSelect(pick: e.rec.display),
     );
   }
 }

@@ -2460,6 +2460,22 @@ class LEn extends L {
   }
 
   @override
+  String get deleteTaskAsk => 'Delete this download task?';
+
+  @override
+  String deleteTasksAskN(int n) {
+    return 'Delete these $n download tasks?';
+  }
+
+  @override
+  String get alsoDeleteFile => 'Also delete the downloaded file';
+
+  @override
+  String clearedFromList(int n) {
+    return 'Cleared $n';
+  }
+
+  @override
   String get uiConfigTitle => 'UI parameters';
 
   @override

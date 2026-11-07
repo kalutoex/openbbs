@@ -2414,6 +2414,22 @@ class LZh extends L {
   }
 
   @override
+  String get deleteTaskAsk => '删除这个下载任务吗？';
+
+  @override
+  String deleteTasksAskN(int n) {
+    return '删除这 $n 个下载任务吗？';
+  }
+
+  @override
+  String get alsoDeleteFile => '同时删除已下载的文件';
+
+  @override
+  String clearedFromList(int n) {
+    return '已清 $n 条';
+  }
+
+  @override
   String get uiConfigTitle => '界面参数';
 
   @override

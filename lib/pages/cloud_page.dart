@@ -3,14 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../cancel_token.dart';
+import '../download_manager.dart';
 import '../cloud.dart';
 import '../download_index.dart';
 import '../downloads.dart';
 import '../local_files.dart';
 import '../pages/transfers_page.dart';
 import '../file_browser.dart';
-import '../file_open.dart';
 import '../file_pick.dart';
 import '../l10n/error_text.dart';
 import '../upload_manager.dart';
@@ -52,12 +51,6 @@ class _CloudPageState extends State<CloudPage> {
   /// 上传统一在 UploadManager 里跑，退出这页也不会停。
   int _seenDone = 0;
 
-  /// 正在下的：id -> 0..1。列表里就着那一行显示进度。
-  final Map<int, double> _dl = {};
-
-  /// 每个下载的取消开关。点进度旁边那个 × 能把连接掐掉。
-  final Map<int, CancelToken> _dlc = {};
-
   /// 搜索防抖。每敲一个字都打一次接口，翻页状态还会互相打架。
   Timer? _debounce;
 
@@ -75,9 +68,15 @@ class _CloudPageState extends State<CloudPage> {
     super.initState();
     _scroll.addListener(_onScroll);
     UploadManager.i.addListener(_onUpload);
+    DownloadManager.i.addListener(_onDownload);
     _seenDone = UploadManager.i.doneCount;
     _loadLocal();
     _load();
+  }
+
+  /// 下载也不归这页管，进度直接从队列里读，变了就重画那一行。
+  void _onDownload() {
+    if (mounted) setState(() {});
   }
 
   /// 上传不归这页管，所以它传完了得回头叫一声：列表和额度都变了。
@@ -119,6 +118,7 @@ class _CloudPageState extends State<CloudPage> {
   void dispose() {
     _debounce?.cancel();
     UploadManager.i.removeListener(_onUpload);
+    DownloadManager.i.removeListener(_onDownload);
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     _search.dispose();
@@ -198,32 +198,22 @@ class _CloudPageState extends State<CloudPage> {
   }
 
   Future<void> _open(CloudFile f) async {
-    if (_dl.containsKey(f.id)) return; // 同一个文件别叠着下
+    final key = DownloadManager.keyForCloud(f.id);
+    if (DownloadManager.i.isDownloading(key)) return; // 同一个文件别叠着下
     // 本机已经有了：不重下，带他去文件所在的那层目录，里面再点才打开。
     final local = _localOf(f);
     if (local != null && await _reveal(f, local)) return;
     final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
-    final cancel = CancelToken();
-    setState(() {
-      _dl[f.id] = 0;
-      _dlc[f.id] = cancel;
-    });
     try {
-      final saved = await openRemoteFile(
+      final saved = await DownloadManager.i.start(
+        key,
         url,
         f.name,
+        total: f.size,
         cloudId: '${f.id}',
-        cancel: cancel,
-        onProgress: (p) {
-          if (mounted) setState(() => _dl[f.id] = p);
-        },
       );
-      if (!mounted) return;
-      setState(() {
-        _dl.remove(f.id);
-        _dlc.remove(f.id);
-        _done.add(f.id);
-      });
+      if (!mounted || saved == null) return;
+      setState(() => _done.add(f.id));
       // 刚下完，本地记录也更新一下，再点就是带你去找文件
       await _loadLocal();
       // 落点只说一次；之后看行里的绿标就够了，不再弹提示。
@@ -232,23 +222,13 @@ class _CloudPageState extends State<CloudPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _dl.remove(f.id);
-        _dlc.remove(f.id);
-      });
-      // 自己点的取消不用报错，那一行回到原样就行
-      if (cancel.cancelled) return;
       _toast(errorText(context, e));
     }
   }
 
   /// 下到一半不下了。连接掐掉，半截文件也跟着删。
   void _cancelDownload(CloudFile f) {
-    _dlc[f.id]?.cancel();
-    setState(() {
-      _dl.remove(f.id);
-      _dlc.remove(f.id);
-    });
+    DownloadManager.i.cancel(DownloadManager.keyForCloud(f.id));
   }
 
   /// 去本机那份文件所在的位置。文件被删了就返回 false，转去正常下载。
@@ -534,15 +514,15 @@ class _CloudPageState extends State<CloudPage> {
           );
         }
         final f = _items[i];
+        final dlKey = DownloadManager.keyForCloud(f.id);
+        final dlProgress = DownloadManager.i.progressOf(dlKey);
         return _FileRow(
           file: f,
           onTap: () => _open(f),
           // 长按只删这一条。整页不再有多选。
           onLongPress: () => _deleteOne(f),
-          onCancelDownload: _dl.containsKey(f.id) && _dl[f.id]! > 0
-              ? () => _cancelDownload(f)
-              : null,
-          progress: _dl[f.id],
+          onCancelDownload: (dlProgress ?? 0) > 0 ? () => _cancelDownload(f) : null,
+          progress: dlProgress,
           downloaded: _done.contains(f.id) || _localOf(f) != null,
         );
       },

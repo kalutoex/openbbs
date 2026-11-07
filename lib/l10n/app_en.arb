@@ -1026,6 +1026,24 @@
     }
   },
   "deletedSelected": "Deleted {n}",
+  "deleteTaskAsk": "Delete this download task?",
+  "deleteTasksAskN": "Delete these {n} download tasks?",
+  "@deleteTasksAskN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "alsoDeleteFile": "Also delete the downloaded file",
+  "clearedFromList": "Cleared {n}",
+  "@clearedFromList": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "@deletedSelected": {
     "placeholders": {
       "n": {

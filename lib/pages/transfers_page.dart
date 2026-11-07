@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
+import '../cloud.dart';
+import '../download_manager.dart';
 import '../upload_manager.dart';
 import '../utils.dart';
 import '../widgets/empty_view.dart';
+import '../widgets/file_card.dart';
 import '../widgets/page_width.dart';
 import 'downloads_page.dart';
 
@@ -42,14 +45,107 @@ class _TransfersPageState extends State<TransfersPage>
             borderRadius: BorderRadius.all(Radius.circular(2)),
           ),
           tabs: [
-            Tab(text: Lc.current.downloadsTab),
+            Tab(text: Lc.current.download),
             Tab(text: Lc.current.uploadsTab),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabs,
-        children: const [DownloadsPage(embedded: true), UploadsView()],
+        children: const [DownloadsTab(), UploadsView()],
+      ),
+    );
+  }
+}
+
+/// 下载：正在下的摊在上面，已下载的接在下面。
+///
+/// 没在下的就不占地方，直接露出已下载那一摞。
+class DownloadsTab extends StatelessWidget {
+  const DownloadsTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        AnimatedBuilder(
+          animation: DownloadManager.i,
+          builder: (context, _) {
+            final jobs = DownloadManager.i.jobs;
+            if (jobs.isEmpty) return const SizedBox.shrink();
+            return PageWidth(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _SectionTitle(Lc.current.downloading),
+                    for (final j in jobs) _DownloadRow(job: j),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const Expanded(child: DownloadsPage(embedded: true)),
+      ],
+    );
+  }
+}
+
+/// 正在下的那一条：文件名、进度、掐掉的按钮。
+class _DownloadRow extends StatelessWidget {
+  const _DownloadRow({required this.job});
+
+  final DownloadJob job;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final pct = (job.progress * 100).clamp(0, 100).toStringAsFixed(0);
+    final got = job.received;
+    final sub = got == null
+        ? '$pct%'
+        : '${bytesText(got)}'
+              '${job.total > 0 ? ' / ${bytesText(job.total)}' : ''} · $pct%';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+      child: Row(
+        children: [
+          Icon(fileIconFor(job.name), size: 24, color: cs.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  job.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: job.progress > 0 ? job.progress : null,
+                    minHeight: 3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  sub,
+                  style: TextStyle(fontSize: 11.5, color: cs.outline),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: Lc.current.cancel,
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () => DownloadManager.i.cancel(job.key),
+          ),
+        ],
       ),
     );
   }

@@ -4412,6 +4412,30 @@ abstract class L {
   /// **'已删 {n} 个'**
   String deletedSelected(int n);
 
+  /// No description provided for @deleteTaskAsk.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这个下载任务吗？'**
+  String get deleteTaskAsk;
+
+  /// No description provided for @deleteTasksAskN.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这 {n} 个下载任务吗？'**
+  String deleteTasksAskN(int n);
+
+  /// No description provided for @alsoDeleteFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'同时删除已下载的文件'**
+  String get alsoDeleteFile;
+
+  /// No description provided for @clearedFromList.
+  ///
+  /// In zh, this message translates to:
+  /// **'已清 {n} 条'**
+  String clearedFromList(int n);
+
   /// No description provided for @uiConfigTitle.
   ///
   /// In zh, this message translates to:
