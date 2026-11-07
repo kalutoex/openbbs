@@ -2300,6 +2300,18 @@ class LZh extends L {
   String get sysNotifyOff => '系统通知权限没开，去手机设置里打开';
 
   @override
+  String get bgKeepAlive => '后台保活';
+
+  @override
+  String get bgKeepAliveHint => '不豁免电池优化，系统会在后台冻住 App，锁屏后收不到提醒';
+
+  @override
+  String get bgKeepAliveOn => '已豁免';
+
+  @override
+  String get bgKeepAliveOff => '去设置';
+
+  @override
   String get noRepliesHint => '说两句，让楼主知道有人看。';
 
   @override

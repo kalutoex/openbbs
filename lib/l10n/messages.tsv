@@ -595,3 +595,7 @@ v1 个没传上去	uploadsFailedN	{v1} failed
 排队中	uploading	Queued
 没传上去	uploadFailed	Upload failed
 已传完	uploadedOk	Uploaded
+后台保活	bgKeepAlive	Background keep-alive
+不豁免电池优化，系统会在后台冻住 App，锁屏后收不到提醒	bgKeepAliveHint	Without the battery exemption the system freezes the app in the background and alerts stop
+已豁免	bgKeepAliveOn	Allowed
+去设置	bgKeepAliveOff	Open settings

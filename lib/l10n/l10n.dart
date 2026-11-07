@@ -21,4 +21,9 @@ class Lc {
     final v = Localizations.of<L>(context, L);
     if (v != null) _current = v;
   }
+
+  /// 后台 isolate 没有 Localizations，只能按存的设置手动对一次。
+  static void setLocale(String code) {
+    _current = lookupL(Locale(code == 'en' ? 'en' : 'zh'));
+  }
 }

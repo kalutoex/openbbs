@@ -5,10 +5,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
 import '../notify.dart';
+import '../power.dart';
 import '../site_config.dart';
 import '../cache_clear.dart';
 import '../store.dart';
@@ -136,7 +138,10 @@ class SettingsPage extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(height: 6),
+                if (!kIsWeb) ...[
+                  const _BgKeepAliveTile(),
+                  const SizedBox(height: 6),
+                ],
                 _label(context, Lc.current.cloudSection),
                 ListTile(
                   leading: const Icon(Icons.cloud_outlined),
@@ -629,6 +634,74 @@ class _WebEntryRow extends StatelessWidget {
 }
 
 /// 清缓存。大小等点进设置页才去算，省得每次进设置都扫一遍目录。
+/// 电池优化豁免。锁屏后收不到提醒，八成是这里没开。
+///
+/// 豁免只能由用户在系统弹窗里点「允许」，所以这一行就是个入口，
+/// 点完回来重新读一次状态，不假装已经成功了。
+class _BgKeepAliveTile extends StatefulWidget {
+  const _BgKeepAliveTile();
+
+  @override
+  State<_BgKeepAliveTile> createState() => _BgKeepAliveTileState();
+}
+
+class _BgKeepAliveTileState extends State<_BgKeepAliveTile>
+    with WidgetsBindingObserver {
+  bool? _on;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // 系统弹窗挡在 App 上面，回来才知道点没点。
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _load();
+  }
+
+  Future<void> _load() async {
+    final v = await Power.ignoringBattery();
+    if (!mounted) return;
+    setState(() => _on = v);
+  }
+
+  Future<void> _tap() async {
+    if (_on == true) {
+      // 已经豁免了还点，就是想去系统里关掉，直接跳到应用设置。
+      await openAppSettings();
+      return;
+    }
+    await Power.requestIgnore();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.battery_saver_outlined),
+      title: Text(Lc.current.bgKeepAlive),
+      subtitle: Text(Lc.current.bgKeepAliveHint),
+      trailing: Text(
+        _on == true ? Lc.current.bgKeepAliveOn : Lc.current.bgKeepAliveOff,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: _on == true
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+      onTap: _tap,
+    );
+  }
+}
+
 class _ClearCacheTile extends StatefulWidget {
   const _ClearCacheTile();
 

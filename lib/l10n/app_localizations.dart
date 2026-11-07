@@ -4208,6 +4208,30 @@ abstract class L {
   /// **'系统通知权限没开，去手机设置里打开'**
   String get sysNotifyOff;
 
+  /// No description provided for @bgKeepAlive.
+  ///
+  /// In zh, this message translates to:
+  /// **'后台保活'**
+  String get bgKeepAlive;
+
+  /// No description provided for @bgKeepAliveHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'不豁免电池优化，系统会在后台冻住 App，锁屏后收不到提醒'**
+  String get bgKeepAliveHint;
+
+  /// No description provided for @bgKeepAliveOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'已豁免'**
+  String get bgKeepAliveOn;
+
+  /// No description provided for @bgKeepAliveOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'去设置'**
+  String get bgKeepAliveOff;
+
   /// No description provided for @noRepliesHint.
   ///
   /// In zh, this message translates to:

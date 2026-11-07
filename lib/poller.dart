@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
+import 'bg_poll.dart';
 import 'l10n/l10n.dart';
 import 'notify.dart';
 import 'pages/notice_page.dart' show noticeActionText;
@@ -45,6 +46,10 @@ class Poller with WidgetsBindingObserver {
 
   /// 这份游标属于谁。登录态一变就得换一份。
   int _uid = 0;
+
+  /// 上次交给后台任务的那份上下文，用来判断要不要重写。
+  String _ctxBase = '';
+  int _ctxUid = -1;
 
   /// 正开着的会话，这个人的消息不弹——人就在看着。
   int activePeer = 0;
@@ -117,8 +122,23 @@ class Poller with WidgetsBindingObserver {
     if (fg == _fore) return;
     _fore = fg;
     _arm();
-    // 切回来马上补一次，别让人盯着旧角标等 5 秒。
-    if (fg) unawaited(tick());
+    // 切回来先重读一遍游标：后台那份可能已经在别的 isolate 里推进过了，
+    // 内存里这个数还是旧的，会把它刚弹过的消息再弹一次。
+    if (fg) unawaited(_refreshThenTick());
+  }
+
+  Future<void> _refreshThenTick() async {
+    try {
+      if (AppState.instance.uid != _uid) {
+        await onAccountChanged();
+      } else {
+        await _p?.reload();
+        _loadCursors();
+      }
+    } catch (_) {
+      // 读不出来就按旧游标走，顶多多弹一条
+    }
+    await tick();
   }
 
   void _arm() {
@@ -156,6 +176,8 @@ class Poller with WidgetsBindingObserver {
 
       await _handleDm(dm);
       await _handleNotice(nt);
+      // 顺手把「当前在哪座站、哪个号」留给后台任务，它那边读不到 AppState。
+      await _syncBgContext();
     } catch (e) {
       _fails++;
       // 以前这里全吞掉。服务端把 dm 改成数组，这里就每天静默失败一万多次，
@@ -169,6 +191,20 @@ class Poller with WidgetsBindingObserver {
       _busy = false;
       _arm();
     }
+  }
+
+  /// 每次成功后对一遍。内容没变就不写盘，省得每 5 秒动一次闪存。
+  Future<void> _syncBgContext() async {
+    final st = AppState.instance;
+    if (!st.loggedIn || Api.base.isEmpty) return;
+    if (Api.base == _ctxBase && st.uid == _ctxUid) return;
+    _ctxBase = Api.base;
+    _ctxUid = st.uid;
+    await BgPoll.syncContext(
+      base: Api.base,
+      endpoints: Api.endpoints,
+      uid: st.uid,
+    );
   }
 
   Future<void> _handleDm(Map<String, dynamic> dm) async {

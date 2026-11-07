@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <!-- 通知：Android 13 起要运行时申请 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- 后台提醒：不进白名单，进程被冻住后什么定时器都不跑。
+         弹窗让用户自己点「允许」，代码不能静默拿。 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <!-- 上传保活：大文件要传十几分钟，人总要切出去干别的。
          没有前台服务，安卓一会儿就把进程冻住，上传就断了。
          只在上传期间挂一个通知，传完就撤。 -->

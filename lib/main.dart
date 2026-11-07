@@ -1,14 +1,18 @@
 import 'app_globals.dart';
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:workmanager/workmanager.dart';
 
 import 'site_config.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
+import 'bg_poll.dart';
 import 'l10n/app_localizations.dart';
 import 'notify.dart';
 import 'pages/chat_page.dart';
@@ -34,7 +38,30 @@ Future<void> main() async {
   // 主题跟着换过去，代价只是极短的一帧默认色。
   runApp(const ShijianxianApp());
   unawaited(SysNotify.init(_onNotifyTap));
+  _initBgPoll();
   unawaited(_boot());
+}
+
+/// 后台轮询交给系统的 WorkManager：前台进程被冻住的时候，只有它能醒过来。
+///
+/// 15 分钟是系统下限，写更小也会被拉回来。重复注册同一个 uniqueName 不会
+/// 叠加任务，开机、升级后重新跑一遍也只是把老任务对齐。
+void _initBgPoll() {
+  if (kIsWeb || !Platform.isAndroid) return;
+  unawaited(() async {
+    try {
+      await Workmanager().initialize(bgCallbackDispatcher);
+      await Workmanager().registerPeriodicTask(
+        bgTaskUnique,
+        bgTaskName,
+        frequency: const Duration(minutes: 15),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+        constraints: Constraints(networkType: NetworkType.connected),
+      );
+    } catch (e) {
+      debugPrint('bgPoll register failed: $e');
+    }
+  }());
 }
 
 /// 读本地设置。读不出来也照常运行，只是用默认色相和明暗。

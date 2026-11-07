@@ -32,6 +32,7 @@ class MainActivity : FlutterActivity() {
         private const val CHANNEL = "openbbs/downloads"
         private const val ICON_CHANNEL = "openbbs/icon"
         private const val KEEPALIVE_CHANNEL = "openbbs/keepalive"
+        private const val POWER_CHANNEL = "openbbs/power"
         private const val REQ_DIR = 4801
         private const val FOLDER = "OpenBBS"
 
@@ -174,6 +175,17 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(engine.dartExecutor.binaryMessenger, POWER_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isIgnoring" -> result.success(isIgnoringBattery())
+                    "requestIgnore" -> {
+                        requestIgnoreBattery()
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -195,6 +207,43 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    // ---------------------------------------------------------- 电池优化豁免
+
+    /**
+     * 是否已经在电池优化白名单里。
+     *
+     * 白名单里的进程不会被系统当成缓存进程冻住，后台那点定时器才有机会跑。
+     * 安卓 6 以下没有这套机制，按已豁免处理。
+     */
+    private fun isIgnoringBattery(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+        return pm.isIgnoringBatteryOptimizations(packageName)
+    }
+
+    /**
+     * 弹系统那个「是否允许忽略电池优化」。
+     *
+     * 只能由用户点「允许」，第三方 App 没有静默拿到的办法。个别定制系统
+     * 不认这个 Intent，退回到白名单列表页让用户自己勾。
+     */
+    private fun requestIgnoreBattery() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || isIgnoringBattery()) return
+        val direct = Intent(
+            android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            Uri.parse("package:$packageName"),
+        )
+        try {
+            startActivity(direct)
+        } catch (_: Exception) {
+            try {
+                startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            } catch (_: Exception) {
+                // 两样都不认就算了，别弹崩溃
+            }
+        }
     }
 
     // ---------------------------------------------------------------- 选目录

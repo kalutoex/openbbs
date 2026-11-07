@@ -2342,6 +2342,19 @@ class LEn extends L {
   String get sysNotifyOff => 'Notifications are blocked in system settings';
 
   @override
+  String get bgKeepAlive => 'Background keep-alive';
+
+  @override
+  String get bgKeepAliveHint =>
+      'Without the battery exemption the system freezes the app in the background and alerts stop';
+
+  @override
+  String get bgKeepAliveOn => 'Allowed';
+
+  @override
+  String get bgKeepAliveOff => 'Open settings';
+
+  @override
   String get noRepliesHint => 'Be the first to say something.';
 
   @override
