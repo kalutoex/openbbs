@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import 'api.dart';
 import 'cloud.dart';
 import 'downloads.dart';
 import 'file_pick.dart';
 import 'l10n/l10n.dart';
+import 'upload_manager.dart';
 import 'utils.dart';
 import 'widgets/file_card.dart';
 import 'widgets/toast.dart';
@@ -85,9 +85,6 @@ class _FileBrowserPageState extends State<FileBrowserPage>
   final Set<String> _picked = {};
 
   bool _uploading = false;
-  int _upTotal = 0;
-  int _upDone = 0;
-  String _upName = '';
 
   final TextEditingController _search = TextEditingController();
   final ScrollController _scroll = ScrollController();
@@ -344,45 +341,27 @@ class _FileBrowserPageState extends State<FileBrowserPage>
     Navigator.pop(context, out);
   }
 
+  /// 点一下就交给上传队列，然后立刻退出去。
+  /// 原来是在这一页里一个接一个 await 着传，进度只有「第几个」，
+  /// 传一个 1GB 的文件时屏幕上永远停在第 1 个，看着就像死了。
   Future<void> _uploadAll(List<String> paths) async {
-    if (paths.isEmpty || _uploading) return;
-    setState(() {
-      _uploading = true;
-      _upTotal = paths.length;
-      _upDone = 0;
-      _upName = _base(paths.first);
-    });
-    var ok = 0;
-    var bad = 0;
-    for (var i = 0; i < paths.length; i++) {
-      final p = paths[i];
-      final name = _base(p);
-      if (mounted) {
-        setState(() {
-          _upDone = i;
-          _upName = name;
-        });
-      }
+    if (paths.isEmpty) return;
+    final out = <PickedFile>[];
+    for (final p in paths) {
       try {
         final st = await File(p).stat();
-        await Api.uploadFile(PickedFile(name: name, size: st.size, path: p));
-        ok++;
+        out.add(PickedFile(name: _base(p), size: st.size, path: p));
       } catch (_) {
-        bad++;
+        // 读不到的就跳过，别让一个坏文件挡住整批
       }
     }
     if (!mounted) return;
-    setState(() {
-      _uploading = false;
-      _picked.clear();
-      _selecting = false;
-    });
-    if (bad == 0) {
-      toast(context, Lc.current.uploadedDone);
-    } else {
-      toast(context, Lc.current.uploadSomeFailed('$ok', '$bad'));
+    if (out.isEmpty) {
+      toast(context, Lc.current.uploadSomeFailed('0', '${paths.length}'));
+      return;
     }
-    if (ok > 0) Navigator.pop(context, true);
+    UploadManager.i.addAll(out);
+    Navigator.pop(context, true);
   }
 
   @override
@@ -446,7 +425,6 @@ class _FileBrowserPageState extends State<FileBrowserPage>
 
   Widget _body(ColorScheme cs) {
     if (_noAccess) return _noAccessView(cs);
-    if (_uploading) return _uploadingView(cs);
     return Column(
       children: [
         if (!_selecting) _crumbs(cs),
@@ -495,33 +473,7 @@ class _FileBrowserPageState extends State<FileBrowserPage>
     );
   }
 
-  Widget _uploadingView(ColorScheme cs) {
-    final total = _upTotal == 0 ? 1 : _upTotal;
-    return Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            Lc.current.uploadingIndexOf('${_upDone + 1}', '$_upTotal', _upName),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 14),
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: _upDone / total,
-              minHeight: 4,
-              backgroundColor: cs.surfaceContainerHighest,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _crumbs(ColorScheme cs) {
     if (_path.isEmpty) return const SizedBox.shrink();

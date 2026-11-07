@@ -10,6 +10,7 @@ import '../file_browser.dart';
 import '../file_open.dart';
 import '../file_pick.dart';
 import '../l10n/error_text.dart';
+import '../upload_manager.dart';
 import '../utils.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/app_sheet.dart';
@@ -44,15 +45,9 @@ class _CloudPageState extends State<CloudPage> {
   int _total = 0;
 
   static const _perPage = 20;
-  bool _uploading = false;
 
-  /// 正在传的那一包：名字和字节数。传大文件时屏幕上就靠这个动。
-  String _upName = '';
-  int _upGot = 0;
-  int _upTotal = 0;
-  double _upSpeed = 0;
-  DateTime _upTick = DateTime.fromMillisecondsSinceEpoch(0);
-  int _upTickBytes = 0;
+  /// 上传统一在 UploadManager 里跑，退出这页也不会停。
+  int _seenDone = 0;
 
   /// 正在下的：id -> 0..1。列表里就着那一行显示进度。
   final Map<int, double> _dl = {};
@@ -70,9 +65,22 @@ class _CloudPageState extends State<CloudPage> {
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
+    UploadManager.i.addListener(_onUpload);
+    _seenDone = UploadManager.i.doneCount;
     _loadLocal();
     _load();
   }
+
+  /// 上传不归这页管，所以它传完了得回头叫一声：列表和额度都变了。
+  void _onUpload() {
+    if (!mounted) return;
+    if (UploadManager.i.doneCount != _seenDone) {
+      _seenDone = UploadManager.i.doneCount;
+      _load();
+    }
+  }
+
+
 
   /// 本机下载记录：认出哪些已经在自己手机上，点的时候不重复下。
   Future<void> _loadLocal() async {
@@ -100,6 +108,7 @@ class _CloudPageState extends State<CloudPage> {
 
   @override
   void dispose() {
+    UploadManager.i.removeListener(_onUpload);
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     _search.dispose();
@@ -313,7 +322,7 @@ class _CloudPageState extends State<CloudPage> {
   /// 上传入口。手机上有内置的文件浏览器，可以翻整个存储；
   /// 别的地方（网页、桌面）还是系统选择器。
   Future<void> _uploadEntry() async {
-    if (_uploading) return;
+    if (UploadManager.i.busy) return;
     if (!fileBrowserSupported) {
       await _upload();
       return;
@@ -351,56 +360,14 @@ class _CloudPageState extends State<CloudPage> {
     }
   }
 
-  /// 选一个文件就传。传完刷新列表，额度条跟着变。
+  /// 选一个文件就交给上传队列。这里不等着它传完——
+  /// 1GB 要十几分钟，人不能卡在这一页上。传完管理器会自己回来喊一声。
   Future<void> _upload() async {
-    if (_uploading) return;
+    if (UploadManager.i.busy) return;
     final f = await pickFile();
     if (f == null) return;
     // 单文件不设死上限，能不能传看剩余空间——服务端会按额度掐断。
-    setState(() {
-      _uploading = true;
-      _upName = f.name;
-      _upGot = 0;
-      _upTotal = f.size;
-      _upSpeed = 0;
-      _upTick = DateTime.now();
-      _upTickBytes = 0;
-    });
-    try {
-      await Api.uploadFile(f, onProgress: _onProgress);
-      if (!mounted) return;
-      await _load();
-      if (mounted) _toast(Lc.current.uploadedDone);
-    } catch (e) {
-      if (mounted) _toast(errorText(context, e));
-    } finally {
-      if (mounted) {
-        setState(() {
-          _uploading = false;
-          _upName = '';
-          _upGot = 0;
-          _upTotal = 0;
-          _upSpeed = 0;
-        });
-      }
-    }
-  }
-
-  /// 一个 1GB 的包会回调上万次，全量 setState 反而把自己拖慢。
-  /// 120ms 一次，收尾那次不掐。
-  void _onProgress(int got, int total) {
-    final now = DateTime.now();
-    final dt = now.difference(_upTick).inMilliseconds;
-    if (got < total && dt < 120) return;
-    final delta = got - _upTickBytes;
-    _upTick = now;
-    _upTickBytes = got;
-    if (!mounted) return;
-    setState(() {
-      _upGot = got;
-      _upTotal = total;
-      if (dt > 0) _upSpeed = delta * 1000 / dt;
-    });
+    UploadManager.i.add(f);
   }
 
   Future<void> _toDownloads() async {
@@ -438,16 +405,22 @@ class _CloudPageState extends State<CloudPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _uploading ? null : _uploadEntry,
-        icon: _uploading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.upload_file),
-        label: Text(Lc.current.upload),
+      floatingActionButton: AnimatedBuilder(
+        animation: UploadManager.i,
+        builder: (context, _) {
+          final busy = UploadManager.i.busy;
+          return FloatingActionButton.extended(
+            onPressed: busy ? null : _uploadEntry,
+            icon: busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.upload_file),
+            label: Text(Lc.current.upload),
+          );
+        },
       ),
       body: PageWidth(
         child: RefreshIndicator(
@@ -455,12 +428,7 @@ class _CloudPageState extends State<CloudPage> {
           child: Column(
             children: [
               if (_usage != null) _UsageBar(usage: _usage!),
-              if (_uploading) _UploadPanel(
-                name: _upName,
-                got: _upGot,
-                total: _upTotal,
-                speed: _upSpeed,
-              ),
+              const _UploadStrip(),
               _SearchBar(
                 controller: _search,
                 onChanged: (v) {
@@ -914,18 +882,45 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
 /// 上传中的一条：文件名、百分比条、已传多少、多快。
 ///
 /// 传 1GB 的时候，有没有这一条决定了「它到底在不在动」。
+/// 进度条。只订阅上传队列，传什么都没在传就什么都不占。
+class _UploadStrip extends StatelessWidget {
+  const _UploadStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: UploadManager.i,
+      builder: (context, _) {
+        final j = UploadManager.i.current;
+        if (j == null) return const SizedBox.shrink();
+        return _UploadPanel(
+          name: j.name,
+          got: j.state == UploadState.running ? j.got : 0,
+          total: j.size,
+          speed: j.state == UploadState.running ? j.speed : 0,
+          queued: UploadManager.i.queuedAfter > (j.state == UploadState.queued ? 1 : 0)
+              ? UploadManager.i.queuedAfter - (j.state == UploadState.queued ? 1 : 0)
+              : 0,
+        );
+      },
+    );
+  }
+}
+
 class _UploadPanel extends StatelessWidget {
   const _UploadPanel({
     required this.name,
     required this.got,
     required this.total,
     required this.speed,
+    this.queued = 0,
   });
 
   final String name;
   final int got;
   final int total;
   final double speed;
+  final int queued;
 
   @override
   Widget build(BuildContext context) {
@@ -954,6 +949,11 @@ class _UploadPanel extends StatelessWidget {
                         style: const TextStyle(fontSize: 13),
                       ),
                     ),
+                    if (queued > 0)
+                      Text(
+                        ' +$queued',
+                        style: TextStyle(fontSize: 11.5, color: cs.outline),
+                      ),
                     const SizedBox(width: 8),
                     if (rate.isNotEmpty)
                       Text(

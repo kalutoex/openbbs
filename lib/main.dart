@@ -1,3 +1,4 @@
+import 'app_globals.dart';
 import 'dart:async';
 
 import 'package:dynamic_color/dynamic_color.dart';
@@ -20,7 +21,6 @@ import 'theme.dart';
 import 'ui_config.dart';
 
 /// 点通知跳页面要一个全局 Navigator，此时还没有 context。
-final GlobalKey<NavigatorState> appNav = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -223,6 +223,7 @@ class _ShijianxianAppState extends State<ShijianxianApp>
           darkTheme: _theme(Brightness.dark, darkDyn),
           themeMode: AppState.instance.themeMode.value,
           navigatorKey: appNav,
+          scaffoldMessengerKey: appMessenger,
           builder: (ctx, child) => ValueListenableBuilder<double>(
             valueListenable: AppState.instance.fontScale,
             builder: (_, scale, _) {
