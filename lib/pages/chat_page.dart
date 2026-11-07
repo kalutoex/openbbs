@@ -81,6 +81,12 @@ class _ChatPageState extends State<ChatPage> {
   /// 正在引用哪一条。发出去就清掉。
   Map<String, dynamic>? _replyTo;
 
+  /// 每条消息气泡的 key，长按菜单要拿它的位置来贴。
+  final Map<int, GlobalKey> _bubbleKeys = {};
+
+  /// 长按中的那条，气泡压一下，给个按住的反馈。
+  int? _pressedId;
+
   String? _err;
 
   /// 双方的主题色。对方那份每次拉取都刷新，可能人家刚换过。
@@ -552,71 +558,150 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   /// 长按菜单：引用、复制、撤回、删除、多选。一条消息能做的事都在这儿。
+  /// 长按菜单：微信那种贴着气泡的横条，不是弹整页。
   Future<void> _msgMenu(Map<String, dynamic> m) async {
     final body = (m['body'] ?? '') as String;
     final recalled = m['recalled'] == true;
     if (recalled) return;
-    await showAppSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.reply),
-              title: Text(Lc.current.quote),
-              onTap: () {
-                Navigator.pop(ctx);
-                setState(() => _replyTo = m);
-                _focus.requestFocus();
-              },
-            ),
-            if (body.isNotEmpty)
-              ListTile(
-                leading: const Icon(Icons.copy),
-                title: Text(Lc.current.copy),
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: body));
-                  Navigator.pop(ctx);
-                  toast(context, Lc.current.copied);
-                },
-              ),
-            if (_canRecall(m))
-              ListTile(
-                leading: const Icon(Icons.undo),
-                title: Text(Lc.current.dmRecall),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _recall(m);
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: Text(Lc.current.delete),
-              onTap: () {
-                Navigator.pop(ctx);
-                _deleteOne(m);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.checklist),
-              title: Text(Lc.current.dmMulti),
-              onTap: () {
-                Navigator.pop(ctx);
-                setState(() {
-                  _multi = true;
-                  _sel
-                    ..clear()
-                    ..add((m['id'] ?? 0) as int);
-                });
-              },
-            ),
-            const SizedBox(height: 6),
-          ],
-        ),
+    final id = (m['id'] ?? 0) as int;
+    final mine = (m['from_id'] ?? 0) == _myId;
+    final actions = <_MsgAction>[
+      _MsgAction(Icons.reply, Lc.current.quote, () {
+        setState(() => _replyTo = m);
+        _focus.requestFocus();
+      }),
+      if (body.isNotEmpty)
+        _MsgAction(Icons.copy, Lc.current.copy, () {
+          Clipboard.setData(ClipboardData(text: body));
+          toast(context, Lc.current.copied);
+        }),
+      if (_canRecall(m))
+        _MsgAction(Icons.undo, Lc.current.dmRecall, () => _recall(m)),
+      _MsgAction(
+        Icons.delete_outline,
+        Lc.current.delete,
+        () => _deleteOne(m),
       ),
+      _MsgAction(Icons.checklist, Lc.current.dmMulti, () {
+        setState(() {
+          _multi = true;
+          _sel
+            ..clear()
+            ..add(id);
+        });
+      }),
+    ];
+    await _showBubbleMenu(id, actions, mine: mine);
+  }
+
+  /// 贴着气泡弹出的横排工具条：算好位置，上下翻，带一个指向气泡的小三角。
+  Future<void> _showBubbleMenu(
+    int id,
+    List<_MsgAction> actions, {
+    required bool mine,
+  }) async {
+    if (actions.isEmpty) return;
+    final box = _bubbleKeys[id]?.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final origin = box.localToGlobal(Offset.zero);
+    final r = origin & box.size;
+
+    final screen = MediaQuery.of(context).size;
+    final topPad = MediaQuery.of(context).padding.top;
+    const barH = 52.0;
+    const arrowH = 7.0;
+    final itemW = ((screen.width - 16) / actions.length).clamp(46.0, 63.0);
+    final barW = itemW * actions.length;
+
+    var left = mine ? r.right - barW : r.left;
+    left = left.clamp(8.0, (screen.width - barW - 8).clamp(8.0, screen.width));
+    // 上面放得下就放上面，贴着气泡；放不下翻到下面。
+    final above = r.top - barH - arrowH - 10 >= topPad;
+    final top = above ? r.top - barH - arrowH - 4 : r.bottom + arrowH + 4;
+    final arrowX = (r.center.dx - left).clamp(20.0, barW - 20.0);
+
+    setState(() => _pressedId = id);
+    final picked = await showGeneralDialog<_MsgAction>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black.withValues(alpha: 0.04),
+      transitionDuration: const Duration(milliseconds: 130),
+      pageBuilder: (ctx, _, _) {
+        final dark = Theme.of(ctx).brightness == Brightness.dark;
+        final bg = dark ? const Color(0xFF2C2C2E) : Colors.white;
+        final fg = dark ? const Color(0xFFEDEDED) : const Color(0xFF1B1B1B);
+        return Stack(
+          children: [
+            Positioned(
+              left: left,
+              top: top,
+              child: SizedBox(
+                width: barW,
+                height: barH + arrowH,
+                child: CustomPaint(
+                  painter: _MsgMenuPainter(
+                    bg: bg,
+                    above: above,
+                    arrowX: arrowX,
+                    barH: barH,
+                    arrowH: arrowH,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: above ? 0 : arrowH,
+                      bottom: above ? arrowH : 0,
+                    ),
+                    child: Row(
+                      children: [
+                        for (final a in actions)
+                          SizedBox(
+                            width: itemW,
+                            height: barH,
+                            child: InkResponse(
+                              radius: 26,
+                              onTap: () => Navigator.pop(ctx, a),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(a.icon, size: 19, color: fg),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    a.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: fg,
+                                      height: 1.15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      transitionBuilder: (ctx, anim, _, child) {
+        final t = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+        return FadeTransition(
+          opacity: t,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.92, end: 1).animate(t),
+            child: child,
+          ),
+        );
+      },
     );
+    if (mounted) setState(() => _pressedId = null);
+    picked?.run();
   }
 
   void _toggleSel(int id) {
@@ -1062,7 +1147,9 @@ class _ChatPageState extends State<ChatPage> {
         body.isEmpty && imgs.isNotEmpty && files.isEmpty && reply == null;
     final maxW = MediaQuery.of(context).size.width * _bubbleRatio;
 
-    return ConstrainedBox(
+    final bubble = ConstrainedBox(
+      // 长按菜单靠它算位置，一条气泡一个 key。
+      key: _bubbleKeys.putIfAbsent(id, () => GlobalKey()),
       constraints: BoxConstraints(maxWidth: maxW < 420 ? maxW : 420),
       child: Container(
         decoration: BoxDecoration(
@@ -1110,6 +1197,13 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
       ),
+    );
+    // 按住时压一点，跟微信的手感。
+    return AnimatedScale(
+      scale: _pressedId == id ? 0.96 : 1,
+      duration: const Duration(milliseconds: 110),
+      curve: Curves.easeOut,
+      child: bubble,
     );
   }
 
@@ -1850,4 +1944,64 @@ class _ImageViewerState extends State<_ImageViewer> {
       ),
     );
   }
+}
+
+/// 长按菜单里的一项。
+class _MsgAction {
+  const _MsgAction(this.icon, this.label, this.run);
+
+  final IconData icon;
+  final String label;
+  final VoidCallback run;
+}
+
+/// 工具条的底：圆角矩形加一个指向气泡的小三角，两者合成一条 path，
+/// 阴影才不会在接缝处断开。
+class _MsgMenuPainter extends CustomPainter {
+  _MsgMenuPainter({
+    required this.bg,
+    required this.above,
+    required this.arrowX,
+    required this.barH,
+    required this.arrowH,
+  });
+
+  final Color bg;
+
+  /// true = 条子在气泡上方，三角朝下；false = 在下方，三角朝上。
+  final bool above;
+  final double arrowX;
+  final double barH;
+  final double arrowH;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bar = Rect.fromLTWH(
+      0,
+      above ? 0 : arrowH,
+      size.width,
+      barH,
+    );
+    final body = Path()
+      ..addRRect(RRect.fromRectAndRadius(bar, const Radius.circular(9)));
+
+    const half = 6.5;
+    final tip = above ? bar.bottom + arrowH : bar.top - arrowH;
+    final tri = Path()
+      ..moveTo(arrowX - half, above ? bar.bottom - 0.5 : bar.top + 0.5)
+      ..lineTo(arrowX + half, above ? bar.bottom - 0.5 : bar.top + 0.5)
+      ..lineTo(arrowX, tip);
+
+    final path = Path.combine(PathOperation.union, body, tri);
+    canvas.drawShadow(path, Colors.black, 6, false);
+    canvas.drawPath(path, Paint()..color = bg);
+  }
+
+  @override
+  bool shouldRepaint(_MsgMenuPainter old) =>
+      old.bg != bg ||
+      old.above != above ||
+      old.arrowX != arrowX ||
+      old.barH != barH ||
+      old.arrowH != arrowH;
 }
