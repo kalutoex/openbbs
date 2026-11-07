@@ -124,7 +124,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   String get _myAvatar => (AppState.instance.user?['avatar'] ?? '') as String;
   int get _myId => (AppState.instance.user?['id'] ?? 0) as int;
 
-  String get _draftKey => 'dm_draft_$_peerId';
+  /// 私信草稿也带账号：peerId 是每座站各自编的，光靠它两个账号会互相覆盖。
+  String get _draftKey => 'dm_draft_u${_myId}_$_peerId';
 
   @override
   void initState() {

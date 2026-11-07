@@ -24,6 +24,10 @@ class Poller with WidgetsBindingObserver {
   static const _kDm = 'notify_cursor_dm';
   static const _kNt = 'notify_cursor_nt';
 
+  /// 游标按账号分开存。id 体系全站一套，但「我处理到哪」是按人算的：
+  /// 拿上个号的进度去卡新号，要么一条不弹，要么一口气弹一堆旧的。
+  String _cursorKey(String base) => _uid == 0 ? base : '${base}_u$_uid';
+
   /// 前台这么快，是为了让「对方刚发完」到「我这边弹出来」之间几乎无感。
   static const _fgSeconds = 5;
   static const _bgSeconds = 60;
@@ -33,10 +37,14 @@ class Poller with WidgetsBindingObserver {
   bool _on = false;
   bool _fore = true;
   int _fails = 0;
+  int _lastLog = 0;
 
   /// 游标：这两条之前的消息都处理过（弹过或不值得弹）。
   int _dm = 0;
   int _nt = 0;
+
+  /// 这份游标属于谁。登录态一变就得换一份。
+  int _uid = 0;
 
   /// 正开着的会话，这个人的消息不弹——人就在看着。
   int activePeer = 0;
@@ -47,12 +55,60 @@ class Poller with WidgetsBindingObserver {
     if (_on) return;
     _on = true;
     _p = await SharedPreferences.getInstance();
-    _dm = _p!.getInt(_kDm) ?? 0;
-    _nt = _p!.getInt(_kNt) ?? 0;
+    _uid = AppState.instance.uid;
+    _loadCursors();
+    // 登录态一变（登入、切号、退出）就换游标。挂在状态上比在各处埋调用
+    // 可靠——现在有三条路径能换账号，漏一条就是静默不弹通知。
+    AppState.instance.addListener(_onState);
     WidgetsBinding.instance.addObserver(this);
     _fore = true;
     _arm();
     unawaited(tick());
+  }
+
+  /// 把当前账号的游标读进内存。
+  void _loadCursors() {
+    final p = _p;
+    if (p == null) return;
+    if (_uid == 0) {
+      // 没登录的时候还停在旧版那份不带账号的 key 上，别去动它。
+      _dm = p.getInt(_kDm) ?? 0;
+      _nt = p.getInt(_kNt) ?? 0;
+      return;
+    }
+    _dm = p.getInt(_cursorKey(_kDm)) ?? _adopt(_kDm);
+    _nt = p.getInt(_cursorKey(_kNt)) ?? _adopt(_kNt);
+  }
+
+  /// 老版本的游标不带账号。第一次按 uid 读不到时继承过来，然后当场删掉，
+  /// 免得第二个登录的账号也捡到同一份。
+  int _adopt(String base) {
+    final p = _p;
+    if (p == null) return 0;
+    final v = p.getInt(base) ?? 0;
+    if (v > 0) {
+      unawaited(p.setInt(_cursorKey(base), v));
+      unawaited(p.remove(base));
+    }
+    return v;
+  }
+
+  /// 换号了：换成新账号自己那份游标。
+  ///
+  /// 之前没接上这里，切完号 `_dm/_nt` 还是上一个人的位置。新号的消息 id
+  /// 比它小就一直「没有新消息」，通知一条不弹，角标却是准的，特别难查。
+  Future<void> onAccountChanged() async {
+    _p ??= await SharedPreferences.getInstance();
+    final uid = AppState.instance.uid;
+    if (uid == _uid) return;
+    _uid = uid;
+    _dm = 0;
+    _nt = 0;
+    _loadCursors();
+  }
+
+  void _onState() {
+    if (AppState.instance.uid != _uid) unawaited(onAccountChanged());
   }
 
   @override
@@ -100,8 +156,15 @@ class Poller with WidgetsBindingObserver {
 
       await _handleDm(dm);
       await _handleNotice(nt);
-    } catch (_) {
+    } catch (e) {
       _fails++;
+      // 以前这里全吞掉。服务端把 dm 改成数组，这里就每天静默失败一万多次，
+      // 角标不动、通知不弹，控制台一个字都没有。限流打一行，够查就行。
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (now - _lastLog > 60000) {
+        _lastLog = now;
+        debugPrint('poller: 第 $_fails 次失败: $e');
+      }
     } finally {
       _busy = false;
       _arm();
@@ -230,16 +293,15 @@ class Poller with WidgetsBindingObserver {
   }
 
   Future<void> _save(String k, int v) async {
-    await _p?.setInt(k, v);
+    await _p?.setInt(_cursorKey(k), v);
   }
 
-  /// 退出登录时清游标：换号之后 id 体系还是同一套，但别拿旧号的位置去
-  /// 卡新号的消息。
+  /// 退出登录时清掉这个账号的游标。
   Future<void> reset() async {
     _dm = 0;
     _nt = 0;
-    await _p?.remove(_kDm);
-    await _p?.remove(_kNt);
+    await _p?.remove(_cursorKey(_kDm));
+    await _p?.remove(_cursorKey(_kNt));
     await SysNotify.cancel(SysNotify.idDm);
     await SysNotify.cancel(SysNotify.idNotice);
   }

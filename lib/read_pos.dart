@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'store.dart';
+
 /// 帖子读到哪儿了。
 ///
 /// 只记 post id 和楼层号，别的都不碰。下次点进同一个帖子，直接落回那一层，
@@ -10,7 +12,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 过期时间一周：隔一个月回来还跳回第 87 层，人只会觉得莫名其妙。
 /// 第 1、2 层不记——等于没读过，记了反而多一次定位请求。
 class ReadPos {
-  static const _k = 'thread_read_pos_v1';
+  /// 以前是一个 key 装所有站所有账号的位置。站点 A 的 56 号帖读到 87 层，
+  /// 切到站点 B 点开自己的 56 号帖，直接落到 87 层——要么落不到，要么落到
+  /// 一个完全无关的楼层。帖子编号是小站各自编的，只有「站 + 人」才算同一篇。
+  static String get _k {
+    final st = AppState.instance;
+    final site = st.activeKey.isEmpty ? 'default' : st.activeKey;
+    final who = st.uid == 0 ? 'guest' : 'u${st.uid}';
+    return 'thread_read_pos_v2_${site}_$who';
+  }
+
   static const _ttl = 7 * 24 * 3600 * 1000;
 
   /// 表里最多留这么多帖子，超了按时间丢最旧的，别让它无限长。

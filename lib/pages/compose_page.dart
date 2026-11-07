@@ -29,8 +29,9 @@ import 'cloud_pick_page.dart';
 /// 发主题帖。
 ///
 /// 站内只有一层：发到主站还是小站，选完就直接发，没有板块可选。
-/// 草稿只留一份，跟选哪座站无关。
-const String _draftKey = 'site';
+/// 草稿跟着账号走，跟选哪座站无关——一个草稿可以发到任意站，但 A 写到
+/// 一半退出登录，B 进来打开发帖页不该看见 A 的标题和正文。
+String get _draftKey => 'u${AppState.instance.uid}_site';
 
 class ComposePage extends StatefulWidget {
   const ComposePage({super.key});

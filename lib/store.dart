@@ -425,34 +425,41 @@ class AppState extends ChangeNotifier {
   }
 
   /// 只读本地设置，不发任何网络请求。
-  /// main() 里在 runApp **之前** await 它 —— 否则第一帧会先按默认色相和
-  /// 默认明暗渲染，读完盘再跳一次，看着就是启动时闪一下。
+  ///
+  /// 调用方是 `_boot()`，在 runApp **之后**跑（`main.dart` 里是
+  /// `runApp(...); unawaited(_boot());`）。所以启动会有一帧默认色相、默认
+  /// 明暗，读完盘再换过去——这是有意的取舍：读盘卡住时界面已经在屏幕上了，
+  /// 不会白屏。别改回 runApp 之前 await。
   /// 冷启动把每座站的入口实探一遍。
   ///
   /// 入口通不通只有当场测了才算数——存下来的旧结果会骗人。
   /// 探完 notifyListeners，站点管理里那排点自己就亮了，不用用户去点测速。
   Future<void> probeSites() async {
-    for (final s in List<SiteEntry>.of(sites)) {
-      try {
-        final rep = await Api.probeReport(s.orderedUrls);
-        s.epStatus
-          ..clear()
-          ..addAll(rep);
-        // 探路不带耗时，旧数字留着会骗人。
-        s.epMs.clear();
-        String? ok;
-        for (final e in rep.entries) {
-          if (e.value) {
-            ok = e.key;
-            break;
-          }
+    // 并发探，不逐站排队。三座站 × 两条入口串起来最坏要 39 秒，首屏的
+    // feed 全程在跟它抢连接，弱网下就是「首页一直转，站点页倒是早亮了」。
+    await Future.wait([for (final s in List<SiteEntry>.of(sites)) _probeOne(s)]);
+  }
+
+  Future<void> _probeOne(SiteEntry s) async {
+    try {
+      final rep = await Api.probeReport(s.orderedUrls);
+      s.epStatus
+        ..clear()
+        ..addAll(rep);
+      // 探路不带耗时，旧数字留着会骗人。
+      s.epMs.clear();
+      String? ok;
+      for (final e in rep.entries) {
+        if (e.value) {
+          ok = e.key;
+          break;
         }
-        s.reachable = ok != null;
-        if (ok != null) s.lastOk = ok;
-        notifyListeners();
-      } catch (_) {
-        // 一座站探不动不该拖住别的站，更不该拖住启动。
       }
+      s.reachable = ok != null;
+      if (ok != null) s.lastOk = ok;
+      notifyListeners();
+    } catch (_) {
+      // 一座站探不动不该拖住别的站，更不该拖住启动。
     }
   }
 
