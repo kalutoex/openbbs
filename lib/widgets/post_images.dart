@@ -215,14 +215,22 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
             controller: _pc,
             itemCount: widget.urls.length,
             onPageChanged: (i) => setState(() => _i = i),
-            itemBuilder: (c, i) => Hero(
-              tag: '${widget.heroPrefix}:${widget.urls[i]}',
-              child: _ZoomableImage(
+            itemBuilder: (c, i) {
+              final img = _ZoomableImage(
                 url: Api.img(widget.urls[i]),
                 cacheWidth: _viewerPx,
                 onTap: () => Navigator.of(context).pop(),
-              ),
-            ),
+              );
+              // 只给正在看的那一页挂 Hero。
+              //
+              // 每页都挂的话，PageView 留在树里的邻页也带着 Hero，退出时
+              // 两个 Hero 各找一个格子往回飞——看着就是两张图一起退出。
+              if (i != _i) return img;
+              return Hero(
+                tag: '${widget.heroPrefix}:${widget.urls[i]}',
+                child: img,
+              );
+            },
           ),
           if (widget.urls.length > 1)
             Positioned(
