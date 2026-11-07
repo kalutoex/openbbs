@@ -19,6 +19,7 @@ import 'poller.dart';
 import 'store.dart';
 import 'theme.dart';
 import 'ui_config.dart';
+import 'upload_manager.dart';
 
 /// 点通知跳页面要一个全局 Navigator，此时还没有 context。
 
@@ -77,6 +78,8 @@ Future<void> _boot() async {
   // 设置读完才有 Api.token。冷启动必须在这里补一次 /me，
   // 否则杀掉后台再进来，token 还在、user 却是空的，看着就是掉登录。
   unawaited(AppState.instance.init());
+  // 上次没传完的东西接着传，断点接着续。
+  unawaited(UploadManager.i.init());
   // 轮询放在最后启动：要有 token 才有东西可查。
   unawaited(Poller.instance.start());
   // 登录着但还没给通知权限的，问一次；问过系统自己会记住。

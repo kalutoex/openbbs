@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'cancel_token.dart';
 import 'download_index.dart';
 import 'downloads.dart';
 
@@ -16,8 +17,10 @@ Future<SavedFile> openRemoteFile(
   void Function(double)? onProgress,
   bool? openAfter,
   String? cloudId,
+  CancelToken? cancel,
 }) async {
-  final saved = await downloadToDevice(url, name, onProgress: onProgress);
+  final saved = await downloadToDevice(url, name,
+      onProgress: onProgress, cancel: cancel);
   var size = 0;
   final p = saved.path;
   if (p != null && p.isNotEmpty) {

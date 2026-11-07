@@ -6,15 +6,21 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
 
+import 'cancel_token.dart';
 import 'upload_progress.dart';
 
 /// 选中待上传的文件。网页版拿的是浏览器里的 File，文件本身还在磁盘上。
 class PickedFile {
-  PickedFile({required this.name, required this.size, required this.file});
+  PickedFile({required this.name, required this.size, this.path, this.file});
 
   final String name;
   final int size;
-  final html.File file;
+
+  /// 网页上没有本地路径，这个永远是 null。管理器看到没路径就走整传。
+  /// 留着这个字段只是为了让两边共用的代码编译得过。
+  final String? path;
+
+  final html.File? file;
 }
 
 /// 网页版的选文件：一个隐藏的 file input。
@@ -54,7 +60,9 @@ Future<Map<String, dynamic>> postFile(
   PickedFile f, {
   UploadProgress? onProgress,
 }) {
-  final form = html.FormData()..appendBlob('f', f.file, f.name);
+  final blob = f.file;
+  if (blob == null) throw StateError('picked file has no blob');
+  final form = html.FormData()..appendBlob('f', blob, f.name);
   final req = html.HttpRequest();
   final done = Completer<Map<String, dynamic>>();
 
@@ -100,4 +108,20 @@ Future<Map<String, dynamic>> postFile(
   });
   req.send(form);
   return done.future;
+}
+
+/// 网页端不分片：浏览器能直接从磁盘流式发，整包反而更简单。
+/// 管理器看到这里抛错就走原来的整传路径，队列也不落盘（刷新页面就没了）。
+typedef UploadCancel = CancelToken;
+
+Future<Map<String, dynamic>> postChunkRange(
+  String url,
+  Map<String, String> headers,
+  String path,
+  int start,
+  int end, {
+  UploadProgress? onProgress,
+  UploadCancel? cancel,
+}) async {
+  throw UnsupportedError('web 不分片');
 }

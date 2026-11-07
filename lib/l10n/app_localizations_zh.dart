@@ -2073,6 +2073,27 @@ class LZh extends L {
   String get uploadedDone => '传好了';
 
   @override
+  String get uploadCancelled => '上传已取消';
+
+  @override
+  String uploadedDoneAll(String v1) {
+    return '都传好了，$v1 个';
+  }
+
+  @override
+  String uploadedFailedAll(String v1) {
+    return '$v1 个都没传上去';
+  }
+
+  @override
+  String uploadedPartly(String v1, String v2) {
+    return '$v1 个传好了，$v2 个没成';
+  }
+
+  @override
+  String get uploadFailedTapRetry => '没传上去，点那一行可以重试';
+
+  @override
   String get fileTooBigHint => '单个文件别超过 500MB';
 
   @override
@@ -2456,4 +2477,43 @@ class LZh extends L {
 
   @override
   String get accentIsIdentity => '这个颜色也是你的颜色——私信气泡、头像外圈、楼层都跟着它，别人看得到。';
+
+  @override
+  String get undo => '撤销';
+
+  @override
+  String get select => '选择';
+
+  @override
+  String selectedN(String v1) {
+    return '已选 $v1 个';
+  }
+
+  @override
+  String deleteTheseN(String v1) {
+    return '删掉这 $v1 个？';
+  }
+
+  @override
+  String movedToTrashN(String v1) {
+    return '$v1 个已移入回收站';
+  }
+
+  @override
+  String cloudNoRoom(String v1) {
+    return '空间不够了，还剩 $v1';
+  }
+
+  @override
+  String uploadQueuedN(String v1) {
+    return '上传 ·$v1';
+  }
+
+  @override
+  String moreQueuedN(String v1) {
+    return '还有 $v1 个在排队';
+  }
+
+  @override
+  String get waitingTurn => '排队中';
 }

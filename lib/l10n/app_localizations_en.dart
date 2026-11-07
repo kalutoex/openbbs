@@ -2106,6 +2106,27 @@ class LEn extends L {
   String get uploadedDone => 'Uploaded';
 
   @override
+  String get uploadCancelled => 'Upload cancelled';
+
+  @override
+  String uploadedDoneAll(String v1) {
+    return 'All done, $v1 files';
+  }
+
+  @override
+  String uploadedFailedAll(String v1) {
+    return '$v1 uploads failed';
+  }
+
+  @override
+  String uploadedPartly(String v1, String v2) {
+    return '$v1 uploaded, $v2 failed';
+  }
+
+  @override
+  String get uploadFailedTapRetry => 'Upload failed. Tap the row to retry';
+
+  @override
   String get fileTooBigHint => 'Keep each file under 500MB';
 
   @override
@@ -2501,4 +2522,43 @@ class LEn extends L {
   @override
   String get accentIsIdentity =>
       'This is also your color elsewhere: your chat bubbles, avatar ring and floor accents use it, and others see it too.';
+
+  @override
+  String get undo => 'Undo';
+
+  @override
+  String get select => 'Select';
+
+  @override
+  String selectedN(String v1) {
+    return '$v1 selected';
+  }
+
+  @override
+  String deleteTheseN(String v1) {
+    return 'Delete these $v1?';
+  }
+
+  @override
+  String movedToTrashN(String v1) {
+    return '$v1 moved to trash';
+  }
+
+  @override
+  String cloudNoRoom(String v1) {
+    return 'Not enough space, $v1 left';
+  }
+
+  @override
+  String uploadQueuedN(String v1) {
+    return 'Upload ·$v1';
+  }
+
+  @override
+  String moreQueuedN(String v1) {
+    return '$v1 more queued';
+  }
+
+  @override
+  String get waitingTurn => 'Queued';
 }

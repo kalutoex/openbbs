@@ -44,6 +44,17 @@ Color bubblePeerFg(double hue, bool dark) => HSLColor.fromAHSL(
   dark ? 0.90 : 0.22,
 ).toColor();
 
+/// 深色下对方气泡的描边。
+///
+/// 气泡底是 L=0.20 的暗色，页面底是差不多的暗色，两者贴在一起就糊成一片，
+/// 看不出气泡到哪儿结束。一条同色系的细边刚好把它勾出来，白天不需要。
+Color bubbleEdge(double hue, bool dark) => HSLColor.fromAHSL(
+  1,
+  AppState.normalizeHue(hue),
+  dark ? 0.34 : 0.35,
+  dark ? 0.36 : 0.86,
+).toColor();
+
 /// 头像外圈：细环，不遮图。
 Color hueRing(double hue, bool dark) => HSLColor.fromAHSL(
   dark ? 0.85 : 1,

@@ -4,7 +4,12 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 
+import 'dart:io';
+
+import 'cancel_token.dart';
 import 'upload_progress.dart';
+
+typedef UploadCancel = CancelToken;
 
 /// 选中待上传的文件。手机上留本地路径，网页版留浏览器 File 对象。
 class PickedFile {
@@ -94,5 +99,68 @@ class _CountingRequest extends http.BaseRequest {
   http.ByteStream finalize() {
     super.finalize();
     return http.ByteStream(body);
+  }
+}
+
+/// 发一片。从 [start] 到 [end]（左闭右开），一边读一边报进度。
+///
+/// 不用 multipart：服务端直接按裸字节追加，省掉重新编码的开销，
+/// 也省得多一个几百兆的临时副本。
+Future<Map<String, dynamic>> postChunkRange(
+  String url,
+  Map<String, String> headers,
+  String path,
+  int start,
+  int end, {
+  UploadProgress? onProgress,
+  UploadCancel? cancel,
+}) async {
+  final client = http.Client();
+  cancel?.onCancel(client.close);
+  final req = http.StreamedRequest('POST', Uri.parse(url));
+  headers.forEach((k, v) {
+    if (k.toLowerCase() != 'content-type') req.headers[k] = v;
+  });
+  final length = end - start;
+  req.contentLength = length;
+
+  var sent = 0;
+  final pump = () async {
+    try {
+      await for (final b in File(path).openRead(start, end)) {
+        if (cancel?.cancelled == true) break;
+        sent += b.length;
+        onProgress?.call(sent, length);
+        req.sink.add(b);
+      }
+      await req.sink.close();
+    } catch (e) {
+      // 连接被我们关掉时这里也会炸，交给下面统一处理
+      try {
+        req.sink.addError(e);
+      } catch (_) {}
+    }
+  }();
+
+  try {
+    final res = await client.send(req).timeout(
+      const Duration(minutes: 10),
+      onTimeout: () => throw TimeoutException('chunk timed out'),
+    );
+    final text = await res.stream.bytesToString();
+    await pump;
+    if (res.statusCode != 200) {
+      String msg = 'HTTP ${res.statusCode}';
+      try {
+        final d = jsonDecode(text);
+        if (d is Map && d['detail'] != null) msg = '${d['detail']}';
+      } catch (_) {}
+      throw Exception(msg);
+    }
+    final d = jsonDecode(text);
+    if (d is! Map) throw StateError('bad response');
+    return Map<String, dynamic>.from(d);
+  } finally {
+    client.close();
   }
 }

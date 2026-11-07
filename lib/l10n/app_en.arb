@@ -275,7 +275,7 @@
   "easterEggButton": "A button that does nothing",
   "easterEggTitle": "Trinkets",
   "hueCards": "Tint cards by author",
-"showThumbnails": "Show thumbnails",
+  "showThumbnails": "Show thumbnails",
   "showThumbnailsHint": "Off means text only in the feed, saves data",
   "autoCheckNotice": "Poll for notifications",
   "autoCheckNoticeHint": "Asks for the unread count once a minute",
@@ -823,6 +823,35 @@
   "upload": "Upload",
   "uploadingFile2": "Uploading {v1}",
   "uploadedDone": "Uploaded",
+  "uploadCancelled": "Upload cancelled",
+  "uploadedDoneAll": "All done, {v1} files",
+  "@uploadedDoneAll": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadedFailedAll": "{v1} uploads failed",
+  "@uploadedFailedAll": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadedPartly": "{v1} uploaded, {v2} failed",
+  "@uploadedPartly": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadFailedTapRetry": "Upload failed. Tap the row to retry",
   "fileTooBigHint": "Keep each file under 500MB",
   "cloudRefsWarn": "Used by {v1} posts. Deleting it makes those places show that the file is gone.",
   "@cloudRefsWarn": {
@@ -1032,5 +1061,56 @@
   "dmSelectCount": "{n} selected",
   "dmEmoji": "Emoji",
   "saved": "Saved",
-  "accentIsIdentity": "This is also your color elsewhere: your chat bubbles, avatar ring and floor accents use it, and others see it too."
+  "accentIsIdentity": "This is also your color elsewhere: your chat bubbles, avatar ring and floor accents use it, and others see it too.",
+  "undo": "Undo",
+  "select": "Select",
+  "selectedN": "{v1} selected",
+  "@selectedN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteTheseN": "Delete these {v1}?",
+  "@deleteTheseN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "movedToTrashN": "{v1} moved to trash",
+  "@movedToTrashN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudNoRoom": "Not enough space, {v1} left",
+  "@cloudNoRoom": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadQueuedN": "Upload ·{v1}",
+  "@uploadQueuedN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "moreQueuedN": "{v1} more queued",
+  "@moreQueuedN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "waitingTurn": "Queued"
 }

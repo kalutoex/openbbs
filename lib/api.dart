@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -349,6 +350,140 @@ class Api {
 
   /// 传附件。手机上边读盘边发，网页版交给浏览器，都不整个进内存。
   /// 名字和大小以服务端回来为准——客户端报的不可信。
+  /// 分片大小。4MB 一片：慢网下两三秒一片，进度看得见；
+  /// 断一次最多重传这一片，不用整包重来。
+  static const int chunkSize = 4 << 20;
+
+  /// 裸字节请求用的头。带 Content-Type: application/json 会让 FastAPI
+  /// 试图解析 body，分片就废了。
+  static Map<String, String> get _rawHeaders => {
+    if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
+  };
+
+  /// 生成本次上传的 id。重试、断点续传都沿用同一个，
+  /// 服务端靠它把分片接回同一个 .part。
+  static String newUploadId() {
+    final r = math.Random();
+    final tail = List.generate(8, (_) => r.nextInt(36).toRadixString(36)).join();
+    return '${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}$tail';
+  }
+
+  /// 分片上传，自带断点续传。
+  ///
+  /// [from] 是已经传上去的字节数（重启 App 后从本地记录读回来），
+  /// 服务端那边对不上会回一个 reset 和它自己的长度，这里顺着对齐。
+  static Future<Map<String, dynamic>> uploadFileChunked(
+    PickedFile f,
+    String uploadId, {
+    int from = 0,
+    UploadProgress? onProgress,
+    UploadCancel? cancel,
+  }) async {
+    if (!configured) {
+      throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
+    }
+    final path = f.path;
+    if (path == null) {
+      throw ApiException(Lc.current.uploadFailedWith('no path'),
+          code: 'uploadFailed');
+    }
+    var got = from.clamp(0, f.size);
+    onProgress?.call(got, f.size);
+    while (got < f.size) {
+      if (cancel?.cancelled == true) {
+        throw ApiException(Lc.current.uploadCancelled, code: 'uploadCancelled');
+      }
+      final base = got;
+      final end = math.min(got + chunkSize, f.size);
+      final r = await _withFailover(
+        retryOnTimeout: false,
+        () => postChunkRange(
+          _uri('/file/chunk', {'id': uploadId, 'offset': '$got'}).toString(),
+          _rawHeaders,
+          path,
+          got,
+          end,
+          onProgress: (n, _) => onProgress?.call(base + n, f.size),
+          cancel: cancel,
+        ),
+      );
+      final received = (r['received'] as num?)?.toInt();
+      if (received == null) {
+        throw ApiException(Lc.current.uploadFailedWith('bad chunk reply'),
+            code: 'uploadFailed');
+      }
+      if (received <= got) {
+        // 服务端说它手里比我们还少，就退回它那个位置重来；
+        // 一点没动说明对不上也没法推进，别在这儿空转。
+        if (r['reset'] == true && received < got) {
+          got = received;
+          continue;
+        }
+        throw ApiException(Lc.current.uploadFailedWith('stalled'),
+            code: 'uploadFailed');
+      }
+      got = received;
+      if (cancel?.cancelled == true) {
+        throw ApiException(Lc.current.uploadCancelled, code: 'uploadCancelled');
+      }
+    }
+
+    if (cancel?.cancelled == true) {
+      throw ApiException(Lc.current.uploadCancelled, code: 'uploadCancelled');
+    }
+    try {
+      final d = await _postJson('/file/chunk/done', {
+        'id': uploadId,
+        'name': f.name,
+        'size': f.size,
+      });
+      final url = '${d['url'] ?? ''}';
+      if (url.isEmpty) {
+        throw ApiException('upload returned no url', code: 'uploadNoUrl');
+      }
+      return {
+        'url': url,
+        'name': '${d['name'] ?? f.name}',
+        'size': d['size'] is int ? d['size'] : f.size,
+      };
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException(
+        Lc.current.uploadFailedWith('$e'),
+        code: 'uploadFailed',
+        detail: '$e',
+      );
+    }
+  }
+
+  /// 丢掉服务端那半截暂存。取消、放弃的时候叫一声，别占着盘。
+  static Future<void> dropChunks(String uploadId) async {
+    if (!configured) return;
+    try {
+      await http
+          .delete(_uri('/file/chunk', {'id': uploadId}), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // 清不掉就算了，服务端启动时会扫
+    }
+  }
+
+  static Future<Map<String, dynamic>> _postJson(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final r = await _withFailover(
+      retryOnTimeout: false,
+      () => http
+          .post(_uri(path), headers: _headers, body: jsonEncode(body))
+          .timeout(const Duration(seconds: 60)),
+    );
+    final d = _decode(r);
+    if (d is! Map) throw StateError('bad response');
+    return Map<String, dynamic>.from(d);
+  }
+
   static Future<Map<String, dynamic>> uploadFile(
     PickedFile f, {
     UploadProgress? onProgress,

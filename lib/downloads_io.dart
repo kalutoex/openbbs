@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
+import 'cancel_token.dart';
 import 'downloads_common.dart';
 
 /// 下载完到底落在哪，得让用户看得见、找得到。
@@ -174,6 +175,7 @@ Future<File> fetchToTemp(
   String url,
   String name, {
   void Function(double)? onProgress,
+  CancelToken? cancel,
 }) async {
   final dir = await _tmpDir();
   final safe = name.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1f]'), '_');
@@ -181,6 +183,7 @@ Future<File> fetchToTemp(
   var have = _haveLen(file.path);
 
   final client = http.Client();
+  cancel?.onCancel(client.close);
   try {
     final req = http.Request('GET', Uri.parse(url));
     final tok = Api.token;
@@ -202,6 +205,15 @@ Future<File> fetchToTemp(
     );
     var got = have;
     await for (final chunk in res.stream) {
+      if (cancel?.cancelled == true) {
+        // 半截文件不留在缓存里，下次重下还要对 Range，容易对岔
+        await sink.flush();
+        await sink.close();
+        try {
+          await file.delete();
+        } catch (_) {}
+        throw const _Cancelled();
+      }
       sink.add(chunk);
       got += chunk.length;
       if (total > 0) onProgress?.call((got / total).clamp(0, 1));
@@ -213,13 +225,19 @@ Future<File> fetchToTemp(
   return file;
 }
 
+/// 用户自己停的，跟出错不是一回事，上层要分开处理。
+class _Cancelled implements Exception {
+  const _Cancelled();
+}
+
 /// 下载 → 落到下载目录 → 删临时文件。返回落到哪了。
 Future<SavedFile> downloadToDevice(
   String url,
   String name, {
   void Function(double)? onProgress,
+  CancelToken? cancel,
 }) async {
-  final tmp = await fetchToTemp(url, name, onProgress: onProgress);
+  final tmp = await fetchToTemp(url, name, onProgress: onProgress, cancel: cancel);
   final saved = await saveDownloaded(tmp.path, name);
   try {
     await tmp.delete();

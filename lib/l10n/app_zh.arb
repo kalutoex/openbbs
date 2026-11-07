@@ -275,7 +275,7 @@
   "easterEggButton": "没啥用的小按钮",
   "easterEggTitle": "小玩意",
   "hueCards": "卡片跟着人染色",
-"showThumbnails": "显示缩略图",
+  "showThumbnails": "显示缩略图",
   "showThumbnailsHint": "关掉后时间线只留文字，省流量",
   "autoCheckNotice": "自动检查通知",
   "autoCheckNoticeHint": "每分钟问一次未读数",
@@ -1406,6 +1406,35 @@
     }
   },
   "uploadedDone": "传好了",
+  "uploadCancelled": "上传已取消",
+  "uploadedDoneAll": "都传好了，{v1} 个",
+  "@uploadedDoneAll": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadedFailedAll": "{v1} 个都没传上去",
+  "@uploadedFailedAll": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadedPartly": "{v1} 个传好了，{v2} 个没成",
+  "@uploadedPartly": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadFailedTapRetry": "没传上去，点那一行可以重试",
   "fileTooBigHint": "单个文件别超过 500MB",
   "cloudRefsWarn": "有 {v1} 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。",
   "@cloudRefsWarn": {
@@ -1643,5 +1672,56 @@
   },
   "dmEmoji": "表情",
   "saved": "已保存",
-  "accentIsIdentity": "这个颜色也是你的颜色——私信气泡、头像外圈、楼层都跟着它，别人看得到。"
+  "accentIsIdentity": "这个颜色也是你的颜色——私信气泡、头像外圈、楼层都跟着它，别人看得到。",
+  "undo": "撤销",
+  "select": "选择",
+  "selectedN": "已选 {v1} 个",
+  "@selectedN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteTheseN": "删掉这 {v1} 个？",
+  "@deleteTheseN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "movedToTrashN": "{v1} 个已移入回收站",
+  "@movedToTrashN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudNoRoom": "空间不够了，还剩 {v1}",
+  "@cloudNoRoom": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadQueuedN": "上传 ·{v1}",
+  "@uploadQueuedN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "moreQueuedN": "还有 {v1} 个在排队",
+  "@moreQueuedN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "waitingTurn": "排队中"
 }

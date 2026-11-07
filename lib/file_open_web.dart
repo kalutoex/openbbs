@@ -1,3 +1,4 @@
+import 'cancel_token.dart';
 import 'downloads.dart';
 
 /// 网页版：没有本地目录可写，交给浏览器。
@@ -7,4 +8,5 @@ Future<SavedFile> openRemoteFile(
   void Function(double)? onProgress,
   bool? openAfter,
   String? cloudId,
+  CancelToken? cancel,
 }) => downloadToDevice(url, name, onProgress: onProgress);

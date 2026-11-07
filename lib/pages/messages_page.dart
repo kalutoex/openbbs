@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../user_hue.dart';
@@ -58,13 +60,46 @@ class _MessagesPageState extends State<MessagesPage> {
   bool _loading = true;
   String? _err;
 
+  /// 上次拿到的角标数。轮询一报变化就顺手把列表拉一次——
+  /// 以前新消息到了只有角标跳，列表还是老的，人得自己下拉。
+  int _seenDm = -1;
+  int _seenNotice = -1;
+
+  /// 兜底：角标没变但内容变了（比如最后一条被撤回）。
+  Timer? _tick;
+
   @override
   void initState() {
     super.initState();
+    AppState.instance.addListener(_onState);
     _load();
+    _tick = Timer.periodic(const Duration(seconds: 30), (_) => _quiet());
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    AppState.instance.removeListener(_onState);
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  void _onState() {
+    if (!mounted) return;
+    final s = AppState.instance;
+    if (s.dmUnread == _seenDm && s.unread == _seenNotice) return;
+    _seenDm = s.dmUnread;
+    _seenNotice = s.unread;
+    _quiet();
+  }
+
+  /// 后台静默刷一次，不动 loading，也不会把正在看的列表清空。
+  Future<void> _quiet() async {
+    if (!mounted || !AppState.instance.loggedIn) return;
+    if (_loading) return;
+    await _load(silent: true);
+  }
+
+  Future<void> _load({bool silent = false}) async {
     if (!AppState.instance.loggedIn) {
       if (!mounted) return;
       setState(() {
@@ -72,6 +107,10 @@ class _MessagesPageState extends State<MessagesPage> {
         _rows.clear();
       });
       return;
+    }
+    if (silent && _rows.isNotEmpty) {
+      _seenDm = AppState.instance.dmUnread;
+      _seenNotice = AppState.instance.unread;
     }
     try {
       // 两个接口一起发，别串着等。

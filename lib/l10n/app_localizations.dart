@@ -3794,6 +3794,36 @@ abstract class L {
   /// **'传好了'**
   String get uploadedDone;
 
+  /// No description provided for @uploadCancelled.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传已取消'**
+  String get uploadCancelled;
+
+  /// No description provided for @uploadedDoneAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'都传好了，{v1} 个'**
+  String uploadedDoneAll(String v1);
+
+  /// No description provided for @uploadedFailedAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'{v1} 个都没传上去'**
+  String uploadedFailedAll(String v1);
+
+  /// No description provided for @uploadedPartly.
+  ///
+  /// In zh, this message translates to:
+  /// **'{v1} 个传好了，{v2} 个没成'**
+  String uploadedPartly(String v1, String v2);
+
+  /// No description provided for @uploadFailedTapRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'没传上去，点那一行可以重试'**
+  String get uploadFailedTapRetry;
+
   /// No description provided for @fileTooBigHint.
   ///
   /// In zh, this message translates to:
@@ -4495,6 +4525,60 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'这个颜色也是你的颜色——私信气泡、头像外圈、楼层都跟着它，别人看得到。'**
   String get accentIsIdentity;
+
+  /// No description provided for @undo.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get undo;
+
+  /// No description provided for @select.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择'**
+  String get select;
+
+  /// No description provided for @selectedN.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选 {v1} 个'**
+  String selectedN(String v1);
+
+  /// No description provided for @deleteTheseN.
+  ///
+  /// In zh, this message translates to:
+  /// **'删掉这 {v1} 个？'**
+  String deleteTheseN(String v1);
+
+  /// No description provided for @movedToTrashN.
+  ///
+  /// In zh, this message translates to:
+  /// **'{v1} 个已移入回收站'**
+  String movedToTrashN(String v1);
+
+  /// No description provided for @cloudNoRoom.
+  ///
+  /// In zh, this message translates to:
+  /// **'空间不够了，还剩 {v1}'**
+  String cloudNoRoom(String v1);
+
+  /// No description provided for @uploadQueuedN.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传 ·{v1}'**
+  String uploadQueuedN(String v1);
+
+  /// No description provided for @moreQueuedN.
+  ///
+  /// In zh, this message translates to:
+  /// **'还有 {v1} 个在排队'**
+  String moreQueuedN(String v1);
+
+  /// No description provided for @waitingTurn.
+  ///
+  /// In zh, this message translates to:
+  /// **'排队中'**
+  String get waitingTurn;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

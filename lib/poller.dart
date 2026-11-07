@@ -142,28 +142,31 @@ class Poller with WidgetsBindingObserver {
 
     if (fresh.isEmpty || !AppState.instance.sysNotify.value) return;
 
-    if (fresh.length == 1) {
-      final e = fresh.first;
-      final who = (e['peer_name'] as String?) ?? '';
-      final text = _bubbleText(e);
-      await SysNotify.show(
-        id: SysNotify.idDm,
-        title: who,
-        body: text,
-        payload: 'dm:${e['peer_id']}:$who',
-      );
-      return;
+    // 按会话分组：同一个人的连发合成一条，换着看它就行；
+    // 不同的人各占一条，不会互相盖掉。
+    final byPeer = <int, List<Map>>{};
+    for (final e in fresh) {
+      final p = (e)['peer_id'] as int? ?? 0;
+      byPeer.putIfAbsent(p, () => []).add(e);
     }
-
-    final lastOne = fresh.last;
-    final who = (lastOne['peer_name'] as String?) ?? '';
-    await SysNotify.show(
-      id: SysNotify.idDm,
-      title: Lc.current.notifyNewCount(fresh.length),
-      body: '$who：${_bubbleText(lastOne)}',
-      payload: 'dm:${lastOne['peer_id']}:$who',
-    );
+    for (final entry in byPeer.entries) {
+      final list = entry.value;
+      final lastOne = list.last;
+      final who = (lastOne['peer_name'] as String?) ?? '';
+      await SysNotify.show(
+        // 条数从 1 涨到 n 也是同一条，别在通知栏里越堆越多
+        id: _dmNotifyId(entry.key),
+        title: list.length == 1 ? who : Lc.current.notifyNewCount(list.length),
+        body: list.length == 1
+            ? _bubbleText(lastOne)
+            : '$who：${_bubbleText(lastOne)}',
+        payload: 'dm:${entry.key}:$who',
+      );
+    }
   }
+
+  /// 每个会话一个通知 id。1001 起往上排，跟站内通知那条(1002)错开。
+  int _dmNotifyId(int peer) => 10000 + (peer % 1000);
 
   Future<void> _handleNotice(Map<String, dynamic> nt) async {
     final last = nt['last_id'] as int? ?? 0;

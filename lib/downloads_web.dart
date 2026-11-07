@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import 'api.dart';
+import 'cancel_token.dart';
 import 'downloads_common.dart';
 
 /// 网页版的下载位置不归我们管：文件进浏览器自己的下载目录，
@@ -41,6 +42,7 @@ Future<SavedFile> downloadToDevice(
   String url,
   String name, {
   void Function(double)? onProgress,
+  CancelToken? cancel,
 }) async {
   final client = http.Client();
   try {

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../cancel_token.dart';
 import '../cloud.dart';
 import '../download_index.dart';
 import '../downloads.dart';
@@ -51,6 +54,16 @@ class _CloudPageState extends State<CloudPage> {
 
   /// 正在下的：id -> 0..1。列表里就着那一行显示进度。
   final Map<int, double> _dl = {};
+
+  /// 每个下载的取消开关。点进度旁边那个 × 能把连接掐掉。
+  final Map<int, CancelToken> _dlc = {};
+
+  /// 搜索防抖。每敲一个字都打一次接口，翻页状态还会互相打架。
+  Timer? _debounce;
+
+  /// 多选：选中的 id，以及现在是不是在选择模式。
+  final Set<int> _picked = {};
+  bool _selecting = false;
 
   /// 这次进来已经下完的，行尾给个绿标。还能再下，标不会清。
   final Set<int> _done = {};
@@ -108,6 +121,7 @@ class _CloudPageState extends State<CloudPage> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     UploadManager.i.removeListener(_onUpload);
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
@@ -193,12 +207,17 @@ class _CloudPageState extends State<CloudPage> {
     final local = _localOf(f);
     if (local != null && await _reveal(f, local)) return;
     final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
-    setState(() => _dl[f.id] = 0);
+    final cancel = CancelToken();
+    setState(() {
+      _dl[f.id] = 0;
+      _dlc[f.id] = cancel;
+    });
     try {
       final saved = await openRemoteFile(
         url,
         f.name,
         cloudId: '${f.id}',
+        cancel: cancel,
         onProgress: (p) {
           if (mounted) setState(() => _dl[f.id] = p);
         },
@@ -206,6 +225,7 @@ class _CloudPageState extends State<CloudPage> {
       if (!mounted) return;
       setState(() {
         _dl.remove(f.id);
+        _dlc.remove(f.id);
         _done.add(f.id);
       });
       // 刚下完，本地记录也更新一下，再点就是带你去找文件
@@ -216,9 +236,23 @@ class _CloudPageState extends State<CloudPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _dl.remove(f.id));
+      setState(() {
+        _dl.remove(f.id);
+        _dlc.remove(f.id);
+      });
+      // 自己点的取消不用报错，那一行回到原样就行
+      if (cancel.cancelled) return;
       _toast(errorText(context, e));
     }
+  }
+
+  /// 下到一半不下了。连接掐掉，半截文件也跟着删。
+  void _cancelDownload(CloudFile f) {
+    _dlc[f.id]?.cancel();
+    setState(() {
+      _dl.remove(f.id);
+      _dlc.remove(f.id);
+    });
   }
 
   /// 去本机那份文件所在的位置。文件被删了就返回 false，转去正常下载。
@@ -246,17 +280,21 @@ class _CloudPageState extends State<CloudPage> {
     return true;
   }
 
-  Future<void> _delete(CloudFile f) async {
-    final used = f.refs;
+  /// 删几个（多选删除走这里）。删完给一次撤销。
+  /// 多选删除。一次删十几个，就弹一次确认、给一次撤销。
+  Future<void> _deletePicked() async {
+    final ids = _picked.toList();
+    if (ids.isEmpty) return;
+    final refs = _items
+        .where((f) => ids.contains(f.id))
+        .fold<int>(0, (a, f) => a + f.refs);
     final trashHint = Lc.current.goesToTrashHint;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(Lc.current.deleteThisFile),
+        title: Text(Lc.current.deleteTheseN('${ids.length}')),
         content: Text(
-          used > 0
-              ? '${Lc.current.cloudRefsWarn('$used')}\n\n$trashHint'
-              : trashHint,
+          refs > 0 ? '${Lc.current.cloudRefsWarn('$refs')}\n\n$trashHint' : trashHint,
         ),
         actions: [
           TextButton(
@@ -271,58 +309,51 @@ class _CloudPageState extends State<CloudPage> {
       ),
     );
     if (ok != true) return;
+    setState(() {
+      _selecting = false;
+    });
+    await _removeIds(ids, refs: refs);
+  }
+
+  Future<void> _removeIds(List<int> ids, {int refs = 0}) async {
+    if (ids.isEmpty) return;
     try {
-      await CloudApi.remove(f.id);
+      for (final id in ids) {
+        await CloudApi.remove(id);
+      }
       if (!mounted) return;
-      setState(() => _items.removeWhere((x) => x.id == f.id));
+      setState(() {
+        _items.removeWhere((x) => ids.contains(x.id));
+        _picked.removeAll(ids);
+      });
       _load(reset: false);
-      _toast(Lc.current.movedToTrash);
+      if (!mounted) return;
+      toast(
+        context,
+        ids.length == 1
+            ? Lc.current.movedToTrash
+            : Lc.current.movedToTrashN('${ids.length}'),
+        action: SnackBarAction(
+          label: Lc.current.undo,
+          onPressed: () async {
+            // 回收站里的东西还能拉回来，错点一下不至于心疼
+            for (final id in ids) {
+              try {
+                await CloudApi.restore(id);
+              } catch (_) {}
+            }
+            if (mounted) _load();
+          },
+        ),
+      );
     } catch (e) {
       if (mounted) _toast(errorText(context, e));
     }
   }
 
-  void _menu(CloudFile f) {
-    showAppSheet<void>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(
-                _localOf(f) != null
-                    ? Icons.folder_open_outlined
-                    : Icons.download_outlined,
-              ),
-              title: Text(
-                _localOf(f) != null
-                    ? Lc.current.showInFolder
-                    : Lc.current.download,
-              ),
-              onTap: () {
-                Navigator.pop(ctx);
-                _open(f);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: Text(Lc.current.delete),
-              onTap: () {
-                Navigator.pop(ctx);
-                _delete(f);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// 上传入口。手机上有内置的文件浏览器，可以翻整个存储；
   /// 别的地方（网页、桌面）还是系统选择器。
   Future<void> _uploadEntry() async {
-    if (UploadManager.i.busy) return;
     if (!fileBrowserSupported) {
       await _upload();
       return;
@@ -363,10 +394,28 @@ class _CloudPageState extends State<CloudPage> {
   /// 选一个文件就交给上传队列。这里不等着它传完——
   /// 1GB 要十几分钟，人不能卡在这一页上。传完管理器会自己回来喊一声。
   Future<void> _upload() async {
-    if (UploadManager.i.busy) return;
     final f = await pickFile();
     if (f == null) return;
-    // 单文件不设死上限，能不能传看剩余空间——服务端会按额度掐断。
+    _enqueue(f);
+  }
+
+  /// 进队列前先自己看一眼额度。
+  ///
+  /// 服务端也会拦，但那是传了几分钟之后才知道；能在选完文件的一秒钟里
+  /// 说清楚的事，不该让人等那么久。
+  void _enqueue(PickedFile f) {
+    final u = _usage;
+    if (u != null && !u.unlimited) {
+      // 已经排在队里的也要算进去，不然一次选十个就都放行了
+      var pending = 0;
+      for (final j in UploadManager.i.activeJobs) {
+        if (j.size > j.offset) pending += j.size - j.offset;
+      }
+      if (f.size + pending > u.left) {
+        _toast(Lc.current.cloudNoRoom(bytesText(u.left)));
+        return;
+      }
+    }
     UploadManager.i.add(f);
   }
 
@@ -390,35 +439,72 @@ class _CloudPageState extends State<CloudPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(Lc.current.cloudDisk),
-        actions: [
-          IconButton(
-            tooltip: Lc.current.downloadsPage,
-            icon: const Icon(Icons.download_done_outlined),
-            onPressed: _toDownloads,
-          ),
-          IconButton(
-            tooltip: Lc.current.recycleBin,
-            icon: const Icon(Icons.delete_outline),
-            onPressed: _toTrash,
-          ),
-        ],
-      ),
+      appBar: !_selecting
+          ? AppBar(
+              title: Text(Lc.current.cloudDisk),
+              actions: [
+                IconButton(
+                  tooltip: Lc.current.select,
+                  icon: const Icon(Icons.checklist_rounded),
+                  onPressed: () => setState(() {
+                  _selecting = true;
+                  _picked.clear();
+                }),
+                ),
+                IconButton(
+                  tooltip: Lc.current.downloadsPage,
+                  icon: const Icon(Icons.download_done_outlined),
+                  onPressed: _toDownloads,
+                ),
+                IconButton(
+                  tooltip: Lc.current.recycleBin,
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: _toTrash,
+                ),
+              ],
+            )
+          : AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() {
+                  _selecting = false;
+                  _picked.clear();
+                }),
+              ),
+              title: Text(Lc.current.selectedN('${_picked.length}')),
+              actions: [
+                IconButton(
+                  tooltip: Lc.current.selectAll,
+                  icon: const Icon(Icons.select_all),
+                  onPressed: () => setState(() {
+                    _picked
+                      ..clear()
+                      ..addAll(_items.map((e) => e.id));
+                  }),
+                ),
+                IconButton(
+                  tooltip: Lc.current.delete,
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: _picked.isEmpty ? null : _deletePicked,
+                ),
+              ],
+            ),
       floatingActionButton: AnimatedBuilder(
         animation: UploadManager.i,
         builder: (context, _) {
-          final busy = UploadManager.i.busy;
+          // 忙也照选：选好自动排队，不用等一个 1GB 的包传完才让点。
+          final waiting = UploadManager.i.activeJobs.length;
           return FloatingActionButton.extended(
-            onPressed: busy ? null : _uploadEntry,
-            icon: busy
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+            onPressed: _uploadEntry,
+            icon: waiting > 0
+                ? Badge(
+                    label: Text('$waiting'),
+                    child: const Icon(Icons.upload_file),
                   )
                 : const Icon(Icons.upload_file),
-            label: Text(Lc.current.upload),
+            label: Text(
+              waiting > 0 ? Lc.current.uploadQueuedN('$waiting') : Lc.current.upload,
+            ),
           );
         },
       ),
@@ -432,8 +518,10 @@ class _CloudPageState extends State<CloudPage> {
               _SearchBar(
                 controller: _search,
                 onChanged: (v) {
+                  // 敲一个字就打一次接口，翻页状态还会互相打架
+                  _debounce?.cancel();
                   setState(() => _q = v);
-                  _load();
+                  _debounce = Timer(const Duration(milliseconds: 320), _load);
                 },
                 sort: _sort,
                 onSort: (s) {
@@ -470,19 +558,36 @@ class _CloudPageState extends State<CloudPage> {
         title: _q.isEmpty ? Lc.current.nothingUploadedYet : Lc.current.notFound,
       );
     }
+    final ended = _items.length >= _total;
+    final tail = _more || (_items.length > _perPage && ended) ? 1 : 0;
     return ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.only(bottom: 24),
-      itemCount: _items.length + (_more ? 1 : 0),
+      itemCount: _items.length + tail,
       itemBuilder: (context, i) {
         if (i >= _items.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
+          if (_more) {
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          }
+          // 翻到底了说一声，省得人一直往上划，以为还有
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(0, 18, 0, 8),
             child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+              child: Text(
+                Lc.current.noMore,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
               ),
             ),
           );
@@ -490,10 +595,28 @@ class _CloudPageState extends State<CloudPage> {
         final f = _items[i];
         return _FileRow(
           file: f,
-          onTap: () => _open(f),
-          onLongPress: () => _menu(f),
+          onTap: () {
+            if (_selecting) {
+              setState(() {
+                if (!_picked.remove(f.id)) _picked.add(f.id);
+              });
+              return;
+            }
+            _open(f);
+          },
+          onLongPress: () {
+            if (_selecting) return;
+            setState(() {
+              _selecting = true;
+              _picked.add(f.id);
+            });
+          },
+          onCancelDownload: _dl.containsKey(f.id) && _dl[f.id]! > 0
+              ? () => _cancelDownload(f)
+              : null,
           progress: _dl[f.id],
           downloaded: _done.contains(f.id) || _localOf(f) != null,
+          selected: _selecting ? _picked.contains(f.id) : null,
         );
       },
     );
@@ -615,6 +738,8 @@ class _FileRow extends StatelessWidget {
     required this.onLongPress,
     this.progress,
     this.downloaded = false,
+    this.onCancelDownload,
+    this.selected,
   });
 
   final CloudFile file;
@@ -627,6 +752,12 @@ class _FileRow extends StatelessWidget {
   /// 这次进来下过了。还能再点，标一直留着。
   final bool downloaded;
 
+  /// 正下着的时候给个 ×，点它能停。
+  final VoidCallback? onCancelDownload;
+
+  /// null = 不在选择模式；true/false = 选中没选中。
+  final bool? selected;
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -637,10 +768,24 @@ class _FileRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
-      child: Padding(
+      child: Container(
+        color: selected == true
+            ? cs.primary.withValues(alpha: 0.08)
+            : null,
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
         child: Row(
           children: [
+            if (selected != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: Icon(
+                  selected!
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  size: 22,
+                  color: selected! ? cs.primary : cs.outline,
+                ),
+              ),
             Icon(
               fileIconFor(file.name),
               size: 26,
@@ -694,6 +839,19 @@ class _FileRow extends StatelessWidget {
                               : Lc.current.downloadingShort,
                           style: TextStyle(fontSize: 11, color: cs.primary),
                         ),
+                        if (onCancelDownload != null)
+                          InkWell(
+                            onTap: onCancelDownload,
+                            borderRadius: BorderRadius.circular(14),
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Icon(
+                                Icons.close,
+                                size: 16,
+                                color: cs.outline,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   if (refs > 0 && p == null)
@@ -879,10 +1037,11 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
   }
 }
 
-/// 上传中的一条：文件名、百分比条、已传多少、多快。
+/// 上传队列那一条。
 ///
 /// 传 1GB 的时候，有没有这一条决定了「它到底在不在动」。
-/// 进度条。只订阅上传队列，传什么都没在传就什么都不占。
+/// 现在队列能排好几个，所以一条一条列出来，正在传的带进度，
+/// 排队的只报个名字。每条都能点 × 停掉，传砸了的点一下就重试。
 class _UploadStrip extends StatelessWidget {
   const _UploadStrip();
 
@@ -891,16 +1050,39 @@ class _UploadStrip extends StatelessWidget {
     return AnimatedBuilder(
       animation: UploadManager.i,
       builder: (context, _) {
-        final j = UploadManager.i.current;
-        if (j == null) return const SizedBox.shrink();
-        return _UploadPanel(
-          name: j.name,
-          got: j.state == UploadState.running ? j.got : 0,
-          total: j.size,
-          speed: j.state == UploadState.running ? j.speed : 0,
-          queued: UploadManager.i.queuedAfter > (j.state == UploadState.queued ? 1 : 0)
-              ? UploadManager.i.queuedAfter - (j.state == UploadState.queued ? 1 : 0)
-              : 0,
+        final active = UploadManager.i.activeJobs;
+        final failed = UploadManager.i.failedJobs;
+        if (active.isEmpty && failed.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final j in active.take(3))
+              _UploadPanel(
+                job: j,
+                onCancel: () => UploadManager.i.cancel(j),
+                onRetry: null,
+              ),
+            if (active.length > 3)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 16, 6),
+                child: Text(
+                  Lc.current.moreQueuedN('${active.length - 3}'),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ),
+              ),
+            // 失败的不自动消失：人得知道哪个没传上去
+            for (final j in failed.take(2))
+              _UploadPanel(
+                job: j,
+                onCancel: () => UploadManager.i.discard(j),
+                onRetry: () => UploadManager.i.retry(j),
+              ),
+          ],
         );
       },
     );
@@ -909,31 +1091,39 @@ class _UploadStrip extends StatelessWidget {
 
 class _UploadPanel extends StatelessWidget {
   const _UploadPanel({
-    required this.name,
-    required this.got,
-    required this.total,
-    required this.speed,
-    this.queued = 0,
+    required this.job,
+    this.onCancel,
+    this.onRetry,
   });
 
-  final String name;
-  final int got;
-  final int total;
-  final double speed;
-  final int queued;
+  final UploadJob job;
+  final VoidCallback? onCancel;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final name = job.name;
+    final total = job.size;
+    final running = job.state == UploadState.running;
+    final failed = job.retryable;
+    final got = running ? job.got : (failed ? job.offset : 0);
+    final speed = running ? job.speed : 0.0;
     final pct = total > 0 ? (got / total).clamp(0.0, 1.0) : null;
-    final left = '${bytesShort(got)} / ${bytesShort(total > 0 ? total : got)}';
+    final left =
+        '${bytesShort(got)} / ${bytesShort(total > 0 ? total : got)}';
     final rate = speed > 0 ? '${bytesShort(speed.round())}/s' : '';
     final pctText = pct == null ? '' : '${(pct * 100).toStringAsFixed(0)}%';
+    final title = failed && job.error.isNotEmpty ? '$name · ${job.error}' : name;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
       child: Row(
         children: [
-          Icon(Icons.upload_file, size: 18, color: cs.primary),
+          Icon(
+            failed ? Icons.error_outline : Icons.upload_file,
+            size: 18,
+            color: failed ? cs.error : cs.primary,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -943,17 +1133,15 @@ class _UploadPanel extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        name,
+                        title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: failed ? cs.error : null,
+                        ),
                       ),
                     ),
-                    if (queued > 0)
-                      Text(
-                        ' +$queued',
-                        style: TextStyle(fontSize: 11.5, color: cs.outline),
-                      ),
                     const SizedBox(width: 8),
                     if (rate.isNotEmpty)
                       Text(
@@ -966,10 +1154,10 @@ class _UploadPanel extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: pct,
+                    value: failed ? (pct ?? 0) : pct,
                     minHeight: 5,
                     backgroundColor: cs.surfaceContainerHighest,
-                    color: cs.primary,
+                    color: failed ? cs.error : cs.primary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -977,18 +1165,48 @@ class _UploadPanel extends StatelessWidget {
                   children: [
                     Text(
                       left,
-                      style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                     const Spacer(),
-                    Text(
-                      pctText,
-                      style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
-                    ),
+                    if (failed)
+                      Text(
+                        Lc.current.tapToRetry,
+                        style: TextStyle(fontSize: 11.5, color: cs.error),
+                      )
+                    else
+                      Text(
+                        job.state == UploadState.queued
+                            ? Lc.current.waitingTurn
+                            : pctText,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
                   ],
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 4),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: failed ? Lc.current.delete : Lc.current.cancel,
+            icon: Icon(failed ? Icons.delete_outline : Icons.close, size: 18),
+            onPressed: onCancel,
+          ),
+          if (failed)
+            TextButton(
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              onPressed: onRetry,
+              child: Text(Lc.current.retry),
+            ),
         ],
       ),
     );

@@ -42,7 +42,7 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   /// 撤回时限，跟服务端 DM_RECALL_WINDOW 对齐。客户端先挡一下，省一次白跑。
   static const int _recallSeconds = 120;
 
@@ -64,6 +64,17 @@ class _ChatPageState extends State<ChatPage> {
 
   bool _loading = true;
   bool _sending = false;
+
+  /// 发多张图时走到第几张了。按钮上直接显示 2/9，人就知道它在动。
+  int _sendAt = 0;
+  int _sendTotal = 0;
+
+  /// 上一次发送失败留下的东西。图传上去的那几张记着地址，
+  /// 重发时直接拿来用，不从头上再传一遍。
+  List<String> _failedUrls = const [];
+  List<PostFile> _failedFiles = const [];
+  Map<String, dynamic>? _failedReply;
+  String _failedWhy = '';
   bool _compressing = false;
   bool _hasMore = false;
   bool _loadingEarlier = false;
@@ -113,6 +124,7 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     // 告诉轮询：这个人的消息别弹，人正看着呢。
     Poller.instance.activePeer = _peerId;
+    WidgetsBinding.instance.addObserver(this);
     _scroll.addListener(_onScroll);
     _focus.addListener(() {
       if (_focus.hasFocus && _showEmoji) setState(() => _showEmoji = false);
@@ -130,6 +142,7 @@ class _ChatPageState extends State<ChatPage> {
     if (Poller.instance.activePeer == _peerId) {
       Poller.instance.activePeer = 0;
     }
+    WidgetsBinding.instance.removeObserver(this);
     _flushDraft();
     _poll?.cancel();
     _draftTimer?.cancel();
@@ -156,6 +169,16 @@ class _ChatPageState extends State<ChatPage> {
         if (bottom) _newCount = 0;
       });
     }
+  }
+
+  /// 键盘弹上弹下会改可视高度，列表跟着缩，最后一条常被挤出屏幕。
+  /// 本来就停在底部的，重新贴回去；人在翻旧消息就别拽他。
+  @override
+  void didChangeMetrics() {
+    if (!_atBottom) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _toBottom();
+    });
   }
 
   void _toBottom({bool animate = false}) {
@@ -481,19 +504,28 @@ class _ChatPageState extends State<ChatPage> {
         _sending) {
       return;
     }
-    setState(() => _sending = true);
+    setState(() {
+      _sending = true;
+      _sendTotal = _pending.length;
+      _sendAt = _failedUrls.length;
+    });
+    // 重发时前面几张已经传好了，接着往下排，别整批重来
+    final urls = <String>[..._failedUrls];
+    final files = _failedFiles.isNotEmpty ? _failedFiles : _pendingFiles;
+    final reply = _replyTo ?? _failedReply;
+    String why = '';
     try {
       // 先把图传上去，拿到站内地址再发消息
-      final urls = <String>[];
-      for (final b in _pending) {
-        urls.add(await Api.uploadImage(b));
+      for (var i = urls.length; i < _pending.length; i++) {
+        if (mounted) setState(() => _sendAt++);
+        urls.add(await Api.uploadImage(_pending[i]));
       }
       await Api.post('/dm/$_peerId', {
         'body': text,
         'images': urls,
-        if (_pendingFiles.isNotEmpty)
-          'files': _pendingFiles.map((f) => f.toJson()).toList(),
-        if (_replyTo != null) 'reply_id': _replyTo!['id'],
+        if (files.isNotEmpty)
+          'files': files.map((f) => f.toJson()).toList(),
+        if (reply != null) 'reply_id': reply['id'],
       });
       if (!mounted) return;
       _input.clear();
@@ -503,21 +535,45 @@ class _ChatPageState extends State<ChatPage> {
         _pendingFiles.clear();
         _replyTo = null;
         _sending = false;
+        _sendAt = 0;
+        _sendTotal = 0;
         _showEmoji = false;
+        _failedUrls = const [];
+        _failedFiles = const [];
+        _failedReply = null;
+        _failedWhy = '';
       });
       await _load();
       _toBottom(animate: true);
     } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _sending = false);
-      toast(context, errorText(context, e));
-      // 403 多半是没互关、那条额度用完了。重新拉一次，输入栏会自己换掉。
-      if (e.status == 403) _load();
+      if (mounted) why = errorText(context, e);
+      if (mounted) {
+        // 403 多半是没互关、那条额度用完了。重新拉一次，输入栏会自己换掉。
+        if (e.status == 403) _load();
+      }
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _sending = false);
-      toast(context, '$e');
+      why = '$e';
     }
+    if (!mounted) return;
+    setState(() {
+      _sending = false;
+      _sendAt = 0;
+      _sendTotal = 0;
+      // 东西都留着，条子上点一下就再来一次
+      _failedUrls = urls;
+      _failedFiles = files;
+      _failedReply = reply;
+      _failedWhy = why;
+    });
+  }
+
+  void _dropFailed() {
+    setState(() {
+      _failedUrls = const [];
+      _failedFiles = const [];
+      _failedReply = null;
+      _failedWhy = '';
+    });
   }
 
   // ── 单条操作 ──────────────────────────────────────────
@@ -919,10 +975,14 @@ class _ChatPageState extends State<ChatPage> {
         title: Lc.current.dmNoChat,
       );
     }
-    // 点消息区任意空白、或者开始往上翻，都收键盘
+    // 点消息区任意空白、或者人手开始往上翻，都收键盘。
+    //
+    // 只看 dragDetails：jumpTo/animateTo 自己贴底也会发 ScrollStartNotification
+    // （dragDetails 是 null），跟着收的话，键盘一弹起来 didChangeMetrics 就贴底、
+    // 贴底就收键盘，人就再也点不出键盘了。手指拖动、甩动才带 dragDetails。
     return NotificationListener<ScrollStartNotification>(
-      onNotification: (_) {
-        FocusScope.of(context).unfocus();
+      onNotification: (n) {
+        if (n.dragDetails != null) FocusScope.of(context).unfocus();
         return false;
       },
       child: GestureDetector(
@@ -1026,11 +1086,26 @@ class _ChatPageState extends State<ChatPage> {
           if (newDay) _dayPill(cs, ts),
           if (showTime && !newDay) _timePill(cs, ts),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 9),
             child: Center(
-              child: Text(
-                mine ? Lc.current.dmRecalledMine : Lc.current.dmRecalledPeer,
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              // 一条灰字太素，看着像渲染失败。给个淡底，明暗主题都认得出来。
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Text(
+                  mine ? Lc.current.dmRecalledMine : Lc.current.dmRecalledPeer,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: cs.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ),
             ),
           ),
@@ -1163,7 +1238,9 @@ class _ChatPageState extends State<ChatPage> {
           ),
           border: selected
               ? Border.all(color: cs.tertiary, width: 2)
-              : null,
+              : (dark && !mine
+                    ? Border.all(color: bubbleEdge(hue, dark))
+                    : null),
         ),
         padding: EdgeInsets.all(onlyImgs ? 3 : 4),
         child: Column(
@@ -1246,6 +1323,67 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  /// 网络图片，按显示尺寸解码。
+  ///
+  /// 以前直接 Image.network 原图，一张照片四五兆，九张一起就是几十兆，
+  /// 解到内存里还按原始尺寸铺开——聊到一个带图的消息就卡一下。
+  /// 缩略图按 3 倍像素密度要就够清楚了。
+  Widget _netImg(
+    String url,
+    double side, {
+    double radius = 9,
+    BoxFit fit = BoxFit.cover,
+  }) {
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final px = (side * dpr).round();
+    final ph = Theme.of(context).colorScheme.surfaceContainerHighest;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: Image.network(
+        Api.img(url),
+        width: side,
+        height: side,
+        fit: fit,
+        cacheWidth: px,
+        // 灰块先占住位置，图真到了再换上去。没有占位就是一跳一跳的。
+        loadingBuilder: (ctx, child, p) {
+          if (p == null) return child;
+          final total = p.expectedTotalBytes;
+          final v = total == null || total == 0
+              ? null
+              : p.cumulativeBytesLoaded / total;
+          return SizedBox(
+            width: side,
+            height: side,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ColoredBox(color: ph),
+                if (v != null)
+                  Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        value: v,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+        errorBuilder: (_, _, _) => Container(
+          width: side,
+          height: side,
+          color: Colors.black12,
+          child: const Icon(Icons.broken_image_outlined, size: 20),
+        ),
+      ),
+    );
+  }
+
   /// 图片排版：一张放大，四张以上走三列九宫格。
   Widget _images(List<String> imgs, int id) {
     final one = imgs.length == 1;
@@ -1261,21 +1399,7 @@ class _ChatPageState extends State<ChatPage> {
     if (one) {
       return GestureDetector(
         onTap: () => tap(0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(13),
-          child: Image.network(
-            Api.img(imgs[0]),
-            width: side,
-            height: side,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(
-              width: side,
-              height: side,
-              color: Colors.black12,
-              child: const Icon(Icons.broken_image_outlined, size: 20),
-            ),
-          ),
-        ),
+        child: _netImg(imgs[0], side, radius: 13),
       );
     }
     return SizedBox(
@@ -1287,21 +1411,7 @@ class _ChatPageState extends State<ChatPage> {
           for (var i = 0; i < imgs.length; i++)
             GestureDetector(
               onTap: () => tap(i),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(9),
-                child: Image.network(
-                  Api.img(imgs[i]),
-                  width: side,
-                  height: side,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    width: side,
-                    height: side,
-                    color: Colors.black12,
-                    child: const Icon(Icons.broken_image_outlined, size: 20),
-                  ),
-                ),
-              ),
+              child: _netImg(imgs[i], side),
             ),
         ],
       ),
@@ -1388,6 +1498,7 @@ class _ChatPageState extends State<ChatPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (_failedWhy.isNotEmpty) _failedBar(cs),
             if (_replyTo != null) _replyBar(cs),
             if (_pending.isNotEmpty || _pendingFiles.isNotEmpty)
               _pendingBar(cs),
@@ -1398,6 +1509,43 @@ class _ChatPageState extends State<ChatPage> {
             if (_showEmoji) _emojiPanel(cs),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 没发出去的那一条。点重试就再来，点 × 扔掉。
+  /// 不弹个 toast 就完：那条提示 1.5 秒后消失，人回头就不知道啥没发出去。
+  Widget _failedBar(ColorScheme cs) {
+    return Container(
+      color: cs.errorContainer.withValues(alpha: 0.6),
+      padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 16, color: cs.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _failedWhy,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: cs.onErrorContainer),
+            ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            onPressed: _sending ? null : _send,
+            child: Text(Lc.current.retry, style: const TextStyle(fontSize: 12.5)),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: _dropFailed,
+            tooltip: Lc.current.cancel,
+            icon: Icon(Icons.close, size: 16, color: cs.onErrorContainer),
+          ),
+        ],
       ),
     );
   }
@@ -1564,8 +1712,14 @@ class _ChatPageState extends State<ChatPage> {
       children: [
         IconButton(
           onPressed: () {
+            // 开表情面板就收键盘；从面板切回键盘得把焦点要回来，
+            // 光把面板藏掉系统不会自己弹键盘，看着就是点不出键盘。
             setState(() => _showEmoji = !_showEmoji);
-            if (_showEmoji) FocusScope.of(context).unfocus();
+            if (_showEmoji) {
+              FocusScope.of(context).unfocus();
+            } else {
+              _focus.requestFocus();
+            }
           },
           tooltip: Lc.current.dmEmoji,
           visualDensity: VisualDensity.compact,
@@ -1634,11 +1788,19 @@ class _ChatPageState extends State<ChatPage> {
                     shape: const StadiumBorder(),
                   ),
                   child: _sending
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? (_sendTotal > 1
+                            // 九张图一张张传，没个数看着就像卡死了
+                            ? Text(
+                                '$_sendAt/$_sendTotal',
+                                style: const TextStyle(fontSize: 13),
+                              )
+                            : const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ))
                       : Text(
                           Lc.current.send,
                           style: const TextStyle(fontSize: 14),
