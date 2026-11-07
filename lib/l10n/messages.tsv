@@ -599,3 +599,11 @@ v1 个没传上去	uploadsFailedN	{v1} failed
 不豁免电池优化，系统会在后台冻住 App，锁屏后收不到提醒	bgKeepAliveHint	Without the battery exemption the system freezes the app in the background and alerts stop
 已豁免	bgKeepAliveOn	Allowed
 去设置	bgKeepAliveOff	Open settings
+通知权限	notifyPerm	Notification permission
+通知权限没开，系统一条提醒都不会显示	notifyPermHint	Notifications are blocked; no alert will be shown
+已开启	notifyPermOn	On
+未开启	notifyPermOff	Off
+通知权限没开，先去系统里打开	notifyPermDenied	Notifications are blocked; enable them in system settings
+发一条测试通知	notifyTest	Send a test notification
+测试通知	notifyTestTitle	Test notification
+能看到这条，说明通知是通的	notifyTestBody	If you see this, notifications work

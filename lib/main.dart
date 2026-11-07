@@ -108,20 +108,8 @@ Future<void> _boot() async {
   // 上次没传完的东西接着传，断点接着续。
   unawaited(UploadManager.i.init());
   // 轮询放在最后启动：要有 token 才有东西可查。
+  // 通知权限、电池豁免也挂在轮询第一次跑通之后问，见 Poller._maybeAskPerms。
   unawaited(Poller.instance.start());
-  // 登录着但还没给通知权限的，问一次；问过系统自己会记住。
-  unawaited(_askNotifyOnce());
-}
-
-/// 通知权限只主动问一次。拒绝了就去设置页手动开，这里不骚扰。
-Future<void> _askNotifyOnce() async {
-  try {
-    if (!AppState.instance.loggedIn) return;
-    if (await SysNotify.granted()) return;
-    await SysNotify.ask();
-  } catch (_) {
-    // 问不到就算了，不影响别的
-  }
 }
 
 /// 点通知回到 App 里。payload 只有两种：`dm:<id>:<名字>` 和 notice。

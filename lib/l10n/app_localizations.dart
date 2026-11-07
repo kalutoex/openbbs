@@ -4232,6 +4232,54 @@ abstract class L {
   /// **'去设置'**
   String get bgKeepAliveOff;
 
+  /// No description provided for @notifyPerm.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知权限'**
+  String get notifyPerm;
+
+  /// No description provided for @notifyPermHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知权限没开，系统一条提醒都不会显示'**
+  String get notifyPermHint;
+
+  /// No description provided for @notifyPermOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'已开启'**
+  String get notifyPermOn;
+
+  /// No description provided for @notifyPermOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'未开启'**
+  String get notifyPermOff;
+
+  /// No description provided for @notifyPermDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知权限没开，先去系统里打开'**
+  String get notifyPermDenied;
+
+  /// No description provided for @notifyTest.
+  ///
+  /// In zh, this message translates to:
+  /// **'发一条测试通知'**
+  String get notifyTest;
+
+  /// No description provided for @notifyTestTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'测试通知'**
+  String get notifyTestTitle;
+
+  /// No description provided for @notifyTestBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'能看到这条，说明通知是通的'**
+  String get notifyTestBody;
+
   /// No description provided for @noRepliesHint.
   ///
   /// In zh, this message translates to:

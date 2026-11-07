@@ -12,6 +12,7 @@ class SysNotify {
   /// 不在通知栏里堆一列。
   static const idDm = 1001;
   static const idNotice = 1002;
+  static const idTest = 1003;
 
   static Future<bool> init(void Function(String payload) onTap) async {
     _onTap = onTap;
@@ -29,6 +30,9 @@ class SysNotify {
       },
     );
     _ready = ok ?? false;
+    // 渠道先建出来：第一次 show 才建也行，但那样重要级别改了也掰不回来，
+    // 而且后台 isolate 里建渠道容易赶上插件还没注册完。
+    await _ensureChannel();
     if (_ready && (launch?.didNotificationLaunchApp ?? false)) {
       final p = launch?.notificationResponse?.payload;
       if (p != null && p.isNotEmpty) {
@@ -62,15 +66,49 @@ class SysNotify {
     return await a.areNotificationsEnabled() ?? false;
   }
 
+  /// 通知渠道。id 和前台服务用的不是同一个，互不影响。
+  static const _channelId = 'messages';
+
+  static Future<void> _ensureChannel() async {
+    if (!_ready) return;
+    try {
+      final a = _p
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      await a?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _channelId,
+          '消息',
+          description: '私信与站内消息提醒',
+          importance: Importance.high,
+        ),
+      );
+    } catch (_) {
+      // 建不出来也不挡着弹：show 那边还会再建一次
+    }
+  }
+
+  static bool get ready => _ready;
+
   static Future<void> show({
     required int id,
     required String title,
     required String body,
     required String payload,
   }) async {
+    // 后台 isolate 里可能来不及走 init，这里兜一次，否则一条都弹不出来
+    // 而表面上什么错都没有。
+    if (!_ready) {
+      try {
+        await init(_onTap ?? (_) {});
+      } catch (_) {
+        return;
+      }
+    }
     if (!_ready) return;
     final details = AndroidNotificationDetails(
-      'messages',
+      _channelId,
       '消息',
       channelDescription: '私信与站内消息提醒',
       importance: Importance.high,

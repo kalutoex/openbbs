@@ -2312,6 +2312,30 @@ class LZh extends L {
   String get bgKeepAliveOff => '去设置';
 
   @override
+  String get notifyPerm => '通知权限';
+
+  @override
+  String get notifyPermHint => '通知权限没开，系统一条提醒都不会显示';
+
+  @override
+  String get notifyPermOn => '已开启';
+
+  @override
+  String get notifyPermOff => '未开启';
+
+  @override
+  String get notifyPermDenied => '通知权限没开，先去系统里打开';
+
+  @override
+  String get notifyTest => '发一条测试通知';
+
+  @override
+  String get notifyTestTitle => '测试通知';
+
+  @override
+  String get notifyTestBody => '能看到这条，说明通知是通的';
+
+  @override
   String get noRepliesHint => '说两句，让楼主知道有人看。';
 
   @override

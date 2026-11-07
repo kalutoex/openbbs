@@ -2355,6 +2355,32 @@ class LEn extends L {
   String get bgKeepAliveOff => 'Open settings';
 
   @override
+  String get notifyPerm => 'Notification permission';
+
+  @override
+  String get notifyPermHint =>
+      'Notifications are blocked; no alert will be shown';
+
+  @override
+  String get notifyPermOn => 'On';
+
+  @override
+  String get notifyPermOff => 'Off';
+
+  @override
+  String get notifyPermDenied =>
+      'Notifications are blocked; enable them in system settings';
+
+  @override
+  String get notifyTest => 'Send a test notification';
+
+  @override
+  String get notifyTestTitle => 'Test notification';
+
+  @override
+  String get notifyTestBody => 'If you see this, notifications work';
+
+  @override
   String get noRepliesHint => 'Be the first to say something.';
 
   @override

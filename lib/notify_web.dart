@@ -3,6 +3,9 @@
 class SysNotify {
   static const idDm = 1001;
   static const idNotice = 1002;
+  static const idTest = 1003;
+
+  static bool get ready => false;
 
   static Future<bool> init(void Function(String payload) onTap) async => false;
   static Future<bool> ask() async => false;

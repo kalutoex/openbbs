@@ -180,7 +180,7 @@ class Poller with WidgetsBindingObserver {
       await _handleNotice(nt);
       // 顺手把「当前在哪座站、哪个号」留给后台任务，它那边读不到 AppState。
       await _syncBgContext();
-      await _maybeAskBattery();
+      await _maybeAskPerms();
     } catch (e) {
       _fails++;
       // 以前这里全吞掉。服务端把 dm 改成数组，这里就每天静默失败一万多次，
@@ -210,27 +210,41 @@ class Poller with WidgetsBindingObserver {
     );
   }
 
-  /// 电池优化豁免只会自动问一次。
+  /// 两样一次性的系统权限：通知、电池优化豁免。
   ///
-  /// 放在这里而不是启动时：轮询能跑是在登录、读站完成之后，那时候弹系统窗口
-  /// 才不打断冷启动。问过就记一笔，拒了也不再提，免得每次开 App 都来一下。
+  /// 都放在轮询第一次跑通之后问。以前挂在 main 的启动流程里，那时候
+  /// `AppState.init()` 还没回来，`loggedIn` 是 false，函数第一行就 return 了——
+  /// 装完到卸载都不会有人问过通知权限，安卓 13 起没这个权限一条都弹不出来。
+  /// 电池优化那边同理：已经豁免的别再问，省得用户点了没反应还以为坏了。
+  static const _kNotifyAsked = 'notify_perm_asked';
   static const _kBgAsked = 'bg_battery_asked';
-  static bool _askedBattery = false;
+  static bool _askedPerms = false;
 
-  Future<void> _maybeAskBattery() async {
-    if (_askedBattery) return;
-    _askedBattery = true;
+  Future<void> _maybeAskPerms() async {
+    if (_askedPerms) return;
+    _askedPerms = true;
     try {
       if (!Platform.isAndroid) return;
       final p = await SharedPreferences.getInstance();
+
+      // 通知权限。系统记着自己拒过，重复问不会弹窗，所以只在这里问一次。
+      if (!(p.getBool(_kNotifyAsked) ?? false)) {
+        await p.setBool(_kNotifyAsked, true);
+        if (!await SysNotify.granted()) {
+          await Future.delayed(const Duration(milliseconds: 800));
+          final ok = await SysNotify.ask();
+          debugPrint('notify permission: $ok');
+        }
+      }
+
+      // 电池优化豁免。已经在白名单里的不弹，只把账记上。
       if (p.getBool(_kBgAsked) ?? false) return;
-      if (await Power.ignoringBattery()) return;
       await p.setBool(_kBgAsked, true);
-      // 等首帧那点动画过去，别跟启动抢镜头。
-      await Future.delayed(const Duration(milliseconds: 1200));
+      if (await Power.ignoringBattery()) return;
+      await Future.delayed(const Duration(milliseconds: 800));
       await Power.requestIgnore();
-    } catch (_) {
-      // 弹不出来就算了，设置页那一行还在
+    } catch (e) {
+      debugPrint('ask perms failed: $e');
     }
   }
 
