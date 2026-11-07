@@ -22,6 +22,7 @@ import '../store.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/page_width.dart';
+import '../widgets/retry_image.dart';
 import '../widgets/avatar.dart';
 import '../widgets/file_card.dart';
 import '../widgets/toast.dart';
@@ -1401,6 +1402,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   /// 以前直接 Image.network 原图，一张照片四五兆，九张一起就是几十兆，
   /// 解到内存里还按原始尺寸铺开——聊到一个带图的消息就卡一下。
   /// 缩略图按 3 倍像素密度要就够清楚了。
+  /// 聊天气泡里的方图。走磁盘缓存，失败能点一下重来——
+  /// 原来用 Image.network，网络一抖就是一张破图，点它也没反应。
   Widget _netImg(
     String url,
     double side, {
@@ -1409,49 +1412,16 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   }) {
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final px = (side * dpr).round();
-    final ph = Theme.of(context).colorScheme.surfaceContainerHighest;
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: Image.network(
-        Api.img(url),
+      child: SizedBox(
         width: side,
         height: side,
-        fit: fit,
-        cacheWidth: px,
-        // 灰块先占住位置，图真到了再换上去。没有占位就是一跳一跳的。
-        loadingBuilder: (ctx, child, p) {
-          if (p == null) return child;
-          final total = p.expectedTotalBytes;
-          final v = total == null || total == 0
-              ? null
-              : p.cumulativeBytesLoaded / total;
-          return SizedBox(
-            width: side,
-            height: side,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                ColoredBox(color: ph),
-                if (v != null)
-                  Center(
-                    child: SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        value: v,
-                        strokeWidth: 2,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        },
-        errorBuilder: (_, _, _) => Container(
-          width: side,
-          height: side,
-          color: Colors.black12,
-          child: const Icon(Icons.broken_image_outlined, size: 20),
+        child: RetryImage(
+          url: Api.img(url),
+          fit: fit,
+          memCacheWidth: px,
+          probeSize: false,
         ),
       ),
     );

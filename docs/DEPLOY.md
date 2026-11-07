@@ -159,3 +159,29 @@ docker compose logs -f
 | 容器起不来 | `docker compose logs --tail 50`；多半是 `config/site.json` 没挂进去 |
 
 健康检查地址：`/api/meta`，返回 200 就是活的。
+
+## 八、加新依赖：镜像缺包体的坑
+
+`PUB_HOSTED_URL=https://pub.flutter-io.cn` 的元数据是全的，但个别包的 tar 包镜像没同步，
+表现为 `flutter pub get` 一路解析成功，最后报：
+
+```
+Package not available (could not find package share_plus at https://pub.flutter-io.cn).
+```
+
+看到这句别怀疑版本号或拼写，八成是包体 404。验证：
+
+```
+flutter pub get -v 2>&1 | grep "HTTP response 404"
+```
+
+回源单独下一次，塞进镜像缓存，再离线解析：
+
+```
+PUB_HOSTED_URL=https://pub.dev flutter pub get      # 包体落到 hosted/pub.dev/
+cp -r ~/.pub-cache/hosted/pub.dev/<包>-<版本> ~/.pub-cache/hosted/pub.flutter-io.cn/
+flutter pub get --offline                            # 让 package_config 指回镜像
+flutter build apk --no-pub                           # 关键：别让 build 再去解析，失败会把刚塞的目录清掉
+```
+
+`deploy_web.sh` 里的 `flutter build web` 已经带 `--no-pub`，原因同上。

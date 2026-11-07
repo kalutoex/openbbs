@@ -28,6 +28,7 @@ import '../widgets/skeleton.dart';
 import '../widgets/user_link.dart';
 
 import '../l10n/error_text.dart';
+import '../share_out.dart';
 import '../l10n/l10n.dart';
 import '../widgets/toast.dart';
 
@@ -182,6 +183,16 @@ class _ThreadPageState extends State<ThreadPage> {
       guard++;
     }
     await _jumpToFocus(fid);
+  }
+
+  /// 回顶。双击标题用，落到第 0 项。
+  void _toTop() {
+    if (!_itemScroll.isAttached) return;
+    _itemScroll.scrollTo(
+      index: 0,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _jumpToFocus(int fid) async {
@@ -633,6 +644,27 @@ class _ThreadPageState extends State<ThreadPage> {
   }
 
   /// 举报整帖。
+  /// 走系统分享面板，把帖子的标题和开头几行发出去。
+  /// 网页版没有深链，所以带上站点地址让对方自己找。
+  Future<void> _shareThread() async {
+    final t = _thread;
+    if (t == null) return;
+    final op = _posts.isEmpty ? const <String, dynamic>{} : _posts.first;
+    final body = ((op['body'] ?? '') as String).trim();
+    final excerpt = body.length > 160 ? '${body.substring(0, 160)}…' : body;
+    final who = (op['author'] ?? '') as String;
+    final text = [
+      '【${widget.title}】',
+      if (excerpt.isNotEmpty) excerpt,
+      '——${who.isEmpty ? '' : '$who · '}${Api.base}',
+    ].join('\n');
+    final ok = await shareText(text, subject: widget.title);
+    if (ok) return;
+    // 分享面板拉不起来（桌面没装、浏览器不支持），退回复制。
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) _toast(Lc.current.copied);
+  }
+
   Future<void> _reportThread() async {
     final t = _thread;
     if (t == null) return;
@@ -920,17 +952,25 @@ class _ThreadPageState extends State<ThreadPage> {
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
               )
             : null,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ],
+        // 标题双击回顶。滚到第几十楼想回开头，比找浮标顺手。
+        title: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onDoubleTap: _toTop,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           if (_thread != null)
@@ -947,6 +987,7 @@ class _ThreadPageState extends State<ThreadPage> {
                 if (v == 'top') _adminToggle('top');
                 if (v == 'good') _adminToggle('good');
                 if (v == 'report') _reportThread();
+                if (v == 'share') _shareThread();
               },
               itemBuilder: (_) => [
                 PopupMenuItem<String>(
@@ -1053,6 +1094,16 @@ class _ThreadPageState extends State<ThreadPage> {
                       ],
                     ),
                   ),
+                PopupMenuItem<String>(
+                  value: 'share',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.share_outlined, size: 18),
+                      const SizedBox(width: 10),
+                      Text(Lc.current.share),
+                    ],
+                  ),
+                ),
                 if (AppState.instance.loggedIn &&
                     AppState.instance.user?['id'] != _thread!['owner_id'])
                   PopupMenuItem<String>(
@@ -1245,7 +1296,11 @@ class _ThreadPageState extends State<ThreadPage> {
                 ),
               if (imgs.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                PostImages(urls: imgs, sizes: sizes),
+                PostImages(
+                  urls: imgs,
+                  sizes: sizes,
+                  heroPrefix: 'p${t['id']}',
+                ),
               ],
               if (files.isNotEmpty) FileCards(files: files),
               const SizedBox(height: 10),
@@ -1873,7 +1928,11 @@ class _PostCardState extends State<_PostCard> {
                                 ),
                           ),
                         if (!recalled && imgs.isNotEmpty)
-                          PostImages(urls: imgs, sizes: sizes),
+                          PostImages(
+                            urls: imgs,
+                            sizes: sizes,
+                            heroPrefix: 'p${widget.post['id']}',
+                          ),
                         if (!recalled && files.isNotEmpty)
                           FileCards(files: files),
                         if (!recalled && subs.isNotEmpty) _subThread(cs, subs),

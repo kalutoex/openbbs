@@ -16,7 +16,9 @@ BASE=${1:-https://127.0.0.1:26016}
 cd "$APP"
 # shellcheck disable=SC1091
 source /vol1/1000/data/code/.fenv
-flutter build web --release --base-href / --no-web-resources-cdn --pwa-strategy=none
+# --no-pub：依赖在这里解析不了（镜像缺包体），pub get 单独跑完再来。
+# shellcheck disable=SC2086
+flutter build web --release --base-href / --no-web-resources-cdn --pwa-strategy=none --no-pub
 
 cp -r build/web/. "$WEB"/
 
