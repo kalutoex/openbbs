@@ -143,6 +143,11 @@ class AppState extends ChangeNotifier {
 
   bool get loggedIn => user != null;
 
+  /// 当前登录的人。没登录是 0。
+  ///
+  /// 需要按人分开存的东西（上传队列、草稿、游标）都拿它当作用域。
+  int get uid => (user?['id'] as num?)?.toInt() ?? 0;
+
   int feedVersion = 0;
 
   /// 未读通知数，底部导航角标用。

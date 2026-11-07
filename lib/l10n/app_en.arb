@@ -853,6 +853,7 @@
     }
   },
   "uploadFailedTapRetry": "Upload failed. Tap the row to retry",
+  "uploadWrongAccount": "Account changed. Tap the row to retry into the current account.",
   "fileTooBigHint": "Keep each file under 500MB",
   "cloudRefsWarn": "Used by {v1} posts. Deleting it makes those places show that the file is gone.",
   "@cloudRefsWarn": {

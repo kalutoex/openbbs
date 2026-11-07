@@ -10,6 +10,7 @@ import 'api.dart';
 import 'app_globals.dart';
 import 'file_pick.dart';
 import 'l10n/l10n.dart';
+import 'store.dart';
 import 'upload_keepalive.dart';
 import 'utils.dart';
 
@@ -17,10 +18,21 @@ enum UploadState { queued, running, done, failed, cancelled }
 
 /// 一包正在传的东西。云盘页只是订阅它，页面关掉也照样传。
 class UploadJob {
-  UploadJob({required this.file, required this.id, this.offset = 0});
+  UploadJob({
+    required this.file,
+    required this.id,
+    this.offset = 0,
+    this.owner = 0,
+  });
 
   /// 服务端那个临时文件的 id。重试、续传、断点都认它。
   final String id;
+
+  /// 这条活是谁的（用户 id）。队列是全局一份，不认人就会把 A 的文件
+  /// 用 B 的令牌传进 B 的云盘。0 = 还没登录时就排进来的。
+  ///
+  /// 不是 final：用户主动在另一个账号下点重试，等于承认「传到这个账号」。
+  int owner;
 
   final PickedFile file;
   String get name => file.name;
@@ -57,6 +69,7 @@ class UploadJob {
     'size': size,
     'path': file.path,
     'offset': offset,
+    'owner': owner,
   };
 }
 
@@ -77,6 +90,12 @@ class UploadManager extends ChangeNotifier {
   static const _keep = 30;
 
   final List<UploadJob> jobs = [];
+
+  /// 盘上属于别的账号、这次不动的任务。只在落盘时原样写回去，
+  /// 这样切回原来的账号还能接上。
+  final List<UploadJob> _parked = [];
+
+  int get _uid => AppState.instance.uid;
 
   /// 累计传完几个。页面靠它判断要不要刷新列表——它自己可能中途才回来。
   int doneCount = 0;
@@ -131,12 +150,22 @@ class UploadManager extends ChangeNotifier {
         if (path.isEmpty || name.isEmpty) continue;
         // 文件可能已经被系统清掉（选择器的缓存目录会被回收）
         if (!File(path).existsSync()) continue;
+        // 老版本的队列没有 owner 字段，那时候只有一个账号在传，
+        // 归到当前这个人名下不会错。
+        final raw = it['owner'];
+        final uid = (raw as num?)?.toInt();
         final job = UploadJob(
           file: PickedFile(name: name, size: size, path: path),
           id: '${it['id'] ?? Api.newUploadId()}',
           offset: (it['offset'] as num?)?.toInt() ?? 0,
+          owner: uid ?? _uid,
         );
         job.got = job.offset;
+        if (job.owner != _uid) {
+          // 别人的活：不传，也不动，下次那个账号回来再接上
+          _parked.add(job);
+          continue;
+        }
         jobs.add(job);
       }
       if (jobs.isNotEmpty) {
@@ -151,7 +180,7 @@ class UploadManager extends ChangeNotifier {
   }
 
   void add(PickedFile f) {
-    final job = UploadJob(file: f, id: Api.newUploadId());
+    final job = UploadJob(file: f, id: Api.newUploadId(), owner: _uid);
     jobs.add(job);
     _batchTotal++;
     _trim();
@@ -169,6 +198,8 @@ class UploadManager extends ChangeNotifier {
   /// 失败或取消之后再来一次。已传的字节还在，从断点接着走。
   void retry(UploadJob job) {
     if (!job.retryable) return;
+    // 人是在当前账号下点的重试，这条就归当前账号了。
+    job.owner = _uid;
     job.state = UploadState.queued;
     job.error = '';
     job.got = job.offset;
@@ -208,7 +239,7 @@ class UploadManager extends ChangeNotifier {
       while (true) {
         UploadJob? next;
         for (final j in jobs) {
-          if (j.state == UploadState.queued) {
+          if (j.state == UploadState.queued && j.owner == _uid) {
             next = j;
             break;
           }
@@ -223,6 +254,16 @@ class UploadManager extends ChangeNotifier {
   }
 
   Future<void> _run(UploadJob job) async {
+    // 令牌是全局的，队列不是。开跑前对一次人：不是同一个就停在这儿，
+    // 绝不能用 A 的活配 B 的令牌传上去。
+    if (job.owner != _uid) {
+      job.state = UploadState.failed;
+      job.error = Lc.current.uploadWrongAccount;
+      job.offset = job.got;
+      _persist();
+      notifyListeners();
+      return;
+    }
     job.state = UploadState.running;
     job.got = job.offset;
     job.speed = 0;
@@ -238,6 +279,11 @@ class UploadManager extends ChangeNotifier {
         from: job.offset,
         cancel: job.cancel,
         onProgress: (got, total) {
+          // 传到一半人切了账号？立刻掐断，剩下的字节不再往新账号那边走。
+          if (job.owner != _uid) {
+            job.cancel.cancel();
+            return;
+          }
           final now = DateTime.now();
           final dt = now.difference(job._tick).inMilliseconds;
           // 上万次回调全量刷新没意义，又没有动画可看。
@@ -262,8 +308,7 @@ class UploadManager extends ChangeNotifier {
       if (_batchTotal <= 1) _say(Lc.current.uploadedDone);
     } on ApiException catch (e) {
       if (job.cancel.cancelled) {
-        job.state = UploadState.cancelled;
-        unawaited(Api.dropChunks(job.id));
+        _afterCancel(job);
       } else {
         job.state = UploadState.failed;
         job.error = e.message;
@@ -273,8 +318,7 @@ class UploadManager extends ChangeNotifier {
       }
     } catch (e) {
       if (job.cancel.cancelled) {
-        job.state = UploadState.cancelled;
-        unawaited(Api.dropChunks(job.id));
+        _afterCancel(job);
       } else {
         job.state = UploadState.failed;
         job.error = _msg(e);
@@ -287,6 +331,22 @@ class UploadManager extends ChangeNotifier {
     if (current == null) unawaited(keepAliveStop());
     _persist();
     notifyListeners();
+  }
+
+  /// 取消（或半路被掐断）之后怎么收尾。
+  ///
+  /// 自己按的取消：清掉服务端那半截临时文件，这条还能重试。
+  /// 换账号被掐断：不算「取消」，挂成失败等他自己决定——重试就归新账号。
+  void _afterCancel(UploadJob job) {
+    job.speed = 0;
+    if (job.owner != _uid) {
+      job.state = UploadState.failed;
+      job.error = Lc.current.uploadWrongAccount;
+      job.offset = job.got;
+      return;
+    }
+    job.state = UploadState.cancelled;
+    unawaited(Api.dropChunks(job.id));
   }
 
   /// 队列空了，把这一批的结果一次说完。
@@ -354,7 +414,7 @@ class UploadManager extends ChangeNotifier {
   void _persist() {
     if (kIsWeb) return;
     final list = <Map<String, dynamic>>[];
-    for (final j in jobs) {
+    for (final j in [...jobs, ..._parked]) {
       if (j.state == UploadState.done) continue;
       if (j.file.path == null) continue;
       list.add(j.toJson());

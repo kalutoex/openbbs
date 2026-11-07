@@ -2097,6 +2097,9 @@ class LZh extends L {
   String get uploadFailedTapRetry => '没传上去，点那一行可以重试';
 
   @override
+  String get uploadWrongAccount => '换过账号了，这条停在这儿。要传到当前账号，点那一行重试。';
+
+  @override
   String get fileTooBigHint => '单个文件别超过 500MB';
 
   @override

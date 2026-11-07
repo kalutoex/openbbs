@@ -1436,6 +1436,7 @@
     }
   },
   "uploadFailedTapRetry": "没传上去，点那一行可以重试",
+  "uploadWrongAccount": "换过账号了，这条停在这儿。要传到当前账号，点那一行重试。",
   "fileTooBigHint": "单个文件别超过 500MB",
   "cloudRefsWarn": "有 {v1} 个帖子正在用它。删掉之后，那些地方会显示「文件已失效」。",
   "@cloudRefsWarn": {

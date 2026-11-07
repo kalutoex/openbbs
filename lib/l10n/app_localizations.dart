@@ -3830,6 +3830,12 @@ abstract class L {
   /// **'没传上去，点那一行可以重试'**
   String get uploadFailedTapRetry;
 
+  /// No description provided for @uploadWrongAccount.
+  ///
+  /// In zh, this message translates to:
+  /// **'换过账号了，这条停在这儿。要传到当前账号，点那一行重试。'**
+  String get uploadWrongAccount;
+
   /// No description provided for @fileTooBigHint.
   ///
   /// In zh, this message translates to:

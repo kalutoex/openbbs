@@ -2131,6 +2131,10 @@ class LEn extends L {
   String get uploadFailedTapRetry => 'Upload failed. Tap the row to retry';
 
   @override
+  String get uploadWrongAccount =>
+      'Account changed. Tap the row to retry into the current account.';
+
+  @override
   String get fileTooBigHint => 'Keep each file under 500MB';
 
   @override
