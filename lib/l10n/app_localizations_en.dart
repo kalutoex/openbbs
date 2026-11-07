@@ -2413,4 +2413,32 @@ class LEn extends L {
   String deletedSelected(int n) {
     return 'Deleted $n';
   }
+
+  @override
+  String get uiConfigTitle => 'UI parameters';
+
+  @override
+  String get uiConfigHint =>
+      'Numbers that shape the interface — card height, padding, font sizes. Save here and the client picks them up on its next fetch; no new build needed.\n\nThe value is one JSON object. Keys are fixed (listed below); values must be numbers within range, or one of the allowed options. Unknown keys and out-of-range numbers are rejected by name. Saving an empty object restores every default.';
+
+  @override
+  String get uiConfigKeys =>
+      'Available keys: fileCard.height (24~240), fileCard.maxWidth (120~2000), fileCard.compactWidth, fileCard.padV, fileCard.padH, fileCard.radius, fileCard.icon, fileCard.nameSize, fileCard.sizeSize, fileCard.gap, fileCard.arrowIcon, threadCard.avatarRadius, threadCard.gap, threadCard.tagSide (leftOfTime / rightOfTime / belowTime).';
+
+  @override
+  String get uiConfigSave => 'Save';
+
+  @override
+  String get uiConfigSaved => 'Saved. Go back one page to see it';
+
+  @override
+  String get uiConfigBadJson => 'Not a valid JSON object';
+
+  @override
+  String get uiConfigDefaults => 'Fill in defaults';
+
+  @override
+  String uiConfigRejected(int count, String lines) {
+    return '$count rejected:\n$lines';
+  }
 }

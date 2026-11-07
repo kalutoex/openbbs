@@ -14,6 +14,7 @@ import 'user_link.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../ui_config.dart';
 import 'toast.dart';
 
 /// 时间线里的一条帖子。
@@ -134,9 +135,9 @@ class ThreadTile extends StatelessWidget {
                       CircleAvatarImg(
                         url: '${item['avatar'] ?? ''}',
                         name: author,
-                        radius: 20,
+                        radius: UiConfig.px('threadCard.avatarRadius'),
                       ),
-                      const SizedBox(width: 9),
+                      SizedBox(width: UiConfig.px('threadCard.gap')),
                       // 昵称在上、@账号在下，两行都放大一号。
                       // 昵称和账号并排时，长名字一挤，@就只剩半个。
                       Expanded(
@@ -175,28 +176,22 @@ class ThreadTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // 时间贴卡片右上角，角标排在它左边，从右往左：
-                      // 置顶离时间最近，往后是精华、多图。
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (imgs.length >= 2) ...[
+                      // 角标相对时间的位置由后台配：默认排在时间左边，
+                      // 从右往左越靠前越贴近时间。也能换成右侧或另起一行。
+                      _tail(
+                        tt,
+                        cs,
+                        [
+                          if (imgs.length >= 2)
                             _tag(Lc.current.multiImage, cs.tertiary),
-                            const SizedBox(width: 5),
-                          ],
-                          if (good) ...[
-                            _tag(Lc.current.featured, cs.error),
-                            const SizedBox(width: 5),
-                          ],
-                          if (item['is_top'] == true) ...[
+                          if (good) _tag(Lc.current.featured, cs.error),
+                          if (item['is_top'] == true)
                             _tag(Lc.current.pinned, cs.primary),
-                            const SizedBox(width: 5),
-                          ],
-                          Text(
-                            timeAgo(ts),
-                            style: tt.labelSmall?.copyWith(color: cs.outline),
-                          ),
                         ],
+                        Text(
+                          timeAgo(ts),
+                          style: tt.labelSmall?.copyWith(color: cs.outline),
+                        ),
                       ),
                     ],
                   ),
@@ -304,6 +299,43 @@ class ThreadTile extends StatelessWidget {
   }
 
   /// 置顶 / 精华 / 多图。三个彩色字挤在一起太碎，做成小胶囊。
+  /// 时间加角标那一块。角标在左、在右、另起一行三种，后台一句话就换。
+  Widget _tail(
+    TextTheme tt,
+    ColorScheme cs,
+    List<Widget> tags,
+    Widget time,
+  ) {
+    final side = UiConfig.str('threadCard.tagSide');
+    if (tags.isEmpty) return time;
+    Widget spaced() => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < tags.length; i++) ...[
+          if (i > 0) const SizedBox(width: 5),
+          tags[i],
+        ],
+      ],
+    );
+    if (side == 'belowTime') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [time, const SizedBox(height: 5), spaced()],
+      );
+    }
+    if (side == 'rightOfTime') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [time, const SizedBox(width: 5), spaced()],
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [spaced(), const SizedBox(width: 5), time],
+    );
+  }
+
   Widget _tag(String text, Color color) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
     decoration: BoxDecoration(

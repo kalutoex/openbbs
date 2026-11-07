@@ -2370,4 +2370,32 @@ class LZh extends L {
   String deletedSelected(int n) {
     return '已删 $n 个';
   }
+
+  @override
+  String get uiConfigTitle => '界面参数';
+
+  @override
+  String get uiConfigHint =>
+      '这里改的是卡片高度、边距、字号这类纯视觉的数字，保存后客户端下次拉取就换过来，不用重新发包。\n\n格式是一个 JSON 对象，键名固定（见下方清单），值只接受数字或在允许范围内的取值。键名不认识、数值超范围都会被拒绝，并告诉你是哪一条。留空保存等于全部恢复默认。';
+
+  @override
+  String get uiConfigKeys =>
+      '可用键：fileCard.height（卡片高度，24~240）、fileCard.maxWidth（宽屏上限，120~2000）、fileCard.compactWidth（私信里的宽度）、fileCard.padV（上下留白）、fileCard.padH（左右留白）、fileCard.radius（圆角）、fileCard.icon（图标大小）、fileCard.nameSize（文件名字号）、fileCard.sizeSize（大小文字字号）、fileCard.gap（图标与文字间距）、fileCard.arrowIcon（右侧图标大小）、threadCard.avatarRadius（头像半径）、threadCard.gap（头像与名字间距）、threadCard.tagSide（角标位置：leftOfTime / rightOfTime / belowTime）。';
+
+  @override
+  String get uiConfigSave => '保存';
+
+  @override
+  String get uiConfigSaved => '已保存，返回上一页就能看到';
+
+  @override
+  String get uiConfigBadJson => '不是合法的 JSON 对象';
+
+  @override
+  String get uiConfigDefaults => '填回默认值';
+
+  @override
+  String uiConfigRejected(int count, String lines) {
+    return '有 $count 条被拒绝：\n$lines';
+  }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../site_config.dart';
 import '../api.dart';
 import '../pages/admin_users_page.dart';
+import '../pages/ui_config_page.dart';
 import '../pages/admin_reports_page.dart';
 import '../pages/feature_request_page.dart';
 import '../pages/feature_requests_admin_page.dart';
@@ -195,6 +196,13 @@ class _AppDrawerState extends State<AppDrawer> {
                             icon: Icons.manage_accounts_outlined,
                             label: Lc.current.accountManagement,
                             onTap: () => _push(const AdminUsersPage()),
+                          ),
+                        if (st.user?['is_admin'] == true)
+                          _item(
+                            context,
+                            icon: Icons.tune,
+                            label: Lc.current.uiConfigTitle,
+                            onTap: () => _push(const UiConfigPage()),
                           ),
                         _item(
                           context,

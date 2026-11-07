@@ -4339,6 +4339,54 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'已删 {n} 个'**
   String deletedSelected(int n);
+
+  /// No description provided for @uiConfigTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'界面参数'**
+  String get uiConfigTitle;
+
+  /// No description provided for @uiConfigHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里改的是卡片高度、边距、字号这类纯视觉的数字，保存后客户端下次拉取就换过来，不用重新发包。\n\n格式是一个 JSON 对象，键名固定（见下方清单），值只接受数字或在允许范围内的取值。键名不认识、数值超范围都会被拒绝，并告诉你是哪一条。留空保存等于全部恢复默认。'**
+  String get uiConfigHint;
+
+  /// No description provided for @uiConfigKeys.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用键：fileCard.height（卡片高度，24~240）、fileCard.maxWidth（宽屏上限，120~2000）、fileCard.compactWidth（私信里的宽度）、fileCard.padV（上下留白）、fileCard.padH（左右留白）、fileCard.radius（圆角）、fileCard.icon（图标大小）、fileCard.nameSize（文件名字号）、fileCard.sizeSize（大小文字字号）、fileCard.gap（图标与文字间距）、fileCard.arrowIcon（右侧图标大小）、threadCard.avatarRadius（头像半径）、threadCard.gap（头像与名字间距）、threadCard.tagSide（角标位置：leftOfTime / rightOfTime / belowTime）。'**
+  String get uiConfigKeys;
+
+  /// No description provided for @uiConfigSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get uiConfigSave;
+
+  /// No description provided for @uiConfigSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存，返回上一页就能看到'**
+  String get uiConfigSaved;
+
+  /// No description provided for @uiConfigBadJson.
+  ///
+  /// In zh, this message translates to:
+  /// **'不是合法的 JSON 对象'**
+  String get uiConfigBadJson;
+
+  /// No description provided for @uiConfigDefaults.
+  ///
+  /// In zh, this message translates to:
+  /// **'填回默认值'**
+  String get uiConfigDefaults;
+
+  /// No description provided for @uiConfigRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'有 {count} 条被拒绝：\n{lines}'**
+  String uiConfigRejected(int count, String lines);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

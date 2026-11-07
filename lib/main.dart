@@ -17,6 +17,7 @@ import 'pages/notice_page.dart';
 import 'poller.dart';
 import 'store.dart';
 import 'theme.dart';
+import 'ui_config.dart';
 
 /// 点通知跳页面要一个全局 Navigator，此时还没有 context。
 final GlobalKey<NavigatorState> appNav = GlobalKey<NavigatorState>();
@@ -37,6 +38,9 @@ Future<void> main() async {
 
 /// 读本地设置。读不出来也照常运行，只是用默认色相和明暗。
 Future<void> _boot() async {
+  // 界面参数先拉：卡片尺寸这类东西，晚一步就有一帧长得不对。
+  // 拉不到就用缓存/默认值，这里不 await 到底，卡住也不该挡住启动。
+  unawaited(UiConfig.load());
   try {
     await AppState.instance.loadPrefs();
   } catch (e) {

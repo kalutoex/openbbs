@@ -4,6 +4,7 @@ import '../api.dart';
 import '../file_open.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../ui_config.dart';
 import 'toast.dart';
 
 /// 帖子里的一个附件。服务端给的名字和大小，客户端只负责摆出来。
@@ -76,18 +77,8 @@ IconData fileIconFor(String name) {
   return Icons.insert_drive_file_outlined;
 }
 
-/// 附件卡的尺寸。主页和帖子里共用一套，改一处两边都变。
-class PostFileCard {
-  static const double height = 80;
-  static const double maxWidth = 420;
-
-  /// 私信里塞在气泡中的尺寸。气泡本身自带底色和内边距，卡片再按 80 高、
-  /// 420 宽摆，就像气泡里又嵌了一块大板子。这里按「比字稍微大一圈」来做：
-  /// 一行文件名、一行大小，上下只留呼吸的余量。
-  static const double compactHeight = 34;
-  static const double compactMaxWidth = 200;
-  static const double compactRadius = 8;
-}
+/// 附件卡的尺寸不再写死：高度、边距、圆角、字号全部来自 [UiConfig]，
+/// 后台改一次就变，不用重新发包。这里的默认值只当兜底的注释看。
 
 /// 帖子里那一排附件卡片。点一下就下载。
 class FileCards extends StatelessWidget {
@@ -192,17 +183,22 @@ class _FileCardState extends State<_FileCard> {
     final t = Theme.of(context);
     final scheme = t.colorScheme;
     final compact = widget.compact;
-    final radius = BorderRadius.circular(
-      compact ? PostFileCard.compactRadius : 10,
-    );
+    final radius =
+        BorderRadius.circular(UiConfig.px('fileCard.radius'));
+    final iconSize = UiConfig.px('fileCard.icon');
+    final padV = UiConfig.px('fileCard.padV');
+    final padH = UiConfig.px('fileCard.padH');
+    final arrowSize = UiConfig.px('fileCard.arrowIcon');
     return Padding(
       padding: EdgeInsets.only(bottom: compact ? 3 : 8),
       // 别用 LayoutBuilder：私信气泡外面套着 IntrinsicWidth，它会去问子节点的
       // 固有宽度，而 LayoutBuilder 答不上来，release 下拿到的就是 0 ——
       // 卡片宽度 0，看着像没发出去，也点不中。宽度交给父约束去压。
       child: SizedBox(
-        width: compact ? PostFileCard.compactMaxWidth : PostFileCard.maxWidth,
-        height: compact ? PostFileCard.compactHeight : PostFileCard.height,
+        width: UiConfig.px(
+          compact ? 'fileCard.compactWidth' : 'fileCard.maxWidth',
+        ),
+        height: UiConfig.px('fileCard.height'),
         child: Material(
           color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
           borderRadius: radius,
@@ -211,25 +207,25 @@ class _FileCardState extends State<_FileCard> {
             onTap: widget.onRemove == null ? _open : null,
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? 6 : 12,
-                vertical: compact ? 2 : 10,
+                horizontal: padH,
+                vertical: padV,
               ),
               child: Row(
                 children: [
                   _busy
                       ? SizedBox(
-                          width: compact ? 14 : 30,
-                          height: compact ? 14 : 30,
+                          width: iconSize,
+                          height: iconSize,
                           child: const CircularProgressIndicator(
                             strokeWidth: 2.5,
                           ),
                         )
                       : Icon(
                           fileIconFor(widget.file.name),
-                          size: compact ? 14 : 30,
+                          size: iconSize,
                           color: scheme.primary,
                         ),
-                  SizedBox(width: compact ? 5 : 10),
+                  SizedBox(width: UiConfig.px('fileCard.gap')),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,11 +236,14 @@ class _FileCardState extends State<_FileCard> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: (compact
-                                  ? t.textTheme.bodySmall
+                                  ? t.textTheme.bodyMedium
                                   : t.textTheme.bodyMedium)
-                              ?.copyWith(height: 1.2),
+                              ?.copyWith(
+                                height: 1.2,
+                                fontSize: UiConfig.px('fileCard.nameSize'),
+                              ),
                         ),
-                        SizedBox(height: compact ? 1 : 4),
+                        const SizedBox(height: 2),
                         Row(
                           children: [
                             Expanded(
@@ -254,12 +253,10 @@ class _FileCardState extends State<_FileCard> {
                                     : widget.file.sizeText,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: (compact
-                                        ? t.textTheme.labelSmall
-                                        : t.textTheme.bodySmall)
-                                    ?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                    ),
+                                style: t.textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                  fontSize: UiConfig.px('fileCard.sizeSize'),
+                                ),
                               ),
                             ),
                             if (widget.onRemove != null)
@@ -270,7 +267,7 @@ class _FileCardState extends State<_FileCard> {
                                   padding: const EdgeInsets.all(2),
                                   child: Icon(
                                     Icons.close,
-                                    size: compact ? 12 : 18,
+                                    size: arrowSize,
                                     color: scheme.outline,
                                   ),
                                 ),
@@ -278,7 +275,7 @@ class _FileCardState extends State<_FileCard> {
                             else if (!_busy)
                               Icon(
                                 Icons.download_outlined,
-                                size: compact ? 11 : 16,
+                                size: arrowSize,
                                 color: scheme.onSurfaceVariant,
                               ),
                           ],
@@ -353,10 +350,10 @@ class _CompactFilesState extends State<CompactFiles> {
       padding: const EdgeInsets.only(top: 8),
       child: LayoutBuilder(
         builder: (context, cons) {
-          final w =
-              cons.maxWidth.isFinite && cons.maxWidth < PostFileCard.maxWidth
+          final maxW = UiConfig.px('fileCard.maxWidth');
+          final w = cons.maxWidth.isFinite && cons.maxWidth < maxW
               ? cons.maxWidth
-              : PostFileCard.maxWidth;
+              : maxW;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -368,7 +365,7 @@ class _CompactFilesState extends State<CompactFiles> {
                 if (shown.isNotEmpty) const SizedBox(height: 8),
                 Container(
                   width: w,
-                  height: PostFileCard.height,
+                  height: UiConfig.px('fileCard.height'),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: scheme.surfaceContainerHighest.withValues(
@@ -400,7 +397,7 @@ class _CompactFilesState extends State<CompactFiles> {
     final busy = _busy == i;
     return SizedBox(
       width: w,
-      height: PostFileCard.height,
+      height: UiConfig.px('fileCard.height'),
       child: Material(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
