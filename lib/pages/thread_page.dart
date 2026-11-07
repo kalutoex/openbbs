@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,6 +12,8 @@ import '../widgets/app_card.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/page_width.dart';
 import '../widgets/mention.dart';
+import '../haptics.dart';
+import '../read_pos.dart';
 import '../store.dart';
 import '../user_hue.dart';
 import '../img_compress.dart';
@@ -79,6 +83,15 @@ class _ThreadPageState extends State<ThreadPage> {
   /// 刚跳过去的楼层，闪一下再恢复
   int _flashFloor = 0;
 
+  /// 滑过两屏才浮出回顶按钮，一进来就挂个按钮在旁边太吵。
+  bool _showTop = false;
+
+  /// 翻页失败：有内容时只在底部提示重试，不拿顶部红条盖住正文。
+  String? _moreErr;
+
+  /// 滚动停下来再记位置，拖动过程中每帧写盘太浪费。
+  Timer? _posTimer;
+
   int? _ownerId;
 
   /// 正在回复的楼层；null 表示回复楼主
@@ -95,23 +108,59 @@ class _ThreadPageState extends State<ThreadPage> {
     _input.addListener(_onMention);
     // 资料可能在别处改过，进帖子页时对一次，底栏头像才不会停在旧的
     AppState.instance.refreshUser();
-    _posListener.itemPositions.addListener(() {
-      final ps = _posListener.itemPositions.value;
-      if (ps.isEmpty) return;
-      var last = 0;
-      for (final e in ps) {
-        if (e.index > last) last = e.index;
-      }
-      // 提前量按这一屏摆得下几楼来算，滑到底时下一页已经在手上。
-      final ahead = ps.length + 2;
-      if (last >= _shownLen - ahead) _loadMore();
-    });
+    _posListener.itemPositions.addListener(_onPositions);
     _boot();
   }
 
+  void _onPositions() {
+    final ps = _posListener.itemPositions.value;
+    if (ps.isEmpty) return;
+    var first = 1 << 30;
+    var last = 0;
+    for (final e in ps) {
+      if (e.index < first) first = e.index;
+      if (e.index > last) last = e.index;
+    }
+    // 提前量按这一屏摆得下几楼来算，滑到底时下一页已经在手上。
+    final ahead = ps.length + 2;
+    if (last >= _shownLen - ahead) _loadMore();
+
+    // index 0 是一楼头部，滑过它两楼以上才给回顶
+    final show = first > 2;
+    if (show != _showTop) setState(() => _showTop = show);
+
+    _posTimer?.cancel();
+    _posTimer = Timer(const Duration(milliseconds: 700), _savePos);
+  }
+
+  /// 记下当前停在的那一层。失败不吭声，这东西坏了最多是下次从头看。
+  Future<void> _savePos() async {
+    if (_posts.isEmpty) return;
+    final ps = _posListener.itemPositions.value;
+    if (ps.isEmpty) return;
+    // 取屏幕最上面那条完整可见的楼
+    final vis = ps.where((e) => e.itemLeadingEdge < 0.9).toList()
+      ..sort((a, b) => a.index.compareTo(b.index));
+    final idx = (vis.isEmpty ? ps.first.index : vis.first.index) - 1;
+    final list = _shownList();
+    if (idx < 0 || idx >= list.length) return;
+    final p = list[idx];
+    await ReadPos.put(
+      widget.threadId,
+      (p['id'] ?? 0) as int,
+      ((p['floor'] ?? 0) as num).toInt(),
+    );
+  }
+
   /// 有 focusPostId 就先把目标页加载出来，再滚过去。
+  /// 没有的话翻一下上次读到哪儿，接着看。
   Future<void> _boot() async {
-    final fid = widget.focusPostId;
+    var fid = widget.focusPostId;
+    if (fid == null) {
+      final saved = await ReadPos.get(widget.threadId);
+      fid = (saved?['id'] as num?)?.toInt();
+      if (!mounted) return;
+    }
     if (fid == null) {
       await _loadMore();
       return;
@@ -240,11 +289,74 @@ class _ThreadPageState extends State<ThreadPage> {
 
   @override
   void dispose() {
+    _posTimer?.cancel();
     _input.removeListener(_onMention);
     _mention.dispose();
     _input.dispose();
     _inputFocus.dispose();
     super.dispose();
+  }
+
+  /// 右下角回顶。滑过两屏才浮出来，到头就缩回去。
+  Widget _backTop(ColorScheme cs) {
+    return AnimatedScale(
+      scale: _showTop ? 1 : 0,
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      child: IgnorePointer(
+        ignoring: !_showTop,
+        child: Tooltip(
+          message: Lc.current.backToTop,
+          child: Material(
+            color: cs.surfaceContainerHigh,
+            elevation: 2,
+            shadowColor: Colors.black26,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () {
+                if (!_itemScroll.isAttached) return;
+                _itemScroll.scrollTo(
+                  index: 0,
+                  duration: const Duration(milliseconds: 420),
+                  curve: Curves.easeOutCubic,
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Icon(
+                  Icons.vertical_align_top_rounded,
+                  size: 20,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 翻页失败时挂在列表末尾：滑到底看得见，点一下重来。
+  Widget _moreBar(ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+      child: Column(
+        children: [
+          Text(
+            _moreErr ?? '',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: cs.outline),
+          ),
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: _retryMore,
+            icon: const Icon(Icons.refresh, size: 16),
+            label: Text(Lc.current.retry),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadMore() async {
@@ -267,12 +379,19 @@ class _ThreadPageState extends State<ThreadPage> {
         _page++;
         _first = false;
         _err = cached ? Lc.current.offlineCached : null;
+        _moreErr = null;
       });
     } on ApiException catch (e) {
       if (!mounted) return;
+      final msg = errorText(context, e);
       setState(() {
         _first = false;
-        _err = errorText(context, e);
+        // 已经有内容就别拿红条盖住正文，底部给个重试就够
+        if (_posts.isEmpty) {
+          _err = msg;
+        } else {
+          _moreErr = msg;
+        }
       });
     } finally {
       _busy = false;
@@ -304,7 +423,57 @@ class _ThreadPageState extends State<ThreadPage> {
       _pages = 1;
       _first = true;
       _err = null;
+      _moreErr = null;
     });
+    await _loadMore();
+  }
+
+  /// 下拉刷新：只换掉第一页，后面已经翻出来的楼层留着。
+  ///
+  /// 不用 [_reload]——那会把整页清成骨架屏，下拉一下屏幕闪白，
+  /// 而且已经读到第 20 页的人会被拽回第 1 页。
+  Future<void> _pullRefresh() async {
+    final before = _posts.isEmpty
+        ? 0
+        : ((_posts.last['floor'] ?? 0) as num).toInt();
+    try {
+      final d = await Api.get(
+        '/t/${widget.threadId}',
+        query: {'page': '1'},
+        cache: true,
+      );
+      if (!mounted) return;
+      final head = (d['posts'] as List).cast<Map<String, dynamic>>();
+      final headLast = head.isEmpty
+          ? 0
+          : ((head.last['floor'] ?? 0) as num).toInt();
+      setState(() {
+        _thread = (d['thread'] as Map<String, dynamic>?) ?? _thread;
+        _ownerId ??= _thread!['owner_id'] as int?;
+        // 第一页覆盖到的楼层整段换新，后面的原样接上
+        final tail = _posts
+            .where((p) => ((p['floor'] ?? 0) as num).toInt() > headLast)
+            .toList();
+        _posts
+          ..clear()
+          ..addAll(head)
+          ..addAll(tail);
+        final np = ((d['pages'] ?? _pages) as num).toInt();
+        _pages = np;
+        if (_page > np) _page = np;
+        _err = Api.lastFromCache ? Lc.current.offlineCached : null;
+        _moreErr = null;
+      });
+      final added = headLast - before;
+      if (added > 0) _toast(Lc.current.newRepliesN('$added'));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      _toast(errorText(context, e));
+    }
+  }
+
+  Future<void> _retryMore() async {
+    setState(() => _moreErr = null);
     await _loadMore();
   }
 
@@ -624,6 +793,8 @@ class _ThreadPageState extends State<ThreadPage> {
     try {
       await Api.delete('/t/${widget.threadId}');
       if (!mounted) return;
+      await ReadPos.clear(widget.threadId);
+      if (!mounted) return;
       _toast(Lc.current.postDeleted);
       _close(true);
     } on ApiException catch (e) {
@@ -715,6 +886,7 @@ class _ThreadPageState extends State<ThreadPage> {
     }
     final id = post['id'] as int;
     if (id == 0) return; // 1 楼没有独立记录，不能赞
+    Haptics.done();
     try {
       final d = await Api.post('/agree/reply/$id', {});
       setState(() {
@@ -924,38 +1096,54 @@ class _ThreadPageState extends State<ThreadPage> {
                       ),
                     ),
                   Expanded(
-                    child: ScrollablePositionedList.builder(
-                      itemScrollController: _itemScroll,
-                      itemPositionsListener: _posListener,
-                      itemCount: rest.length + 1,
-                      itemBuilder: (context, i) {
-                        if (i == 0) return _header(cs, op);
-                        final p = rest[i - 1];
-                        return _PostCard(
-                          post: p,
-                          highlight:
-                              _flashFloor > 0 &&
-                              (p['floor'] ?? 0) == _flashFloor,
-                          onReply: () => _beginReply(p),
-                          onAgree: () => _agree(p),
-                          onEdit: p['can_edit'] == true
-                              ? () => _editReply(p)
-                              : null,
-                          onRecall: p['can_recall'] == true
-                              ? () => _recallReply(p)
-                              : null,
-                          onDelete:
-                              (p['can_delete'] == true &&
-                                  (p['floor'] ?? 0) != 1)
-                              ? () => _deletePost(p)
-                              : null,
-                          onDeleteSub: _deleteSub,
-                          onRecallSub: _recallSub,
-                          onReport: (p['floor'] ?? 0) == 1
-                              ? _reportThread
-                              : () => _reportReply(p),
-                        );
-                      },
+                    child: Stack(
+                      children: [
+                        RefreshIndicator(
+                          onRefresh: _pullRefresh,
+                          child: ScrollablePositionedList.builder(
+                            itemScrollController: _itemScroll,
+                            itemPositionsListener: _posListener,
+                            // 内容只有一屏时也要能拉得动，不然刷新做不了
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount:
+                                rest.length + 1 + (_moreErr == null ? 0 : 1),
+                            itemBuilder: (context, i) {
+                              if (i == 0) return _header(cs, op);
+                              if (i > rest.length) return _moreBar(cs);
+                              final p = rest[i - 1];
+                              return _PostCard(
+                                post: p,
+                                highlight:
+                                    _flashFloor > 0 &&
+                                    (p['floor'] ?? 0) == _flashFloor,
+                                onReply: () => _beginReply(p),
+                                onAgree: () => _agree(p),
+                                onEdit: p['can_edit'] == true
+                                    ? () => _editReply(p)
+                                    : null,
+                                onRecall: p['can_recall'] == true
+                                    ? () => _recallReply(p)
+                                    : null,
+                                onDelete:
+                                    (p['can_delete'] == true &&
+                                        (p['floor'] ?? 0) != 1)
+                                    ? () => _deletePost(p)
+                                    : null,
+                                onDeleteSub: _deleteSub,
+                                onRecallSub: _recallSub,
+                                onReport: (p['floor'] ?? 0) == 1
+                                    ? _reportThread
+                                    : () => _reportReply(p),
+                              );
+                            },
+                          ),
+                        ),
+                        Positioned(
+                          right: 14,
+                          bottom: 14,
+                          child: _backTop(cs),
+                        ),
+                      ],
                     ),
                   ),
                   // 输入栏放在 body 里而不是 bottomNavigationBar：
@@ -1482,6 +1670,7 @@ class _PostCardState extends State<_PostCard> {
   bool _all = false;
 
   Future<void> _moreSheet() async {
+    Haptics.press();
     final act = await showAppSheet<String>(
       context: context,
       showDragHandle: true,

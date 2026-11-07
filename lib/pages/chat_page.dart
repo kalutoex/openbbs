@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart' hide PickedFile;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
+import '../haptics.dart';
 import '../poller.dart';
 import '../cloud.dart';
+import '../save_cover.dart';
 import '../file_browser.dart';
 import '../file_pick.dart';
 import '../img_compress.dart';
@@ -97,6 +100,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   /// 长按中的那条，气泡压一下，给个按住的反馈。
   int? _pressedId;
+
+  /// 上次看到哪条。进会话时比这更新的第一条上面拉一条「以下是新消息」。
+  int _unreadFromId = 0;
 
   String? _err;
 
@@ -228,6 +234,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   Future<void> _load({bool initial = false}) async {
     try {
+      final seen = initial ? await _lastSeen() : 0;
       final d = await Api.get('/dm/$_peerId');
       if (!mounted) return;
       final list = (d['items'] as List).cast<Map<String, dynamic>>();
@@ -239,7 +246,19 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         if (((m['id'] ?? 0) as int) > prevLast) fresh++;
       }
       final peer = (d['peer'] as Map?)?.cast<String, dynamic>();
+      // 上次离开之后才来的消息，从第一条开始划线
+      var lineId = 0;
+      if (initial && seen > 0) {
+        for (final m in list) {
+          final id = (m['id'] ?? 0) as int;
+          if (id > seen) {
+            lineId = id;
+            break;
+          }
+        }
+      }
       setState(() {
+        if (initial) _unreadFromId = lineId;
         if (peer != null) _peerHue = hueOfUser(peer);
         _msgs
           ..clear()
@@ -255,6 +274,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         _sel.removeWhere((id) => !ids.contains(id));
       });
       AppState.instance.refreshDmUnread();
+      if (initial) _markSeen();
       if (initial || stay) _toBottom();
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -269,6 +289,20 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         _err = '$e';
       });
     }
+  }
+
+  Future<int> _lastSeen() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getInt('dm_seen_$_peerId') ?? 0;
+  }
+
+  /// 进来就算看过。老规矩，没看完也认，省得下次一堆「新消息」压着。
+  Future<void> _markSeen() async {
+    if (_msgs.isEmpty) return;
+    final last = (_msgs.last['id'] ?? 0) as int;
+    if (last <= 0) return;
+    final p = await SharedPreferences.getInstance();
+    await p.setInt('dm_seen_$_peerId', last);
   }
 
   Future<void> _loadEarlier() async {
@@ -528,6 +562,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         if (reply != null) 'reply_id': reply['id'],
       });
       if (!mounted) return;
+      Haptics.done();
       _input.clear();
       await _flushDraft();
       setState(() {
@@ -676,6 +711,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     final top = above ? r.top - barH - arrowH - 4 : r.bottom + arrowH + 4;
     final arrowX = (r.center.dx - left).clamp(20.0, barW - 20.0);
 
+    Haptics.press();
     setState(() => _pressedId = id);
     final picked = await showGeneralDialog<_MsgAction>(
       context: context,
@@ -1011,9 +1047,46 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                 ),
               );
             }
-            return _row(cs, i - 1);
+            final idx = i - 1;
+            final w = _row(cs, idx);
+            final id = (_msgs[idx]['id'] ?? 0) as int;
+            if (_unreadFromId <= 0 || id != _unreadFromId) return w;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [_unreadLine(cs), w],
+            );
           },
         ),
+      ),
+    );
+  }
+
+  /// 「以下是新消息」——一条细线，别做成一块横幅，聊天页面经不起这么重的元素。
+  Widget _unreadLine(ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(
+              color: cs.primary.withValues(alpha: 0.35),
+              thickness: 1,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              Lc.current.newMessagesBelow,
+              style: TextStyle(fontSize: 11.5, color: cs.primary),
+            ),
+          ),
+          Expanded(
+            child: Divider(
+              color: cs.primary.withValues(alpha: 0.35),
+              thickness: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2052,6 +2125,30 @@ class _ImageViewer extends StatefulWidget {
 class _ImageViewerState extends State<_ImageViewer> {
   late final PageController _pc = PageController(initialPage: widget.index);
   late int _i = widget.index;
+  bool _saving = false;
+
+  /// 存当前这张。跟帖子里那个看图页走同一套，别两处不一样。
+  Future<void> _save() async {
+    if (_saving || widget.urls.isEmpty) return;
+    setState(() => _saving = true);
+    try {
+      final r = await http
+          .get(Uri.parse(Api.img(widget.urls[_i])))
+          .timeout(const Duration(seconds: 30));
+      if (r.statusCode >= 400) {
+        throw Exception('download failed (${r.statusCode})');
+      }
+      final name = 'openbbs_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final where = await saveImageBytes(r.bodyBytes, name);
+      if (!mounted) return;
+      toast(context, Lc.current.savedTo(where), floating: true);
+    } catch (e) {
+      if (!mounted) return;
+      toast(context, Lc.current.saveFailed('$e'), floating: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -2077,6 +2174,34 @@ class _ImageViewerState extends State<_ImageViewer> {
                   maxScale: 4,
                   child: Image.network(Api.img(widget.urls[i])),
                 ),
+              ),
+            ),
+            if (_saving)
+              const Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    color: Colors.white70,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 4,
+              right: 8,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.download, color: Colors.white70),
+                    tooltip: Lc.current.downloadImage,
+                    onPressed: _saving ? null : _save,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
               ),
             ),
             if (widget.urls.length > 1)

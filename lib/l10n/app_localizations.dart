@@ -4579,6 +4579,18 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'排队中'**
   String get waitingTurn;
+
+  /// No description provided for @newRepliesN.
+  ///
+  /// In zh, this message translates to:
+  /// **'有 {v1} 条新回复'**
+  String newRepliesN(String v1);
+
+  /// No description provided for @newMessagesBelow.
+  ///
+  /// In zh, this message translates to:
+  /// **'以下是新消息'**
+  String get newMessagesBelow;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

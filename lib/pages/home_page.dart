@@ -10,6 +10,7 @@ import '../store.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/page_width.dart';
 import 'compose_page.dart';
+import '../haptics.dart';
 import 'feed_tab.dart';
 import 'login_page.dart';
 import 'me_tab.dart';
@@ -49,6 +50,7 @@ class _HomePageState extends State<HomePage> {
   void _go(int i) {
     if (!_barTabs.contains(i)) return;
     if (i == _index) return;
+    Haptics.tap();
     setState(() {
       _index = i;
       _started.add(i);

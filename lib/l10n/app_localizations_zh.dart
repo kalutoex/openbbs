@@ -2516,4 +2516,12 @@ class LZh extends L {
 
   @override
   String get waitingTurn => '排队中';
+
+  @override
+  String newRepliesN(String v1) {
+    return '有 $v1 条新回复';
+  }
+
+  @override
+  String get newMessagesBelow => '以下是新消息';
 }

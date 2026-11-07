@@ -2561,4 +2561,12 @@ class LEn extends L {
 
   @override
   String get waitingTurn => 'Queued';
+
+  @override
+  String newRepliesN(String v1) {
+    return '$v1 new replies';
+  }
+
+  @override
+  String get newMessagesBelow => 'New messages below';
 }

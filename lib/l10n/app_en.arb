@@ -1112,5 +1112,14 @@
       }
     }
   },
-  "waitingTurn": "Queued"
+  "waitingTurn": "Queued",
+  "newRepliesN": "{v1} new replies",
+  "@newRepliesN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "newMessagesBelow": "New messages below"
 }

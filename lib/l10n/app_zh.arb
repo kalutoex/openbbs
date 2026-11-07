@@ -1723,5 +1723,14 @@
       }
     }
   },
-  "waitingTurn": "排队中"
+  "waitingTurn": "排队中",
+  "newRepliesN": "有 {v1} 条新回复",
+  "@newRepliesN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "newMessagesBelow": "以下是新消息"
 }

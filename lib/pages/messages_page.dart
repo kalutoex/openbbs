@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../user_hue.dart';
 import '../api.dart';
+import '../haptics.dart';
 import '../store.dart';
 import '../utils.dart';
 import '../widgets/app_card.dart';
@@ -58,6 +59,11 @@ class _Row {
 class _MessagesPageState extends State<MessagesPage> {
   final List<_Row> _rows = [];
   bool _loading = true;
+
+  /// 会话一多就得靠搜。名字和最后一句都认。
+  bool _searching = false;
+  String _q = '';
+  final TextEditingController _sc = TextEditingController();
   String? _err;
 
   /// 上次拿到的角标数。轮询一报变化就顺手把列表拉一次——
@@ -78,9 +84,23 @@ class _MessagesPageState extends State<MessagesPage> {
 
   @override
   void dispose() {
+    _sc.dispose();
     AppState.instance.removeListener(_onState);
     _tick?.cancel();
     super.dispose();
+  }
+
+  /// 搜索框里只过滤，不重新请求。
+  List<_Row> get _shown {
+    final q = _q.trim().toLowerCase();
+    if (q.isEmpty) return _rows;
+    return _rows
+        .where(
+          (r) =>
+              r.title.toLowerCase().contains(q) ||
+              r.text.toLowerCase().contains(q),
+        )
+        .toList();
   }
 
   void _onState() {
@@ -284,11 +304,37 @@ class _MessagesPageState extends State<MessagesPage> {
           tooltip: Lc.current.menu,
         ),
         titleSpacing: 0,
-        title: Text(
-          Lc.current.messagesTab,
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        title: _searching
+            ? TextField(
+                controller: _sc,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: Lc.current.search,
+                  border: InputBorder.none,
+                ),
+                onChanged: (v) => setState(() => _q = v),
+              )
+            : Text(
+                Lc.current.messagesTab,
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+        actions: [
+          IconButton(
+            icon: Icon(_searching ? Icons.close : Icons.search_rounded),
+            tooltip: _searching ? Lc.current.cancel : Lc.current.search,
+            onPressed: () => setState(() {
+              if (_searching) {
+                _searching = false;
+                _q = '';
+                _sc.clear();
+              } else {
+                _searching = true;
+              }
+            }),
+          ),
+        ],
       ),
       body: PageWidth(
         child: RefreshIndicator(onRefresh: _load, child: _body(context)),
@@ -325,7 +371,15 @@ class _MessagesPageState extends State<MessagesPage> {
         ),
       ).scrollable();
     }
-    if (_rows.isEmpty) {
+    final rows = _shown;
+    if (rows.isEmpty) {
+      // 搜不到就说搜不到，别说「还没有会话」，人会以为自己的会话没了
+      if (_q.trim().isNotEmpty) {
+        return EmptyView(
+          icon: Icons.search_off_rounded,
+          title: Lc.current.notFound,
+        ).scrollable();
+      }
       return EmptyView(
         icon: Icons.forum_outlined,
         title: Lc.current.dmEmpty,
@@ -335,9 +389,9 @@ class _MessagesPageState extends State<MessagesPage> {
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
-      itemCount: _rows.length,
+      itemCount: rows.length,
       itemBuilder: (context, i) {
-        final row = _rows[i];
+        final row = rows[i];
         // 会话卡跟着对方走色；站内消息没有「对方」，留着默认底。
         final dark = Theme.of(context).brightness == Brightness.dark;
         return AppCard(
@@ -421,7 +475,10 @@ class _MessagesPageState extends State<MessagesPage> {
         ),
       ),
       onTap: () => _open(row),
-      onLongPress: () => _menu(row),
+      onLongPress: () {
+        Haptics.press();
+        _menu(row);
+      },
     );
   }
 }
