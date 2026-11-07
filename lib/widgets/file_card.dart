@@ -200,8 +200,9 @@ class _FileCardState extends State<_FileCard> {
         ),
         height: UiConfig.px('fileCard.height'),
         child: Material(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: radius,
+          // 不要底板、不要描边：只有图标、文件名、大小，直接摆在背景上。
+          // 水波纹还得有 Material 托着，所以留一层透明的。
+          type: MaterialType.transparency,
           child: InkWell(
             borderRadius: radius,
             onTap: widget.onRemove == null ? _open : null,
@@ -363,19 +364,15 @@ class _CompactFilesState extends State<CompactFiles> {
               ],
               if (rest > 0) ...[
                 if (shown.isNotEmpty) const SizedBox(height: 8),
-                Container(
+                SizedBox(
                   width: w,
                   height: UiConfig.px('fileCard.height'),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHighest.withValues(
-                      alpha: 0.5,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '+$rest',
+                      style: tt.labelLarge?.copyWith(color: scheme.outline),
                     ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '+$rest',
-                    style: tt.labelLarge?.copyWith(color: scheme.outline),
                   ),
                 ),
               ],
@@ -399,8 +396,7 @@ class _CompactFilesState extends State<CompactFiles> {
       width: w,
       height: UiConfig.px('fileCard.height'),
       child: Material(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10),
+        type: MaterialType.transparency,
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: _busy >= 0 ? null : () => _open(f, i),
