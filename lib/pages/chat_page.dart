@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart' hide PickedFile;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,7 +9,6 @@ import '../api.dart';
 import '../haptics.dart';
 import '../poller.dart';
 import '../cloud.dart';
-import '../save_cover.dart';
 import '../file_browser.dart';
 import '../file_pick.dart';
 import '../img_compress.dart';
@@ -25,6 +23,7 @@ import '../widgets/page_width.dart';
 import '../widgets/retry_image.dart';
 import '../widgets/avatar.dart';
 import '../widgets/file_card.dart';
+import '../widgets/post_images.dart';
 import '../widgets/toast.dart';
 import 'cloud_pick_page.dart';
 import 'gallery_picker_page.dart';
@@ -1493,12 +1492,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     );
   }
 
+  /// 跟帖子里点图走同一个查看器，缩放、翻页、存图都是那一套。
   void _viewImage(List<String> urls, int index) {
     Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.black,
-        pageBuilder: (_, _, _) => _ImageViewer(urls: urls, index: index),
+      MaterialPageRoute(
+        builder: (_) => ImageViewerPage(urls: urls, initial: index),
       ),
     );
   }
@@ -2110,127 +2108,6 @@ class _ChatSearchSheetState extends State<_ChatSearchSheet> {
           },
         );
       },
-    );
-  }
-}
-
-class _ImageViewer extends StatefulWidget {
-  const _ImageViewer({required this.urls, required this.index});
-
-  final List<String> urls;
-  final int index;
-
-  @override
-  State<_ImageViewer> createState() => _ImageViewerState();
-}
-
-class _ImageViewerState extends State<_ImageViewer> {
-  late final PageController _pc = PageController(initialPage: widget.index);
-  late int _i = widget.index;
-  bool _saving = false;
-
-  /// 存当前这张。跟帖子里那个看图页走同一套，别两处不一样。
-  Future<void> _save() async {
-    if (_saving || widget.urls.isEmpty) return;
-    setState(() => _saving = true);
-    try {
-      final r = await http
-          .get(Uri.parse(Api.img(widget.urls[_i])))
-          .timeout(const Duration(seconds: 30));
-      if (r.statusCode >= 400) {
-        throw Exception('download failed (${r.statusCode})');
-      }
-      final name = 'openbbs_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final where = await saveImageBytes(r.bodyBytes, name);
-      if (!mounted) return;
-      toast(context, Lc.current.savedTo(where), floating: true);
-    } catch (e) {
-      if (!mounted) return;
-      toast(context, Lc.current.saveFailed('$e'), floating: true);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _pc.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
-        child: Stack(
-          children: [
-            PageView.builder(
-              controller: _pc,
-              itemCount: widget.urls.length,
-              onPageChanged: (i) => setState(() => _i = i),
-              itemBuilder: (_, i) => Center(
-                child: InteractiveViewer(
-                  minScale: 1,
-                  maxScale: 4,
-                  child: Image.network(Api.img(widget.urls[i])),
-                ),
-              ),
-            ),
-            if (_saving)
-              const Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                    color: Colors.white70,
-                    strokeWidth: 2,
-                  ),
-                ),
-              ),
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 4,
-              right: 8,
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.download, color: Colors.white70),
-                    tooltip: Lc.current.downloadImage,
-                    onPressed: _saving ? null : _save,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-            ),
-            if (widget.urls.length > 1)
-              Positioned(
-                bottom: 28,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${_i + 1}/${widget.urls.length}',
-                      style: const TextStyle(fontSize: 12, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }
