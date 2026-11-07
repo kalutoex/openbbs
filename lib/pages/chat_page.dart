@@ -650,7 +650,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     }
   }
 
-  /// 长按菜单：引用、复制、撤回、删除、多选。一条消息能做的事都在这儿。
+  /// 长按菜单：引用、复制、添加到云盘、撤回、删除、多选。一条消息能做的事都在这儿。
   /// 长按菜单：微信那种贴着气泡的横条，不是弹整页。
   Future<void> _msgMenu(Map<String, dynamic> m) async {
     final body = (m['body'] ?? '') as String;
@@ -658,6 +658,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     if (recalled) return;
     final id = (m['id'] ?? 0) as int;
     final mine = (m['from_id'] ?? 0) == _myId;
+    final files = PostFile.listOf(m['files']);
     final actions = <_MsgAction>[
       _MsgAction(Icons.reply, Lc.current.quote, () {
         setState(() => _replyTo = m);
@@ -668,6 +669,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           Clipboard.setData(ClipboardData(text: body));
           toast(context, Lc.current.copied);
         }),
+      if (files.isNotEmpty)
+        _MsgAction(
+          Icons.cloud_upload_outlined,
+          Lc.current.saveToCloud,
+          () => _saveToCloud(files),
+        ),
       if (_canRecall(m))
         _MsgAction(Icons.undo, Lc.current.dmRecall, () => _recall(m)),
       _MsgAction(
@@ -685,6 +692,30 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       }),
     ];
     await _showBubbleMenu(id, actions, mine: mine);
+  }
+
+  /// 聊天里的附件收进自己云盘。服务端手里已经有这份内容，只挂一条账本，
+  /// 不用把文件再下下来传一遍。多个文件一起收，最后只说一句结果。
+  Future<void> _saveToCloud(List<PostFile> files) async {
+    var added = 0;
+    Object? err;
+    for (final f in files) {
+      try {
+        final d = await CloudApi.claim(f.url);
+        if (d['exists'] != true) added++;
+      } catch (e) {
+        err = e;
+      }
+    }
+    if (!mounted) return;
+    if (err != null) {
+      toast(context, errorText(context, err));
+      return;
+    }
+    toast(
+      context,
+      added > 0 ? Lc.current.addedToCloud : Lc.current.alreadyInCloud,
+    );
   }
 
   /// 贴着气泡弹出的横排工具条：算好位置，上下翻，带一个指向气泡的小三角。

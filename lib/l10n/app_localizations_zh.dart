@@ -2457,6 +2457,15 @@ class LZh extends L {
   String get dmRead => '已读';
 
   @override
+  String get saveToCloud => '添加到云盘';
+
+  @override
+  String get alreadyInCloud => '该文件已在云盘中';
+
+  @override
+  String get addedToCloud => '已添加到云盘';
+
+  @override
   String get dmMulti => '多选';
 
   @override

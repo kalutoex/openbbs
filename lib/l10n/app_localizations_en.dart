@@ -2503,6 +2503,15 @@ class LEn extends L {
   String get dmRead => 'Read';
 
   @override
+  String get saveToCloud => 'Save to cloud';
+
+  @override
+  String get alreadyInCloud => 'Already in your cloud';
+
+  @override
+  String get addedToCloud => 'Added to cloud';
+
+  @override
   String get dmMulti => 'Select';
 
   @override

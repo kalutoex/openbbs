@@ -4490,6 +4490,24 @@ abstract class L {
   /// **'已读'**
   String get dmRead;
 
+  /// No description provided for @saveToCloud.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加到云盘'**
+  String get saveToCloud;
+
+  /// No description provided for @alreadyInCloud.
+  ///
+  /// In zh, this message translates to:
+  /// **'该文件已在云盘中'**
+  String get alreadyInCloud;
+
+  /// No description provided for @addedToCloud.
+  ///
+  /// In zh, this message translates to:
+  /// **'已添加到云盘'**
+  String get addedToCloud;
+
   /// No description provided for @dmMulti.
   ///
   /// In zh, this message translates to:

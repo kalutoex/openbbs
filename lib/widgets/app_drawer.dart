@@ -345,7 +345,7 @@ class _Top extends StatelessWidget {
     final u = st.user;
     final nick = st.loggedIn
         ? '${u?['nickname'] ?? u?['name'] ?? ''}'
-        : Lc.current.notLoggedIn;
+        : '@${Lc.current.notLoggedIn}';
     final handle = st.loggedIn ? '${u?['handle'] ?? ''}' : '';
 
     return Padding(
