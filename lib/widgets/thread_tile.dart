@@ -109,7 +109,13 @@ class ThreadTile extends StatelessWidget {
       // 卡片之间靠这条外边距隔开，列表的分割线已经不用了。
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Material(
-        color: cs.surfaceContainerLow,
+        // 谁发的帖子就是谁的色（设置里可关，关了就回默认底）。
+        color:
+            hueCardTint(
+              hueOfUser(item),
+              Theme.of(context).brightness == Brightness.dark,
+            ) ??
+            cs.surfaceContainerLow,
         borderRadius: radius,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -183,8 +189,9 @@ class ThreadTile extends StatelessWidget {
                                   ],
                                   Text(
                                     timeAgo(ts),
-                                    style: tt.labelSmall
-                                        ?.copyWith(color: cs.outline),
+                                    style: tt.labelSmall?.copyWith(
+                                      color: cs.outline,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -315,12 +322,7 @@ class ThreadTile extends StatelessWidget {
 
   /// 置顶 / 精华 / 多图。三个彩色字挤在一起太碎，做成小胶囊。
   /// 时间加角标那一块。角标在左、在右、另起一行三种，后台一句话就换。
-  Widget _tail(
-    TextTheme tt,
-    ColorScheme cs,
-    List<Widget> tags,
-    Widget time,
-  ) {
+  Widget _tail(TextTheme tt, ColorScheme cs, List<Widget> tags, Widget time) {
     final side = UiConfig.str('threadCard.tagSide');
     if (tags.isEmpty) return time;
     Widget spaced() => Row(

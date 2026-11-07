@@ -297,10 +297,18 @@ class _MessagesPageState extends State<MessagesPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
       itemCount: _rows.length,
-      itemBuilder: (context, i) => AppCard(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: _tile(context, _rows[i]),
-      ),
+      itemBuilder: (context, i) {
+        final row = _rows[i];
+        // 会话卡跟着对方走色；站内消息没有「对方」，留着默认底。
+        final dark = Theme.of(context).brightness == Brightness.dark;
+        return AppCard(
+          margin: const EdgeInsets.only(bottom: 8),
+          color: row.notice || row.peer == null
+              ? null
+              : hueCardTint(hueOfUser(row.peer), dark),
+          child: _tile(context, row),
+        );
+      },
     );
   }
 

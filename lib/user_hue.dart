@@ -51,3 +51,19 @@ Color hueRing(double hue, bool dark) => HSLColor.fromAHSL(
   dark ? 0.50 : 0.55,
   dark ? 0.62 : 0.52,
 ).toColor();
+
+/// 卡片底色：跟人走。
+///
+/// 只染一点点色相，亮度咬着 surfaceContainerLow 上下——一眼能看出是谁的，
+/// 又不至于让卡片里的正文、灰字失掉对比。深色模式下同理，往暗里染。
+Color hueCardBg(double hue, bool dark) => HSLColor.fromAHSL(
+  1,
+  AppState.normalizeHue(hue),
+  dark ? 0.34 : 0.62,
+  dark ? 0.155 : 0.945,
+).toColor();
+
+/// 卡片底色，开关关着时返回 null——调用方退回默认的 surfaceContainerLow。
+/// 头像外圈（[hueRing]）不看这个开关。
+Color? hueCardTint(double hue, bool dark) =>
+    AppState.instance.hueCards.value ? hueCardBg(hue, dark) : null;

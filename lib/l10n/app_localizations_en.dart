@@ -545,6 +545,13 @@ class LEn extends L {
   String get startTabHint => 'Which tab opens first';
 
   @override
+  String get hueCards => 'Tint cards by author';
+
+  @override
+  String get hueCardsHint =>
+      'On tints card backgrounds with the author\'s color; off is a plain background. Avatar rings are unaffected';
+
+  @override
   String get showThumbnails => 'Show thumbnails';
 
   @override
@@ -2265,6 +2272,13 @@ class LEn extends L {
 
   @override
   String get quote => 'Quote';
+
+  @override
+  String get replyRecalled => 'This reply was recalled';
+
+  @override
+  String get replyRemembered =>
+      'You can recall within 2 minutes; after that it stays';
 
   @override
   String get replyImage => '[image]';

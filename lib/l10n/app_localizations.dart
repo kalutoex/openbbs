@@ -1100,6 +1100,18 @@ abstract class L {
   /// **'打开 app 先看哪个'**
   String get startTabHint;
 
+  /// No description provided for @hueCards.
+  ///
+  /// In zh, this message translates to:
+  /// **'卡片跟着人染色'**
+  String get hueCards;
+
+  /// No description provided for @hueCardsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'开的卡按发帖人的主题色染底，关掉是统一底色；头像外圈不受影响'**
+  String get hueCardsHint;
+
   /// No description provided for @showThumbnails.
   ///
   /// In zh, this message translates to:
@@ -4081,6 +4093,18 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'引用'**
   String get quote;
+
+  /// No description provided for @replyRecalled.
+  ///
+  /// In zh, this message translates to:
+  /// **'该回复已撤回'**
+  String get replyRecalled;
+
+  /// No description provided for @replyRemembered.
+  ///
+  /// In zh, this message translates to:
+  /// **'两分钟内可以撤回，过了就撤不回了'**
+  String get replyRemembered;
 
   /// No description provided for @replyImage.
   ///

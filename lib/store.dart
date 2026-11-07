@@ -32,6 +32,7 @@ class AppState extends ChangeNotifier {
   static const _kAutoUnread = 'auto_unread';
   static const _kSysNotify = 'sys_notify';
   static const _kStartTab = 'start_tab';
+  static const _kHueCards = 'hue_cards';
 
   /// 底部 tab 表变过（板块改成站点），老键里存的值按旧表解释，新值单开一个键。
   static const _kStartTabV2 = 'start_tab_v2';
@@ -204,6 +205,17 @@ class AppState extends ChangeNotifier {
   static const double defaultHue = 174;
 
   final ValueNotifier<double> accentHue = ValueNotifier(defaultHue);
+
+  /// 卡片底色是否跟着作者的主题色走。
+  /// 默认关：默认是干净的统一底色，想要「一眼认出谁发的」可以在设置里打开。
+  /// 头像外圈不受这个开关影响，那个一直在。
+  final ValueNotifier<bool> hueCards = ValueNotifier(false);
+
+  Future<void> setHueCards(bool v) async {
+    hueCards.value = v;
+    final x = await SharedPreferences.getInstance();
+    await x.setBool(_kHueCards, v);
+  }
 
   /// 跟随系统壁纸取色（Android 12+ / 网页版不支持）。
   /// 开着时主题色由系统给，色相滑块不起作用。
@@ -446,6 +458,7 @@ class AppState extends ChangeNotifier {
     fontScale.value = p.getDouble(_kFont) ?? 1.0;
     accentHue.value = normalizeHue(p.getDouble(_kHue) ?? defaultHue);
     useDynamicColor.value = p.getBool(_kDyn) ?? false;
+    hueCards.value = p.getBool(_kHueCards) ?? false;
     density.value = (p.getInt(_kDensity) ?? 1).clamp(0, 2);
     thumbs.value = p.getBool(_kThumbs) ?? true;
     final fs = p.getString(_kFeedSort);

@@ -70,6 +70,16 @@ class SettingsPage extends StatelessWidget {
                     ),
                   ),
                 ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: st.hueCards,
+                  builder: (_, v, _) => SwitchListTile(
+                    secondary: const Icon(Icons.palette_outlined),
+                    title: Text(Lc.current.hueCards),
+                    subtitle: Text(Lc.current.hueCardsHint),
+                    value: v,
+                    onChanged: (x) => st.setHueCards(x),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 _label(context, Lc.current.browseSection),
                 ValueListenableBuilder<String>(

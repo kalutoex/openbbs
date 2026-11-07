@@ -658,6 +658,38 @@ class _ThreadPageState extends State<ThreadPage> {
     }
   }
 
+  Future<void> _recallReply(Map<String, dynamic> post) async {
+    if (!AppState.instance.loggedIn) {
+      _toast(Lc.current.needLogin);
+      return;
+    }
+    final id = (post['id'] ?? 0) as int;
+    if (id == 0) return;
+    try {
+      await Api.post('/c/$id/recall', const {});
+      if (!mounted) return;
+      _toast(Lc.current.dmRecalledMine);
+      await _reload();
+    } on ApiException catch (e) {
+      _toast(e);
+    }
+  }
+
+  Future<void> _recallSub(Map<String, dynamic> sub) async {
+    if (!AppState.instance.loggedIn) {
+      _toast(Lc.current.needLogin);
+      return;
+    }
+    try {
+      await Api.post('/c/${sub['id']}/recall', const {});
+      if (!mounted) return;
+      _toast(Lc.current.dmRecalledMine);
+      await _reload();
+    } on ApiException catch (e) {
+      _toast(e);
+    }
+  }
+
   Future<void> _deleteSub(Map<String, dynamic> sub) async {
     if (!AppState.instance.loggedIn) {
       _toast(Lc.current.needLogin);
@@ -909,12 +941,16 @@ class _ThreadPageState extends State<ThreadPage> {
                           onEdit: p['can_edit'] == true
                               ? () => _editReply(p)
                               : null,
+                          onRecall: p['can_recall'] == true
+                              ? () => _recallReply(p)
+                              : null,
                           onDelete:
                               (p['can_delete'] == true &&
                                   (p['floor'] ?? 0) != 1)
                               ? () => _deletePost(p)
                               : null,
                           onDeleteSub: _deleteSub,
+                          onRecallSub: _recallSub,
                           onReport: (p['floor'] ?? 0) == 1
                               ? _reportThread
                               : () => _reportReply(p),
@@ -961,6 +997,10 @@ class _ThreadPageState extends State<ThreadPage> {
         AppCard(
           margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          color: hueCardTint(
+            hueOfUser(op),
+            Theme.of(context).brightness == Brightness.dark,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1219,9 +1259,7 @@ class _ThreadPageState extends State<ThreadPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      Lc.current.replyTo(
-                        (_replyTo!['author'] ?? '') as String,
-                      ),
+                      Lc.current.replyTo((_replyTo!['author'] ?? '') as String),
                       style: TextStyle(fontSize: 12, color: cs.primary),
                     ),
                     GestureDetector(
@@ -1415,7 +1453,9 @@ class _PostCard extends StatefulWidget {
   final VoidCallback onReply;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onRecall;
   final ValueChanged<Map<String, dynamic>>? onDeleteSub;
+  final ValueChanged<Map<String, dynamic>>? onRecallSub;
   final VoidCallback? onReport;
 
   /// 刚跳过来的那一层，底色淡一下
@@ -1427,7 +1467,9 @@ class _PostCard extends StatefulWidget {
     required this.onReply,
     this.onEdit,
     this.onDelete,
+    this.onRecall,
     this.onDeleteSub,
+    this.onRecallSub,
     this.onReport,
     this.highlight = false,
   });
@@ -1453,6 +1495,13 @@ class _PostCardState extends State<_PostCard> {
                 title: Text(Lc.current.edit),
                 onTap: () => Navigator.of(c).pop('edit'),
               ),
+            if (widget.onRecall != null)
+              ListTile(
+                leading: const Icon(Icons.undo),
+                title: Text(Lc.current.dmRecall),
+                subtitle: Text(Lc.current.replyRemembered),
+                onTap: () => Navigator.of(c).pop('recall'),
+              ),
             if (widget.onDelete != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline),
@@ -1472,6 +1521,7 @@ class _PostCardState extends State<_PostCard> {
     );
     if (!mounted) return;
     if (act == 'edit') widget.onEdit?.call();
+    if (act == 'recall') widget.onRecall?.call();
     if (act == 'del') widget.onDelete?.call();
     if (act == 'report') widget.onReport?.call();
   }
@@ -1493,10 +1543,12 @@ class _PostCardState extends State<_PostCard> {
     final agreed = post['agreed'] == true;
     final created = (post['created_at'] ?? 0) as int;
     final isOp = post['is_op'] == true;
+    final recalled = post['recalled'] == true;
     final liked = agreed ? cs.primary : cs.outline;
     // 这一层是谁的，描边里看得见。淡，但一层一层扫下去能分出人。
     final dark = Theme.of(context).brightness == Brightness.dark;
     final authHue = hueOfUser(post);
+    final tint = hueCardTint(authHue, dark);
 
     // 楼层走卡片：和列表页一个语言，跳楼时靠描边和底色提示位置。
     return AnimatedContainer(
@@ -1504,9 +1556,14 @@ class _PostCardState extends State<_PostCard> {
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
+        // 这一层是谁的，底色就是谁的；开关关掉就是默认底。
+        // 跳楼高亮要叠在底色上，所以先算出底色再混。
         color: widget.highlight
-            ? cs.primary.withValues(alpha: 0.07)
-            : cs.surfaceContainerLow,
+            ? Color.alphaBlend(
+                cs.primary.withValues(alpha: 0.10),
+                tint ?? cs.surfaceContainerLow,
+              )
+            : tint,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: widget.highlight
@@ -1591,31 +1648,46 @@ class _PostCardState extends State<_PostCard> {
                           ],
                         ),
                         const SizedBox(height: 3),
-                        RichBody(
-                          bodyText,
-                          style: const TextStyle(fontSize: 14, height: 1.5),
-                          contextMenuBuilder: (ctx, editable) =>
-                              AdaptiveTextSelectionToolbar.buttonItems(
-                                anchors: editable.contextMenuAnchors,
-                                buttonItems: [
-                                  ContextMenuButtonItem(
-                                    label: Lc.current.copyFullText,
-                                    onPressed: () {
-                                      Clipboard.setData(
-                                        ClipboardData(text: bodyText),
-                                      );
-                                      editable.hideToolbar();
-                                      _toastOf(ctx, Lc.current.copied);
-                                    },
-                                  ),
-                                  ...editable.contextMenuButtonItems,
-                                ],
+                        if (recalled)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2, bottom: 2),
+                            child: Text(
+                              Lc.current.replyRecalled,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                fontStyle: FontStyle.italic,
+                                color: cs.outline,
                               ),
-                        ),
-                        if (imgs.isNotEmpty)
+                            ),
+                          )
+                        else
+                          RichBody(
+                            bodyText,
+                            style: const TextStyle(fontSize: 14, height: 1.5),
+                            contextMenuBuilder: (ctx, editable) =>
+                                AdaptiveTextSelectionToolbar.buttonItems(
+                                  anchors: editable.contextMenuAnchors,
+                                  buttonItems: [
+                                    ContextMenuButtonItem(
+                                      label: Lc.current.copyFullText,
+                                      onPressed: () {
+                                        Clipboard.setData(
+                                          ClipboardData(text: bodyText),
+                                        );
+                                        editable.hideToolbar();
+                                        _toastOf(ctx, Lc.current.copied);
+                                      },
+                                    ),
+                                    ...editable.contextMenuButtonItems,
+                                  ],
+                                ),
+                          ),
+                        if (!recalled && imgs.isNotEmpty)
                           PostImages(urls: imgs, sizes: sizes),
-                        if (files.isNotEmpty) FileCards(files: files),
-                        if (subs.isNotEmpty) _subThread(cs, subs),
+                        if (!recalled && files.isNotEmpty)
+                          FileCards(files: files),
+                        if (!recalled && subs.isNotEmpty) _subThread(cs, subs),
                         if (subs.length > 3)
                           GestureDetector(
                             onTap: () => setState(() => _all = !_all),
@@ -1635,62 +1707,66 @@ class _PostCardState extends State<_PostCard> {
                               ),
                             ),
                           ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            InkWell(
-                              onTap: widget.onReply,
-                              borderRadius: BorderRadius.circular(4),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                  vertical: 6,
-                                ),
-                                child: Icon(
-                                  Icons.mode_comment_outlined,
-                                  size: 16,
-                                  color: cs.outline,
+                        if (!recalled) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              InkWell(
+                                onTap: widget.onReply,
+                                borderRadius: BorderRadius.circular(4),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                    vertical: 6,
+                                  ),
+                                  child: Icon(
+                                    Icons.mode_comment_outlined,
+                                    size: 16,
+                                    color: cs.outline,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 22),
-                            InkWell(
-                              onTap: widget.onAgree,
-                              borderRadius: BorderRadius.circular(4),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                  vertical: 6,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      agreed
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                      size: 16,
-                                      color: liked,
-                                    ),
-                                    if (agree > 0) ...[
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        bigNum(agree),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: liked,
-                                        ),
+                              const SizedBox(width: 22),
+                              InkWell(
+                                onTap: widget.onAgree,
+                                borderRadius: BorderRadius.circular(4),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                    vertical: 6,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        agreed
+                                            ? Icons.favorite
+                                            : Icons.favorite_border,
+                                        size: 16,
+                                        color: liked,
                                       ),
+                                      if (agree > 0) ...[
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          bigNum(agree),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: liked,
+                                          ),
+                                        ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                  if (widget.onDelete != null || widget.onEdit != null)
+                  if (widget.onDelete != null ||
+                      widget.onEdit != null ||
+                      widget.onRecall != null)
                     GestureDetector(
                       onTap: _moreSheet,
                       behavior: HitTestBehavior.opaque,
@@ -1743,7 +1819,17 @@ class _PostCardState extends State<_PostCard> {
                               color: cs.primary,
                             ),
                           ),
-                          TextSpan(text: '${s['body']}'),
+                          TextSpan(
+                            text: s['recalled'] == true
+                                ? Lc.current.replyRecalled
+                                : '${s['body']}',
+                            style: s['recalled'] == true
+                                ? TextStyle(
+                                    fontStyle: FontStyle.italic,
+                                    color: cs.outline,
+                                  )
+                                : null,
+                          ),
                         ],
                       ),
                       style: TextStyle(
@@ -1753,6 +1839,15 @@ class _PostCardState extends State<_PostCard> {
                       ),
                     ),
                   ),
+                  if (s['can_recall'] == true)
+                    GestureDetector(
+                      onTap: () => widget.onRecallSub?.call(s),
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8, top: 2),
+                        child: Icon(Icons.undo, size: 14, color: cs.outline),
+                      ),
+                    ),
                   if (s['can_delete'] == true)
                     GestureDetector(
                       onTap: () => widget.onDeleteSub?.call(s),
