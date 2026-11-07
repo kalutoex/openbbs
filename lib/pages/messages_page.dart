@@ -303,9 +303,10 @@ class _MessagesPageState extends State<MessagesPage> {
         final dark = Theme.of(context).brightness == Brightness.dark;
         return AppCard(
           margin: const EdgeInsets.only(bottom: 8),
+          // 会话卡一直跟着对方走色，不进彩蛋里的那个开关。
           color: row.notice || row.peer == null
               ? null
-              : hueCardTint(hueOfUser(row.peer), dark),
+              : hueCardBg(hueOfUser(row.peer), dark),
           child: _tile(context, row),
         );
       },

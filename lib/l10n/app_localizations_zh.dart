@@ -541,10 +541,13 @@ class LZh extends L {
   String get startTabHint => '打开 app 先看哪个';
 
   @override
-  String get hueCards => '卡片跟着人染色';
+  String get easterEggButton => '没啥用的小按钮';
 
   @override
-  String get hueCardsHint => '开的卡按发帖人的主题色染底，关掉是统一底色；头像外圈不受影响';
+  String get easterEggTitle => '小玩意';
+
+  @override
+  String get hueCards => '卡片跟着人染色';
 
   @override
   String get showThumbnails => '显示缩略图';

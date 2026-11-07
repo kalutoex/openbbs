@@ -545,11 +545,13 @@ class LEn extends L {
   String get startTabHint => 'Which tab opens first';
 
   @override
-  String get hueCards => 'Tint cards by author';
+  String get easterEggButton => 'A button that does nothing';
 
   @override
-  String get hueCardsHint =>
-      'On tints card backgrounds with the author\'s color; off is a plain background. Avatar rings are unaffected';
+  String get easterEggTitle => 'Trinkets';
+
+  @override
+  String get hueCards => 'Tint cards by author';
 
   @override
   String get showThumbnails => 'Show thumbnails';

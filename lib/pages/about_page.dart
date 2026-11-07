@@ -5,17 +5,23 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../site_config.dart';
+import 'easter_egg_page.dart';
 import 'friends_page.dart';
 
 import '../l10n/l10n.dart';
 import '../widgets/toast.dart';
 
 /// 关于：只放开源信息和链接。
-class AboutPage extends StatelessWidget {
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
 
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
   /// 项目地址来自构建参数 REPO，没配就不显示那一行。
-  static String get _repo => SiteConfig.repo;
+  String get _repo => SiteConfig.repo;
 
   @override
   Widget build(BuildContext context) {
@@ -99,9 +105,41 @@ class AboutPage extends StatelessWidget {
                 ],
               ),
             ),
+
+            // 没啥用的小按钮。点几下都没反应，连着点五下才开门。
+            const SizedBox(height: 10),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              onTap: _tap,
+              child: ListTile(
+                title: Text(
+                  Lc.current.easterEggButton,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  /// 连点计数。4 次以内一律没反应，第 5 次进彩蛋页。
+  /// 隔 3 秒没再点就归零——不然一路点下来攒够五下，反而容易被误触打开。
+  int _taps = 0;
+  DateTime? _lastTap;
+
+  void _tap() {
+    final now = DateTime.now();
+    if (_lastTap != null && now.difference(_lastTap!) > const Duration(seconds: 3)) {
+      _taps = 0;
+    }
+    _lastTap = now;
+    _taps++;
+    if (_taps < 5) return;
+    _taps = 0;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const EasterEggPage()),
     );
   }
 
