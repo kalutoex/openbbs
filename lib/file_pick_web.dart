@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:html' as html;
 
+import 'upload_progress.dart';
+
 /// 选中待上传的文件。网页版拿的是浏览器里的 File，文件本身还在磁盘上。
 class PickedFile {
   PickedFile({required this.name, required this.size, required this.file});
@@ -49,8 +51,9 @@ Future<PickedFile?> pickFile() async {
 Future<Map<String, dynamic>> postFile(
   String url,
   Map<String, String> headers,
-  PickedFile f,
-) {
+  PickedFile f, {
+  UploadProgress? onProgress,
+}) {
   final form = html.FormData()..appendBlob('f', f.file, f.name);
   final req = html.HttpRequest();
   final done = Completer<Map<String, dynamic>>();
@@ -60,6 +63,10 @@ Future<Map<String, dynamic>> postFile(
     if (k.toLowerCase() != 'content-type') req.setRequestHeader(k, v);
   });
   req.timeout = 30 * 60 * 1000;
+  // 浏览器自己从磁盘读，这里只报它已经发出去多少。
+  req.upload.onProgress.listen((e) {
+    onProgress?.call(e.loaded ?? 0, e.total ?? f.size);
+  });
   req.onLoad.listen((_) {
     if (done.isCompleted) return;
     final text = req.responseText ?? '';

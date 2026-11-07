@@ -46,6 +46,14 @@ class _CloudPageState extends State<CloudPage> {
   static const _perPage = 20;
   bool _uploading = false;
 
+  /// 正在传的那一包：名字和字节数。传大文件时屏幕上就靠这个动。
+  String _upName = '';
+  int _upGot = 0;
+  int _upTotal = 0;
+  double _upSpeed = 0;
+  DateTime _upTick = DateTime.fromMillisecondsSinceEpoch(0);
+  int _upTickBytes = 0;
+
   /// 正在下的：id -> 0..1。列表里就着那一行显示进度。
   final Map<int, double> _dl = {};
 
@@ -349,18 +357,50 @@ class _CloudPageState extends State<CloudPage> {
     final f = await pickFile();
     if (f == null) return;
     // 单文件不设死上限，能不能传看剩余空间——服务端会按额度掐断。
-    setState(() => _uploading = true);
-    _toast(Lc.current.uploadingFile2(f.name));
+    setState(() {
+      _uploading = true;
+      _upName = f.name;
+      _upGot = 0;
+      _upTotal = f.size;
+      _upSpeed = 0;
+      _upTick = DateTime.now();
+      _upTickBytes = 0;
+    });
     try {
-      await Api.uploadFile(f);
+      await Api.uploadFile(f, onProgress: _onProgress);
       if (!mounted) return;
       await _load();
       if (mounted) _toast(Lc.current.uploadedDone);
     } catch (e) {
       if (mounted) _toast(errorText(context, e));
     } finally {
-      if (mounted) setState(() => _uploading = false);
+      if (mounted) {
+        setState(() {
+          _uploading = false;
+          _upName = '';
+          _upGot = 0;
+          _upTotal = 0;
+          _upSpeed = 0;
+        });
+      }
     }
+  }
+
+  /// 一个 1GB 的包会回调上万次，全量 setState 反而把自己拖慢。
+  /// 120ms 一次，收尾那次不掐。
+  void _onProgress(int got, int total) {
+    final now = DateTime.now();
+    final dt = now.difference(_upTick).inMilliseconds;
+    if (got < total && dt < 120) return;
+    final delta = got - _upTickBytes;
+    _upTick = now;
+    _upTickBytes = got;
+    if (!mounted) return;
+    setState(() {
+      _upGot = got;
+      _upTotal = total;
+      if (dt > 0) _upSpeed = delta * 1000 / dt;
+    });
   }
 
   Future<void> _toDownloads() async {
@@ -415,6 +455,12 @@ class _CloudPageState extends State<CloudPage> {
           child: Column(
             children: [
               if (_usage != null) _UsageBar(usage: _usage!),
+              if (_uploading) _UploadPanel(
+                name: _upName,
+                got: _upGot,
+                total: _upTotal,
+                speed: _upSpeed,
+              ),
               _SearchBar(
                 controller: _search,
                 onChanged: (v) {
@@ -861,6 +907,90 @@ class _CloudTrashPageState extends State<CloudTrashPage> {
                 );
               },
             ),
+    );
+  }
+}
+
+/// 上传中的一条：文件名、百分比条、已传多少、多快。
+///
+/// 传 1GB 的时候，有没有这一条决定了「它到底在不在动」。
+class _UploadPanel extends StatelessWidget {
+  const _UploadPanel({
+    required this.name,
+    required this.got,
+    required this.total,
+    required this.speed,
+  });
+
+  final String name;
+  final int got;
+  final int total;
+  final double speed;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final pct = total > 0 ? (got / total).clamp(0.0, 1.0) : null;
+    final left = '${bytesShort(got)} / ${bytesShort(total > 0 ? total : got)}';
+    final rate = speed > 0 ? '${bytesShort(speed.round())}/s' : '';
+    final pctText = pct == null ? '' : '${(pct * 100).toStringAsFixed(0)}%';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+      child: Row(
+        children: [
+          Icon(Icons.upload_file, size: 18, color: cs.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (rate.isNotEmpty)
+                      Text(
+                        rate,
+                        style: TextStyle(fontSize: 11.5, color: cs.outline),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: pct,
+                    minHeight: 5,
+                    backgroundColor: cs.surfaceContainerHighest,
+                    color: cs.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      left,
+                      style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+                    ),
+                    const Spacer(),
+                    Text(
+                      pctText,
+                      style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

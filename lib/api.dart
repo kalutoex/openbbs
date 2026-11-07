@@ -9,6 +9,7 @@ import 'disk_cache.dart';
 import 'file_pick.dart';
 import 'site_config.dart';
 import 'site_meta.dart';
+import 'upload_progress.dart';
 import 'sites.dart';
 
 import '../l10n/l10n.dart';
@@ -348,14 +349,18 @@ class Api {
 
   /// 传附件。手机上边读盘边发，网页版交给浏览器，都不整个进内存。
   /// 名字和大小以服务端回来为准——客户端报的不可信。
-  static Future<Map<String, dynamic>> uploadFile(PickedFile f) async {
+  static Future<Map<String, dynamic>> uploadFile(
+    PickedFile f, {
+    UploadProgress? onProgress,
+  }) async {
     if (!configured) {
       throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
     }
     try {
       final d = await _withFailover(
         retryOnTimeout: false,
-        () => postFile(_uri('/file').toString(), _headers, f),
+        () => postFile(_uri('/file').toString(), _headers, f,
+            onProgress: onProgress),
       );
       final url = '${d['url'] ?? ''}';
       if (url.isEmpty) {
