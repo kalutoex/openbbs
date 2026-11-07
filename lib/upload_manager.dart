@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'app_globals.dart';
+import 'cloud.dart';
 import 'file_pick.dart';
 import 'l10n/l10n.dart';
+import 'upload_keepalive.dart';
 
 enum UploadState { queued, running, done, failed }
 
@@ -84,6 +88,8 @@ class UploadManager extends ChangeNotifier {
     job.speed = 0;
     job._tick = DateTime.now();
     job._tickBytes = 0;
+    // 安卓那边挂个前台服务：切出去回消息、锁屏，进程也不会被冻住。
+    unawaited(keepAliveStart(_label(job), '0%'));
     notifyListeners();
     try {
       await Api.uploadFile(job.file, onProgress: (got, total) {
@@ -96,19 +102,45 @@ class UploadManager extends ChangeNotifier {
         job._tickBytes = got;
         job.got = got;
         if (dt > 0) job.speed = delta * 1000 / dt;
+        _notifyBar(job);
         notifyListeners();
       });
       job.state = UploadState.done;
       job.got = job.size;
       doneCount++;
+      _finishBar();
       _say(Lc.current.uploadedDone);
     } catch (e) {
       job.state = UploadState.failed;
       job.error = _msg(e);
       failedCount++;
+      _finishBar();
       _say(job.error);
     }
     notifyListeners();
+  }
+
+  String _label(UploadJob job) => job.size > 0
+      ? '${job.name} · ${bytesText(job.size)}'
+      : job.name;
+
+  /// 通知栏的刷新别跟着 120ms 走，太密。两秒一次足够看出在动。
+  DateTime _barTick = DateTime.fromMillisecondsSinceEpoch(0);
+
+  void _notifyBar(UploadJob job) {
+    final now = DateTime.now();
+    if (now.difference(_barTick).inMilliseconds < 2000) return;
+    _barTick = now;
+    final pct = (job.ratio * 100).round();
+    unawaited(keepAliveUpdate(_label(job), '$pct%${_speedText(job)}'));
+  }
+
+  String _speedText(UploadJob job) =>
+      job.speed > 0 ? ' · ${bytesText(job.speed.round())}/s' : '';
+
+  /// 队列里还有就继续挂着，传干净了才把通知撤掉。
+  void _finishBar() {
+    if (current == null) unawaited(keepAliveStop());
   }
 
   String _msg(Object e) {

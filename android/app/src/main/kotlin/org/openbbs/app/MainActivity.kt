@@ -31,6 +31,7 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val CHANNEL = "openbbs/downloads"
         private const val ICON_CHANNEL = "openbbs/icon"
+        private const val KEEPALIVE_CHANNEL = "openbbs/keepalive"
         private const val REQ_DIR = 4801
         private const val FOLDER = "OpenBBS"
 
@@ -143,6 +144,33 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "current" -> result.success(currentIcon())
                     "set" -> setIcon(call.argument<String>("key") ?: "", result)
+                    else -> result.notImplemented()
+                }
+            }
+        MethodChannel(engine.dartExecutor.binaryMessenger, KEEPALIVE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        UploadService.start(
+                            this,
+                            call.argument<String>("title") ?: "正在上传",
+                            call.argument<String>("text") ?: "",
+                        )
+                        result.success(true)
+                    }
+                    "update" -> {
+                        // 走 startService 再进一次 onStartCommand，顺手把通知刷新掉
+                        UploadService.start(
+                            this,
+                            call.argument<String>("title") ?: "正在上传",
+                            call.argument<String>("text") ?: "",
+                        )
+                        result.success(true)
+                    }
+                    "stop" -> {
+                        UploadService.stop(this)
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }

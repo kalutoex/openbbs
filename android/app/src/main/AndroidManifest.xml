@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <!-- 通知：Android 13 起要运行时申请 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- 上传保活：大文件要传十几分钟，人总要切出去干别的。
+         没有前台服务，安卓一会儿就把进程冻住，上传就断了。
+         只在上传期间挂一个通知，传完就撤。 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <!-- 应用内更新：装下载好的 apk -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <!-- 相册：13 起读图片，12 及以下走旧权限 -->
@@ -152,6 +157,11 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity-alias>
+        <!-- 上传时挂个前台服务，进程才不会被系统冻住 -->
+        <service
+            android:name=".UploadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
