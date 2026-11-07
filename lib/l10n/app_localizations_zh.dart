@@ -2179,7 +2179,7 @@ class LZh extends L {
   String get deleteForever => '彻底删除';
 
   @override
-  String get deleteForeverHint => '彻底删除后找不回来，回收站里也不会再有。';
+  String get deleteForeverHint => '删了就找不回来。';
 
   @override
   String get deletedForever => '已彻底删除';
@@ -2539,4 +2539,123 @@ class LZh extends L {
 
   @override
   String get newMessagesBelow => '以下是新消息';
+
+  @override
+  String get endpointHint => '两个地址是同一个站。主入口连不上时会自己走备用那条。';
+
+  @override
+  String get handleHint => '别人用 @ 找到你；小写字母、数字、下划线，3–16 位';
+
+  @override
+  String get profileSavedHint => '改完立刻生效，回主页刷新就能看到。';
+
+  @override
+  String get bindEmailWhy => '绑了之后，忘记密码不用找人：登录页点「忘记密码」，收个验证码就能改。';
+
+  @override
+  String get newPasswordOnce => '关掉就看不到了。让本人登录后马上改成自己记得的。';
+
+  @override
+  String creditsAdminOnly(String v1) {
+    return '这份名单只有管理员能改（当前登录：$v1）。';
+  }
+
+  @override
+  String get permOptionalNote => '不想开的可以一直关着，只是发图时得手动去系统里选。';
+
+  @override
+  String get siteAddHint => '填对方给的地址，带不带 http:// 都行';
+
+  @override
+  String get siteImportPasteHint => '把 bbs.json 的内容贴进来，一个文件可以有多座站';
+
+  @override
+  String get notifyImage => '[图片]';
+
+  @override
+  String get transfers => '传输';
+
+  @override
+  String get uploadsTab => '上传';
+
+  @override
+  String get downloadsTab => '已下载';
+
+  @override
+  String get trashFilesTab => '云盘文件';
+
+  @override
+  String get trashThreadsTab => '帖子';
+
+  @override
+  String get trashEmptyFiles => '回收站里没有文件';
+
+  @override
+  String get trashEmptyThreads => '回收站里没有帖子';
+
+  @override
+  String get trashKeptHint => '删掉的东西先在这儿放几天，过期才真清。';
+
+  @override
+  String get trashThreadHint => '帖子删了也会在这儿留几天，想找回来还来得及。';
+
+  @override
+  String get threadBack => '帖子回来了';
+
+  @override
+  String get threadPurgeHint => '帖子里的回复、点赞、通知在删的时候就清了，彻底删掉就只剩这一下。';
+
+  @override
+  String get restored => '已恢复';
+
+  @override
+  String get adminTrash => '管理员回收站';
+
+  @override
+  String get adminTrashEmpty => '还没有管理员删掉的东西';
+
+  @override
+  String get adminTrashHint => '管理员删掉的帖子和文件，原主人那边看不到，只有这儿能捞回来。';
+
+  @override
+  String get allOwners => '全部用户';
+
+  @override
+  String get allKinds => '全部类型';
+
+  @override
+  String get filter => '筛选';
+
+  @override
+  String get uploadsEmpty => '没有在上传的文件';
+
+  @override
+  String get uploadsEmptyHint => '选好文件点上传，进度都在这儿看。';
+
+  @override
+  String uploadsRunningN(String v1) {
+    return '正在传 v1 个';
+  }
+
+  @override
+  String uploadsFailedN(String v1) {
+    return 'v1 个没传上去';
+  }
+
+  @override
+  String uploadsDoneN(String v1) {
+    return '已传完 v1 个';
+  }
+
+  @override
+  String get clearFinished => '清空已完成';
+
+  @override
+  String get uploading => '排队中';
+
+  @override
+  String get uploadFailed => '没传上去';
+
+  @override
+  String get uploadedOk => '已传完';
 }

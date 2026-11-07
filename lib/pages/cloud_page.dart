@@ -8,7 +8,7 @@ import '../cloud.dart';
 import '../download_index.dart';
 import '../downloads.dart';
 import '../local_files.dart';
-import '../pages/downloads_page.dart';
+import '../pages/transfers_page.dart';
 import '../file_browser.dart';
 import '../file_open.dart';
 import '../file_pick.dart';
@@ -419,21 +419,13 @@ class _CloudPageState extends State<CloudPage> {
     UploadManager.i.add(f);
   }
 
-  Future<void> _toDownloads() async {
+  Future<void> _toTransfers() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const DownloadsPage()),
+      MaterialPageRoute(builder: (_) => const TransfersPage()),
     );
-    // 那边可能删了文件，回来重新认一遍
+    // 那边可能删了文件、也可能传完了，回来重新认一遍
     if (mounted) _loadLocal();
-  }
-
-  Future<void> _toTrash() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const CloudTrashPage()),
-    );
-    if (mounted) _load();
   }
 
   @override
@@ -441,25 +433,22 @@ class _CloudPageState extends State<CloudPage> {
     return Scaffold(
       appBar: !_selecting
           ? AppBar(
-              title: Text(Lc.current.cloudDisk),
-              actions: [
-                IconButton(
-                  tooltip: Lc.current.select,
-                  icon: const Icon(Icons.checklist_rounded),
-                  onPressed: () => setState(() {
+              // 左上角：多选。长按列表里任意一条也能进。
+              leading: IconButton(
+                tooltip: Lc.current.select,
+                icon: const Icon(Icons.checklist_rounded),
+                onPressed: () => setState(() {
                   _selecting = true;
                   _picked.clear();
                 }),
-                ),
+              ),
+              title: Text(Lc.current.cloudDisk),
+              actions: [
+                // 右上角只留一个：上传队列和已下载都在「传输」里。
                 IconButton(
-                  tooltip: Lc.current.downloadsPage,
-                  icon: const Icon(Icons.download_done_outlined),
-                  onPressed: _toDownloads,
-                ),
-                IconButton(
-                  tooltip: Lc.current.recycleBin,
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: _toTrash,
+                  tooltip: Lc.current.transfers,
+                  icon: const Icon(Icons.swap_vert_rounded),
+                  onPressed: _toTransfers,
                 ),
               ],
             )
@@ -473,15 +462,6 @@ class _CloudPageState extends State<CloudPage> {
               ),
               title: Text(Lc.current.selectedN('${_picked.length}')),
               actions: [
-                IconButton(
-                  tooltip: Lc.current.selectAll,
-                  icon: const Icon(Icons.select_all),
-                  onPressed: () => setState(() {
-                    _picked
-                      ..clear()
-                      ..addAll(_items.map((e) => e.id));
-                  }),
-                ),
                 IconButton(
                   tooltip: Lc.current.delete,
                   icon: const Icon(Icons.delete_outline),
@@ -514,7 +494,7 @@ class _CloudPageState extends State<CloudPage> {
           child: Column(
             children: [
               if (_usage != null) _UsageBar(usage: _usage!),
-              const _UploadStrip(),
+              _UploadStrip(onTap: _toTransfers),
               _SearchBar(
                 controller: _search,
                 onChanged: (v) {
@@ -894,156 +874,16 @@ class _DoneBadge extends StatelessWidget {
   }
 }
 
-/// 回收站。7 天后服务端清掉，列表上给个倒计时。
-class CloudTrashPage extends StatefulWidget {
-  const CloudTrashPage({super.key});
-
-  @override
-  State<CloudTrashPage> createState() => _CloudTrashPageState();
-}
-
-class _CloudTrashPageState extends State<CloudTrashPage> {
-  List<CloudFile>? _items;
-  bool _failed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final v = await CloudApi.trash();
-      if (!mounted) return;
-      setState(() {
-        _items = v;
-        _failed = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _failed = true);
-    }
-  }
-
-  Future<void> _restore(CloudFile f) async {
-    try {
-      await CloudApi.restore(f.id);
-      if (!mounted) return;
-      setState(() => _items?.removeWhere((x) => x.id == f.id));
-      toast(context, Lc.current.restoredDone);
-    } catch (e) {
-      if (!mounted) return;
-      toast(context, errorText(context, e));
-    }
-  }
-
-  /// 彻底删除：不进 7 天倒计时，直接没了，空间当场还。
-  Future<void> _purge(CloudFile f) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(Lc.current.deleteForever),
-        content: Text('${f.name}\n\n${Lc.current.deleteForeverHint}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(Lc.current.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              Lc.current.deleteForever,
-              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    try {
-      await CloudApi.purge(f.id);
-      if (!mounted) return;
-      setState(() => _items?.removeWhere((x) => x.id == f.id));
-      toast(context, Lc.current.deletedForever);
-    } catch (e) {
-      if (!mounted) return;
-      toast(context, errorText(context, e));
-    }
-  }
-
-  String _left(int? sec) {
-    if (sec == null) return '';
-    final d = Duration(seconds: sec);
-    final days = d.inDays;
-    final hours = d.inHours;
-    if (days >= 1) return Lc.current.daysLeft('$days');
-    if (hours >= 1) return Lc.current.hoursLeft('$hours');
-    return Lc.current.expiringSoon;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Scaffold(
-      appBar: AppBar(title: Text(Lc.current.recycleBin)),
-      body: _items == null
-          ? Center(
-              child: _failed
-                  ? TextButton(
-                      onPressed: _load,
-                      child: Text(Lc.current.notConnectedTapRetry),
-                    )
-                  : const CircularProgressIndicator(),
-            )
-          : _items!.isEmpty
-          ? Center(
-              child: Text(
-                Lc.current.emptyHere,
-                style: TextStyle(color: cs.outline),
-              ),
-            )
-          : ListView.builder(
-              itemCount: _items!.length,
-              itemBuilder: (context, i) {
-                final f = _items![i];
-                return ListTile(
-                  leading: Icon(fileIconFor(f.name), color: cs.outline),
-                  title: Text(
-                    f.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    '${bytesText(f.size)} · ${_left(f.expiresIn)}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextButton(
-                        onPressed: () => _restore(f),
-                        child: Text(Lc.current.restore),
-                      ),
-                      IconButton(
-                        tooltip: Lc.current.deleteForever,
-                        icon: Icon(Icons.delete_forever, color: cs.error),
-                        onPressed: () => _purge(f),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-    );
-  }
-}
-
 /// 上传队列那一条。
 ///
 /// 传 1GB 的时候，有没有这一条决定了「它到底在不在动」。
 /// 现在队列能排好几个，所以一条一条列出来，正在传的带进度，
 /// 排队的只报个名字。每条都能点 × 停掉，传砸了的点一下就重试。
 class _UploadStrip extends StatelessWidget {
-  const _UploadStrip();
+  const _UploadStrip({this.onTap});
+
+  /// 点一下去「传输」，那儿能看完整的队列。
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1055,7 +895,9 @@ class _UploadStrip extends StatelessWidget {
         if (active.isEmpty && failed.isEmpty) {
           return const SizedBox.shrink();
         }
-        return Column(
+        return InkWell(
+          onTap: onTap,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final j in active.take(3))
@@ -1083,6 +925,7 @@ class _UploadStrip extends StatelessWidget {
                 onRetry: () => UploadManager.i.retry(j),
               ),
           ],
+          ),
         );
       },
     );

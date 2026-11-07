@@ -2586,4 +2586,136 @@ class LEn extends L {
 
   @override
   String get newMessagesBelow => 'New messages below';
+
+  @override
+  String get endpointHint =>
+      'Both addresses are the same site. When the primary one won\'t connect, the backup takes over.';
+
+  @override
+  String get handleHint =>
+      'Others find you with @; lowercase letters, digits, underscore, 3–16 characters';
+
+  @override
+  String get profileSavedHint =>
+      'Takes effect right away — refresh the home page to see it.';
+
+  @override
+  String get bindEmailWhy =>
+      'Once bound, a forgotten password needs no help: tap the reset link on the login page, get a code, set a new one.';
+
+  @override
+  String get newPasswordOnce =>
+      'Close it and it\'s gone. Have them log in and change it right away.';
+
+  @override
+  String creditsAdminOnly(String v1) {
+    return 'Only admins can change this list (logged in as $v1).';
+  }
+
+  @override
+  String get permOptionalNote =>
+      'You can leave these off — you\'ll just have to pick images through the system picker.';
+
+  @override
+  String get siteAddHint =>
+      'Enter the address you were given; http:// is optional';
+
+  @override
+  String get siteImportPasteHint =>
+      'Paste the contents of bbs.json — one file can list many sites';
+
+  @override
+  String get notifyImage => '[Photo]';
+
+  @override
+  String get transfers => 'Transfers';
+
+  @override
+  String get uploadsTab => 'Uploads';
+
+  @override
+  String get downloadsTab => 'Downloads';
+
+  @override
+  String get trashFilesTab => 'Files';
+
+  @override
+  String get trashThreadsTab => 'Posts';
+
+  @override
+  String get trashEmptyFiles => 'No files in the trash';
+
+  @override
+  String get trashEmptyThreads => 'No posts in the trash';
+
+  @override
+  String get trashKeptHint =>
+      'Deleted items stay here for a while before they\'re gone for good.';
+
+  @override
+  String get trashThreadHint =>
+      'Deleted posts stay here for a few days, so you can still get them back.';
+
+  @override
+  String get threadBack => 'Post restored';
+
+  @override
+  String get threadPurgeHint =>
+      'Replies, likes and notifications were already cleared when it was deleted. This wipes the rest.';
+
+  @override
+  String get restored => 'Restored';
+
+  @override
+  String get adminTrash => 'Admin trash';
+
+  @override
+  String get adminTrashEmpty => 'Nothing deleted by an admin yet';
+
+  @override
+  String get adminTrashHint =>
+      'Posts and files an admin deleted are hidden from their owners. Only this page can bring them back.';
+
+  @override
+  String get allOwners => 'All users';
+
+  @override
+  String get allKinds => 'All types';
+
+  @override
+  String get filter => 'Filter';
+
+  @override
+  String get uploadsEmpty => 'Nothing uploading';
+
+  @override
+  String get uploadsEmptyHint =>
+      'Pick a file to upload and the progress shows up here.';
+
+  @override
+  String uploadsRunningN(String v1) {
+    return '$v1 uploading';
+  }
+
+  @override
+  String uploadsFailedN(String v1) {
+    return '$v1 failed';
+  }
+
+  @override
+  String uploadsDoneN(String v1) {
+    return '$v1 finished';
+  }
+
+  @override
+  String get clearFinished => 'Clear finished';
+
+  @override
+  String get uploading => 'Queued';
+
+  @override
+  String get uploadFailed => 'Upload failed';
+
+  @override
+  String get uploadedOk => 'Uploaded';
 }

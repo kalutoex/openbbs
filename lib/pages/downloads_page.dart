@@ -19,7 +19,10 @@ import '../widgets/toast.dart';
 /// 只管本地这一份。删了不影响云盘，云盘删了这里也还在。
 /// 点一下打开，长按能删、能去文件所在的那层目录看看。
 class DownloadsPage extends StatefulWidget {
-  const DownloadsPage({super.key});
+  const DownloadsPage({super.key, this.embedded = false});
+
+  /// 塞进「传输」页的 tab 里时不再自带 AppBar。
+  final bool embedded;
 
   @override
   State<DownloadsPage> createState() => _DownloadsPageState();
@@ -311,6 +314,50 @@ class _DownloadsPageState extends State<DownloadsPage> {
     final hasMissing = _items.any((e) => !e.alive);
     final canSelect = _items.isNotEmpty;
     final allOn = canSelect && _sel.length == _items.length;
+    if (widget.embedded) {
+      // 没有自己的 AppBar，多选那几条操作挪到页面顶上一条细栏里，
+      // 平时不占地方，进了选择模式才出现。
+      return PageWidth(
+        child: Column(
+          children: [
+            if (_selecting)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: _endSelect,
+                      tooltip: Lc.current.cancel,
+                    ),
+                    Expanded(
+                      child: Text(
+                        Lc.current.selectedCount(_sel.length),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: allOn
+                          ? Lc.current.selectNone
+                          : Lc.current.selectAll,
+                      icon: Icon(allOn ? Icons.deselect : Icons.select_all),
+                      onPressed: canSelect ? _toggleAll : null,
+                    ),
+                    IconButton(
+                      tooltip: Lc.current.deleteSelected,
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: _sel.isEmpty ? null : _deleteSelected,
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: RefreshIndicator(onRefresh: _load, child: _body()),
+            ),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         leading: _selecting

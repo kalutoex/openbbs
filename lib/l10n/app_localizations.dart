@@ -3989,7 +3989,7 @@ abstract class L {
   /// No description provided for @deleteForeverHint.
   ///
   /// In zh, this message translates to:
-  /// **'彻底删除后找不回来，回收站里也不会再有。'**
+  /// **'删了就找不回来。'**
   String get deleteForeverHint;
 
   /// No description provided for @deletedForever.
@@ -4621,6 +4621,228 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'以下是新消息'**
   String get newMessagesBelow;
+
+  /// No description provided for @endpointHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'两个地址是同一个站。主入口连不上时会自己走备用那条。'**
+  String get endpointHint;
+
+  /// No description provided for @handleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'别人用 @ 找到你；小写字母、数字、下划线，3–16 位'**
+  String get handleHint;
+
+  /// No description provided for @profileSavedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'改完立刻生效，回主页刷新就能看到。'**
+  String get profileSavedHint;
+
+  /// No description provided for @bindEmailWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'绑了之后，忘记密码不用找人：登录页点「忘记密码」，收个验证码就能改。'**
+  String get bindEmailWhy;
+
+  /// No description provided for @newPasswordOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'关掉就看不到了。让本人登录后马上改成自己记得的。'**
+  String get newPasswordOnce;
+
+  /// No description provided for @creditsAdminOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份名单只有管理员能改（当前登录：{v1}）。'**
+  String creditsAdminOnly(String v1);
+
+  /// No description provided for @permOptionalNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'不想开的可以一直关着，只是发图时得手动去系统里选。'**
+  String get permOptionalNote;
+
+  /// No description provided for @siteAddHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'填对方给的地址，带不带 http:// 都行'**
+  String get siteAddHint;
+
+  /// No description provided for @siteImportPasteHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'把 bbs.json 的内容贴进来，一个文件可以有多座站'**
+  String get siteImportPasteHint;
+
+  /// No description provided for @notifyImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'[图片]'**
+  String get notifyImage;
+
+  /// No description provided for @transfers.
+  ///
+  /// In zh, this message translates to:
+  /// **'传输'**
+  String get transfers;
+
+  /// No description provided for @uploadsTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'上传'**
+  String get uploadsTab;
+
+  /// No description provided for @downloadsTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'已下载'**
+  String get downloadsTab;
+
+  /// No description provided for @trashFilesTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'云盘文件'**
+  String get trashFilesTab;
+
+  /// No description provided for @trashThreadsTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子'**
+  String get trashThreadsTab;
+
+  /// No description provided for @trashEmptyFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'回收站里没有文件'**
+  String get trashEmptyFiles;
+
+  /// No description provided for @trashEmptyThreads.
+  ///
+  /// In zh, this message translates to:
+  /// **'回收站里没有帖子'**
+  String get trashEmptyThreads;
+
+  /// No description provided for @trashKeptHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'删掉的东西先在这儿放几天，过期才真清。'**
+  String get trashKeptHint;
+
+  /// No description provided for @trashThreadHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子删了也会在这儿留几天，想找回来还来得及。'**
+  String get trashThreadHint;
+
+  /// No description provided for @threadBack.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子回来了'**
+  String get threadBack;
+
+  /// No description provided for @threadPurgeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'帖子里的回复、点赞、通知在删的时候就清了，彻底删掉就只剩这一下。'**
+  String get threadPurgeHint;
+
+  /// No description provided for @restored.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复'**
+  String get restored;
+
+  /// No description provided for @adminTrash.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理员回收站'**
+  String get adminTrash;
+
+  /// No description provided for @adminTrashEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有管理员删掉的东西'**
+  String get adminTrashEmpty;
+
+  /// No description provided for @adminTrashHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理员删掉的帖子和文件，原主人那边看不到，只有这儿能捞回来。'**
+  String get adminTrashHint;
+
+  /// No description provided for @allOwners.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部用户'**
+  String get allOwners;
+
+  /// No description provided for @allKinds.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部类型'**
+  String get allKinds;
+
+  /// No description provided for @filter.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选'**
+  String get filter;
+
+  /// No description provided for @uploadsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有在上传的文件'**
+  String get uploadsEmpty;
+
+  /// No description provided for @uploadsEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'选好文件点上传，进度都在这儿看。'**
+  String get uploadsEmptyHint;
+
+  /// No description provided for @uploadsRunningN.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在传 v1 个'**
+  String uploadsRunningN(String v1);
+
+  /// No description provided for @uploadsFailedN.
+  ///
+  /// In zh, this message translates to:
+  /// **'v1 个没传上去'**
+  String uploadsFailedN(String v1);
+
+  /// No description provided for @uploadsDoneN.
+  ///
+  /// In zh, this message translates to:
+  /// **'已传完 v1 个'**
+  String uploadsDoneN(String v1);
+
+  /// No description provided for @clearFinished.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空已完成'**
+  String get clearFinished;
+
+  /// No description provided for @uploading.
+  ///
+  /// In zh, this message translates to:
+  /// **'排队中'**
+  String get uploading;
+
+  /// No description provided for @uploadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'没传上去'**
+  String get uploadFailed;
+
+  /// No description provided for @uploadedOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'已传完'**
+  String get uploadedOk;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

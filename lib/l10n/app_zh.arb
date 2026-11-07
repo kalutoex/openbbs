@@ -1476,7 +1476,7 @@
   "cacheCleared": "清掉了",
   "downloadByBrowser": "网页版的下载位置由浏览器决定，在浏览器自己的设置里改。",
   "deleteForever": "彻底删除",
-  "deleteForeverHint": "彻底删除后找不回来，回收站里也不会再有。",
+  "deleteForeverHint": "删了就找不回来。",
   "deletedForever": "已彻底删除",
   "downloadedBadge": "已下载",
   "downloadingShort": "下载中",
@@ -1547,13 +1547,6 @@
   "dmAttach": "发送",
   "notifyNewDm": "新私信",
   "notifyNewCount": "{n} 条新消息",
-  "@notifyNewCount": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "sysNotify": "消息通知",
   "sysNotifyHint": "有新消息时弹一条系统通知",
   "sysNotifyOff": "系统通知权限没开，去手机设置里打开",
@@ -1607,29 +1600,8 @@
   "selectNone": "全不选",
   "deleteSelected": "删除所选",
   "selectedCount": "已选 {n} 个",
-  "@selectedCount": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "deleteSelectedAsk": "这 {n} 个文件会从手机里删掉，云盘里的还在。",
-  "@deleteSelectedAsk": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "deletedSelected": "已删 {n} 个",
-  "@deletedSelected": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "uiConfigTitle": "界面参数",
   "uiConfigHint": "这里改的是卡片高度、边距、字号这类纯视觉的数字，保存后客户端下次拉取就换过来，不用重新发包。\n\n格式是一个 JSON 对象，键名固定（见下方清单），值只接受数字或在允许范围内的取值。键名不认识、数值超范围都会被拒绝，并告诉你是哪一条。留空保存等于全部恢复默认。",
   "uiConfigKeys": "可用键：fileCard.height（卡片高度，24~240）、fileCard.maxWidth（宽屏上限，120~2000）、fileCard.compactWidth（私信里的宽度）、fileCard.padV（上下留白）、fileCard.padH（左右留白）、fileCard.radius（圆角）、fileCard.icon（图标大小）、fileCard.nameSize（文件名字号）、fileCard.sizeSize（大小文字字号）、fileCard.gap（图标与文字间距）、fileCard.arrowIcon（右侧图标大小）、threadCard.avatarRadius（头像半径）、threadCard.gap（头像与名字间距）、threadCard.tagSide（角标位置：leftOfTime / rightOfTime / belowTime）。",
@@ -1737,5 +1709,98 @@
       }
     }
   },
-  "newMessagesBelow": "以下是新消息"
+  "newMessagesBelow": "以下是新消息",
+  "endpointHint": "两个地址是同一个站。主入口连不上时会自己走备用那条。",
+  "handleHint": "别人用 @ 找到你；小写字母、数字、下划线，3–16 位",
+  "profileSavedHint": "改完立刻生效，回主页刷新就能看到。",
+  "bindEmailWhy": "绑了之后，忘记密码不用找人：登录页点「忘记密码」，收个验证码就能改。",
+  "newPasswordOnce": "关掉就看不到了。让本人登录后马上改成自己记得的。",
+  "creditsAdminOnly": "这份名单只有管理员能改（当前登录：{v1}）。",
+  "@creditsAdminOnly": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "permOptionalNote": "不想开的可以一直关着，只是发图时得手动去系统里选。",
+  "siteAddHint": "填对方给的地址，带不带 http:// 都行",
+  "siteImportPasteHint": "把 bbs.json 的内容贴进来，一个文件可以有多座站",
+  "notifyImage": "[图片]",
+  "transfers": "传输",
+  "uploadsTab": "上传",
+  "downloadsTab": "已下载",
+  "trashFilesTab": "云盘文件",
+  "trashThreadsTab": "帖子",
+  "trashEmptyFiles": "回收站里没有文件",
+  "trashEmptyThreads": "回收站里没有帖子",
+  "trashKeptHint": "删掉的东西先在这儿放几天，过期才真清。",
+  "trashThreadHint": "帖子删了也会在这儿留几天，想找回来还来得及。",
+  "threadBack": "帖子回来了",
+  "threadPurgeHint": "帖子里的回复、点赞、通知在删的时候就清了，彻底删掉就只剩这一下。",
+  "restored": "已恢复",
+  "adminTrash": "管理员回收站",
+  "adminTrashEmpty": "还没有管理员删掉的东西",
+  "adminTrashHint": "管理员删掉的帖子和文件，原主人那边看不到，只有这儿能捞回来。",
+  "allOwners": "全部用户",
+  "allKinds": "全部类型",
+  "filter": "筛选",
+  "uploadsEmpty": "没有在上传的文件",
+  "uploadsEmptyHint": "选好文件点上传，进度都在这儿看。",
+  "uploadsRunningN": "正在传 v1 个",
+  "uploadsFailedN": "v1 个没传上去",
+  "uploadsDoneN": "已传完 v1 个",
+  "clearFinished": "清空已完成",
+  "uploading": "排队中",
+  "uploadFailed": "没传上去",
+  "uploadedOk": "已传完",
+  "@notifyNewCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@selectedCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@deleteSelectedAsk": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@deletedSelected": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@uploadsRunningN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "@uploadsFailedN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  },
+  "@uploadsDoneN": {
+    "placeholders": {
+      "v1": {
+        "type": "String"
+      }
+    }
+  }
 }

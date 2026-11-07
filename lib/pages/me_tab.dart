@@ -5,15 +5,18 @@ import '../api.dart';
 import '../cloud.dart' hide CloudPage;
 import '../site_config.dart';
 import '../store.dart';
+import '../trash.dart';
 import '../utils.dart';
 import '../widgets/app_card.dart';
 import '../widgets/page_width.dart';
 import '../widgets/name_tag.dart';
+import 'admin_trash_page.dart';
 import 'cloud_page.dart';
 import 'login_page.dart';
 import 'follow_page.dart';
 import 'settings_page.dart';
 import 'thread_list_page.dart';
+import 'trash_page.dart';
 import 'user_page.dart';
 
 import '../l10n/l10n.dart';
@@ -227,6 +230,8 @@ class MeTab extends StatelessWidget {
                             ),
                           ),
                         ),
+                        _hairLine(cs),
+                        _TrashEntry(admin: (u['is_admin'] ?? false) == true),
                       ],
                     ),
                   ),
@@ -250,6 +255,103 @@ class MeTab extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// 回收站入口。数字放这儿，别让人点进去才知道有没有东西。
+class _TrashEntry extends StatefulWidget {
+  const _TrashEntry({required this.admin});
+
+  final bool admin;
+
+  @override
+  State<_TrashEntry> createState() => _TrashEntryState();
+}
+
+class _TrashEntryState extends State<_TrashEntry> {
+  TrashSummary? _sum;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final s = await TrashApi.summary();
+      if (!mounted) return;
+      setState(() => _sum = s);
+    } catch (_) {
+      // 拿不到就不显示数字，不打扰
+    }
+  }
+
+  Future<void> _open() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TrashPage()),
+    );
+    if (mounted) _load();
+  }
+
+  Future<void> _openAdmin() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AdminTrashPage()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final n = _sum?.total ?? 0;
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.delete_outline),
+          title: Text(Lc.current.recycleBin),
+          subtitle: n > 0
+              ? Text(
+                  '${Lc.current.trashThreadsTab} ${_sum!.threads} · '
+                  '${Lc.current.trashFilesTab} ${_sum!.files}',
+                  style: const TextStyle(fontSize: 12),
+                )
+              : null,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (n > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.errorContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$n',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onErrorContainer,
+                    ),
+                  ),
+                ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+          onTap: _open,
+        ),
+        if (widget.admin)
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings_outlined),
+            title: Text(Lc.current.adminTrash),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _openAdmin,
+          ),
+      ],
     );
   }
 }

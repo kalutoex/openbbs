@@ -567,3 +567,31 @@ $usedText / $quotaText	usedOfTotal	{v1} / {v2}
 已选 {n} 个	selectedCount	{n} selected
 这 {n} 个文件会从手机里删掉，云盘里的还在。	deleteSelectedAsk	These {n} files will be removed from this phone. Copies in the cloud stay.
 已删 {n} 个	deletedSelected	Deleted {n}
+传输	transfers	Transfers
+上传	uploadsTab	Uploads
+已下载	downloadsTab	Downloads
+云盘文件	trashFilesTab	Files
+帖子	trashThreadsTab	Posts
+回收站里没有文件	trashEmptyFiles	No files in the trash
+回收站里没有帖子	trashEmptyThreads	No posts in the trash
+删掉的东西先在这儿放几天，过期才真清。	trashKeptHint	Deleted items stay here for a while before they're gone for good.
+帖子删了也会在这儿留几天，想找回来还来得及。	trashThreadHint	Deleted posts stay here for a few days, so you can still get them back.
+帖子回来了	threadBack	Post restored
+帖子里的回复、点赞、通知在删的时候就清了，彻底删掉就只剩这一下。	threadPurgeHint	Replies, likes and notifications were already cleared when it was deleted. This wipes the rest.
+删了就找不回来。	deleteForeverHint	This can't be undone.
+已恢复	restored	Restored
+管理员回收站	adminTrash	Admin trash
+还没有管理员删掉的东西	adminTrashEmpty	Nothing deleted by an admin yet
+管理员删掉的帖子和文件，原主人那边看不到，只有这儿能捞回来。	adminTrashHint	Posts and files an admin deleted are hidden from their owners. Only this page can bring them back.
+全部用户	allOwners	All users
+全部类型	allKinds	All types
+筛选	filter	Filter
+没有在上传的文件	uploadsEmpty	Nothing uploading
+选好文件点上传，进度都在这儿看。	uploadsEmptyHint	Pick a file to upload and the progress shows up here.
+正在传 v1 个	uploadsRunningN	{v1} uploading
+v1 个没传上去	uploadsFailedN	{v1} failed
+已传完 v1 个	uploadsDoneN	{v1} finished
+清空已完成	clearFinished	Clear finished
+排队中	uploading	Queued
+没传上去	uploadFailed	Upload failed
+已传完	uploadedOk	Uploaded
