@@ -56,6 +56,11 @@ class Poller with WidgetsBindingObserver {
   /// 正开着的会话，这个人的消息不弹——人就在看着。
   int activePeer = 0;
 
+  /// 自检用：最近一次轮询和最近一批私信都怎么处理的。
+  /// 「没弹」有七八个原因都能造成，不写下来只能靠猜。
+  String _diagTick = '还没跑过';
+  String _diagDm = '还没跑过';
+
   SharedPreferences? _p;
 
   Future<void> start() async {
@@ -170,6 +175,9 @@ class Poller with WidgetsBindingObserver {
       final dm = (m['dm'] as Map).cast<String, dynamic>();
       final nt = (m['notice'] as Map).cast<String, dynamic>();
       _fails = 0;
+      final n = DateTime.now();
+      _diagTick =
+          '上次轮询: ${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}:${n.second.toString().padLeft(2, '0')}，成功';
 
       st.setBadges(
         dm: dm['total'] as int? ?? 0,
@@ -183,6 +191,7 @@ class Poller with WidgetsBindingObserver {
       await _maybeAskPerms();
     } catch (e) {
       _fails++;
+      _diagTick = '上次轮询: 失败（第 $_fails 次）$e';
       // 以前这里全吞掉。服务端把 dm 改成数组，这里就每天静默失败一万多次，
       // 角标不动、通知不弹，控制台一个字都没有。限流打一行，够查就行。
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -256,14 +265,28 @@ class Poller with WidgetsBindingObserver {
     if (_dm == 0) {
       if (last > 0) await _save(_kDm, last);
       _dm = last;
+      _diagDm = '私信: 第一次跑，游标定在 $last，不弹';
       return;
     }
 
     if (items.isEmpty) {
       if (last > _dm) await _save(_kDm, last);
       if (last > _dm) _dm = last;
+      // 游标往前走了却没有条目：多半是免打扰的会话，或者那几条刚被读掉。
+      if (last > 0) _diagDm = '私信: 没有条目，游标跟到 $last';
       return;
     }
+
+    // 人正开着这个会话：这些不弹通知，但得马上告诉他，让他重拉。
+    // 以前这判断写在 fresh 过滤之后——聊天页开着时 fresh 一定是空的，
+    // 早就在上面 return 了，信号永远发不出去，看着就是「不实时刷新」。
+    final watching = [
+      for (final e in items)
+        if (((e as Map)['id'] as int? ?? 0) > _dm &&
+            (e['peer_id'] as int? ?? 0) == activePeer)
+          e,
+    ].length;
+    if (watching > 0) dmSignal.value++;
 
     final fresh = <Map>[
       for (final e in items)
@@ -280,7 +303,14 @@ class Poller with WidgetsBindingObserver {
       _dm = next;
     }
 
-    if (fresh.isEmpty || !AppState.instance.sysNotify.value) return;
+    if (fresh.isEmpty) {
+      _diagDm = '私信: 新到 ${items.length} 条，都处理过了（游标 $_dm）';
+      return;
+    }
+    if (!AppState.instance.sysNotify.value) {
+      _diagDm = '私信: 来 ${fresh.length} 条，但「系统通知」开关是关的';
+      return;
+    }
 
     // 按会话分组：同一个人的连发合成一条，换着看它就行；
     // 不同的人各占一条，不会互相盖掉。
@@ -289,11 +319,12 @@ class Poller with WidgetsBindingObserver {
       final p = (e)['peer_id'] as int? ?? 0;
       byPeer.putIfAbsent(p, () => []).add(e);
     }
+    final errs = <String>[];
     for (final entry in byPeer.entries) {
       final list = entry.value;
       final lastOne = list.last;
       final who = (lastOne['peer_name'] as String?) ?? '';
-      await SysNotify.show(
+      final err = await SysNotify.show(
         // 条数从 1 涨到 n 也是同一条，别在通知栏里越堆越多
         id: _dmNotifyId(entry.key),
         title: list.length == 1 ? who : Lc.current.notifyNewCount(list.length),
@@ -302,8 +333,27 @@ class Poller with WidgetsBindingObserver {
             : '$who：${_bubbleText(lastOne)}',
         payload: 'dm:${entry.key}:$who',
       );
+      if (err != null) errs.add(err);
     }
+    _diagDm = errs.isEmpty
+        ? '私信: 弹了 ${byPeer.length} 条'
+              '${watching > 0 ? '，正在看这个会话挡掉 $watching 条' : ''}'
+        : '私信: 弹失败 ${errs.join(' / ')}';
   }
+
+  /// 正开着的会话来了新消息：聊天页挂在这上面，一有动静就立刻拉一次，
+  /// 不用等它自己那 15 秒的定时器。值就是对方的 uid。
+  final ValueNotifier<int> dmSignal = ValueNotifier(0);
+
+  /// 自检：轮询和私信最近一轮到底怎么回事，设置页里直接显示。
+  Future<List<String>> diagLines() async => [
+    '轮询: ${_on ? (_fore ? '前台，每 ${_fails >= 3 ? 30 : _fgSeconds} 秒' : '后台') : '没启动'}',
+    _diagTick,
+    '游标: 私信 $_dm / 站内 $_nt',
+    _diagDm,
+    '系统通知开关: ${AppState.instance.sysNotify.value ? '开' : '关'}',
+    ...await BgPoll.diagLines(),
+  ];
 
   /// 每个会话一个通知 id。1001 起往上排，跟站内通知那条(1002)错开。
   int _dmNotifyId(int peer) => 10000 + (peer % 1000);

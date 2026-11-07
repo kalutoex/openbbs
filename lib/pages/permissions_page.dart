@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../notify.dart';
+import '../poller.dart';
 import '../permissions.dart';
 import '../widgets/keep_alive_tile.dart';
 
@@ -54,7 +55,10 @@ class _PermissionsPageState extends State<PermissionsPage> {
       body: Lc.current.notifyTestBody,
       payload: '',
     );
-    final lines = await SysNotify.diagnose();
+    final lines = <String>[
+      ...await SysNotify.diagnose(),
+      ...await Poller.instance.diagLines(),
+    ];
     if (!mounted) return;
     final text = <String>[
       if (err == null) Lc.current.notifyTestSent else '${Lc.current.notifyTestFail}: $err',

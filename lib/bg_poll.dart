@@ -25,16 +25,23 @@ const bgTaskUnique = 'openbbs-notify-poll';
 const bgTaskName = 'notifyPoll';
 
 const _kCtx = 'bg_ctx';
+
+/// 后台这轮跑到哪、死在哪。前台自检里会读出来显示——
+/// 后台 isolate 的异常没人看得见，不落盘就只能干猜。
+const _kDiag = 'bg_diag';
+const _kRuns = 'bg_runs';
 const _kDm = 'notify_cursor_dm';
 const _kNt = 'notify_cursor_nt';
 
 @pragma('vm:entry-point')
 void bgCallbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    unawaited(BgPoll.countRun());
     try {
       await BgPoll.run();
     } catch (e) {
       debugPrint('bgPoll: $e');
+      await BgPoll.diag('炸了: $e');
     }
     // 永远回 true：失败也等下一轮，别让系统按退避把间隔越拉越长。
     return true;
@@ -43,6 +50,58 @@ void bgCallbackDispatcher() {
 
 class BgPoll {
   BgPoll._();
+
+  /// 系统叫起来一次记一次，顺便把时间写上。
+  static Future<void> countRun() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      final n = (p.getInt(_kRuns) ?? 0) + 1;
+      await p.setInt(_kRuns, n);
+      await p.setString(
+        _kDiag,
+        '${DateTime.now().millisecondsSinceEpoch}|第 $n 次唤醒',
+      );
+    } catch (_) {}
+  }
+
+  /// 记一行「跑到哪了」，前台自检读取。
+  static Future<void> diag(String msg) async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setString(
+        _kDiag,
+        '${DateTime.now().millisecondsSinceEpoch}|$msg',
+      );
+    } catch (_) {}
+  }
+
+  /// 自检用：上次后台跑的时间和结果。
+  static Future<List<String>> diagLines() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      final n = p.getInt(_kRuns) ?? 0;
+      final raw = p.getString(_kDiag) ?? '';
+      final i = raw.indexOf('|');
+      var when = '从没跑过';
+      if (i > 0) {
+        final ms = int.tryParse(raw.substring(0, i)) ?? 0;
+        if (ms > 0) {
+          final d = DateTime.fromMillisecondsSinceEpoch(ms);
+          when =
+              '${d.month}-${d.day} '
+              '${d.hour.toString().padLeft(2, '0')}:'
+              '${d.minute.toString().padLeft(2, '0')}:'
+              '${d.second.toString().padLeft(2, '0')}';
+        }
+      }
+      return [
+        '后台: 累计唤醒 $n 次，最近 $when',
+        '后台最后一步: ${i > 0 ? raw.substring(i + 1) : '无'}',
+      ];
+    } catch (_) {
+      return const ['后台: 读不到记录'];
+    }
+  }
 
   /// 前台记下来的上下文：当前站的入口和账号。
   ///
@@ -71,10 +130,16 @@ class BgPoll {
     DartPluginRegistrant.ensureInitialized();
 
     final p = await SharedPreferences.getInstance();
-    if (!(p.getBool('sys_notify') ?? true)) return;
+    if (!(p.getBool('sys_notify') ?? true)) {
+      await diag('系统通知开关是关的，跳过');
+      return;
+    }
 
     final raw = p.getString(_kCtx);
-    if (raw == null || raw.isEmpty) return;
+    if (raw == null || raw.isEmpty) {
+      await diag('没有站点上下文（前台还没同步过）');
+      return;
+    }
     Map ctx;
     try {
       ctx = jsonDecode(raw) as Map;
@@ -83,10 +148,16 @@ class BgPoll {
     }
     final uid = (ctx['uid'] as num?)?.toInt() ?? 0;
     final base = '${ctx['base'] ?? ''}';
-    if (uid <= 0 || base.isEmpty) return;
+    if (uid <= 0 || base.isEmpty) {
+      await diag('上下文不完整 uid=$uid base=$base');
+      return;
+    }
 
     final token = await TokenStore.read();
-    if (token == null || token.isEmpty) return;
+    if (token == null || token.isEmpty) {
+      await diag('读不到登录令牌');
+      return;
+    }
 
     // 文案跟着设置走，不然英文界面下弹一条中文。
     final lc = p.getString('locale') ?? '';
@@ -98,13 +169,18 @@ class BgPoll {
     final nt0 = p.getInt(ntKey) ?? p.getInt(_kNt) ?? 0;
 
     final m = await _poll(ctx, base, token, dm0, nt0);
-    if (m == null) return;
+    if (m == null) {
+      await diag('请求失败: 入口全不通');
+      return;
+    }
 
     final dm = (m['dm'] as Map).cast<String, dynamic>();
     final nt = (m['notice'] as Map).cast<String, dynamic>();
 
     await _handleDm(p, dmKey, dm0, dm);
     await _handleNotice(p, ntKey, nt0, nt);
+
+    await diag('跑完: 私信未读 ${dm['total'] ?? 0} 条，站内 ${nt['total'] ?? 0} 条');
   }
 
   static String _cursorKey(String base, int uid) => '${base}_u$uid';
@@ -124,11 +200,12 @@ class BgPoll {
     }
     for (final b in urls) {
       try {
-        final u = Uri.parse(
-          '${b.endsWith('/') ? b.substring(0, b.length - 1) : b}/api/notify/poll',
-        ).replace(
-          queryParameters: {'dm_since': '$dmSince', 'nt_since': '$ntSince'},
-        );
+        final u =
+            Uri.parse(
+              '${b.endsWith('/') ? b.substring(0, b.length - 1) : b}/api/notify/poll',
+            ).replace(
+              queryParameters: {'dm_since': '$dmSince', 'nt_since': '$ntSince'},
+            );
         final r = await http
             .get(u, headers: {'Authorization': 'Bearer $token'})
             .timeout(const Duration(seconds: 20));
@@ -182,11 +259,12 @@ class BgPoll {
       final peer = (e['peer_id'] as num?)?.toInt() ?? 0;
       byPeer.putIfAbsent(peer, () => []).add(e);
     }
+    final errs = <String>[];
     for (final entry in byPeer.entries) {
       final list = entry.value;
       final lastOne = list.last;
       final who = '${lastOne['peer_name'] ?? ''}';
-      await SysNotify.show(
+      final err = await SysNotify.show(
         id: 10000 + (entry.key % 1000),
         title: list.length == 1 ? who : Lc.current.notifyNewCount(list.length),
         body: list.length == 1
@@ -194,7 +272,11 @@ class BgPoll {
             : '$who：${_bubbleText(lastOne)}',
         payload: 'dm:${entry.key}:$who',
       );
+      if (err != null) errs.add(err);
     }
+    await diag(
+      errs.isEmpty ? '私信弹了 ${byPeer.length} 条' : '私信弹失败: ${errs.join(' / ')}',
+    );
   }
 
   static Future<void> _handleNotice(
@@ -232,9 +314,7 @@ class BgPoll {
     final who = '${e['actor'] ?? ''}';
     await SysNotify.show(
       id: SysNotify.idNotice,
-      title: fresh.length == 1
-          ? who
-          : Lc.current.notifyNewCount(fresh.length),
+      title: fresh.length == 1 ? who : Lc.current.notifyNewCount(fresh.length),
       body: fresh.length == 1
           ? noticeActionText('${e['kind'] ?? ''}')
           : '$who ${noticeActionText('${e['kind'] ?? ''}')}',

@@ -66,6 +66,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   Timer? _draftTimer;
 
   bool _loading = true;
+
   bool _sending = false;
 
   /// 发多张图时走到第几张了。按钮上直接显示 2/9，人就知道它在动。
@@ -142,6 +143,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       if (!mounted || _sending) return;
       _load();
     });
+    // 全站轮询 5 秒一趟，它一发现这个会话有新消息就敲一下。
+    // 只靠上面那个 15 秒的定时器，对方刚发完得干等十几秒才看见。
+    Poller.instance.dmSignal.addListener(_onPollerSignal);
   }
 
   @override
@@ -152,6 +156,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _flushDraft();
     _poll?.cancel();
+    Poller.instance.dmSignal.removeListener(_onPollerSignal);
     _draftTimer?.cancel();
     _scroll.dispose();
     _input.dispose();
@@ -159,16 +164,24 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  void _onPollerSignal() {
+    if (!mounted || _sending) return;
+    _load();
+  }
+
+  /// reverse 列表，offset 0 就是最底下（最新一条）。
   bool _isBottom() {
     if (!_scroll.hasClients) return true;
-    final p = _scroll.position;
-    return p.pixels > p.maxScrollExtent - 80;
+    return _scroll.position.pixels <= 80;
   }
 
   void _onScroll() {
     if (!_scroll.hasClients) return;
     final p = _scroll.position;
-    if (p.pixels <= 24 && _hasMore && !_loadingEarlier) _loadEarlier();
+    // 到顶了（offset 跑到最大）就该翻更早的
+    if (p.pixels >= p.maxScrollExtent - 24 && _hasMore && !_loadingEarlier) {
+      _loadEarlier();
+    }
     final bottom = _isBottom();
     if (bottom != _atBottom) {
       setState(() {
@@ -191,7 +204,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   void _toBottom({bool animate = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scroll.hasClients) return;
-      final end = _scroll.position.maxScrollExtent;
+      const end = 0.0;
       if (animate) {
         _scroll.animateTo(
           end,
@@ -233,7 +246,17 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   // ── 拉取 ─────────────────────────────────────────────
 
+  /// 一趟还没回来就又来一趟，会两次 setState 换数据，画面就抖一下。
+  /// 记下来等这趟完事再补一次，别并行。
+  bool _fetching = false;
+  bool _reloadPending = false;
+
   Future<void> _load({bool initial = false}) async {
+    if (_fetching) {
+      _reloadPending = true;
+      return;
+    }
+    _fetching = true;
     try {
       final seen = initial ? await _lastSeen() : 0;
       final d = await Api.get('/dm/$_peerId');
@@ -289,6 +312,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         _loading = false;
         _err = '$e';
       });
+    } finally {
+      _fetching = false;
+      if (_reloadPending && mounted) {
+        _reloadPending = false;
+        unawaited(_load());
+      }
     }
   }
 
@@ -310,8 +339,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     if (_msgs.isEmpty || !_hasMore || _loadingEarlier) return;
     setState(() => _loadingEarlier = true);
     final before = (_msgs.first['id'] ?? 0) as int;
-    final oldMax = _scroll.hasClients ? _scroll.position.maxScrollExtent : 0.0;
-    final oldPix = _scroll.hasClients ? _scroll.position.pixels : 0.0;
     try {
       final d = await Api.get('/dm/$_peerId', query: {'before_id': '$before'});
       final list = (d['items'] as List).cast<Map<String, dynamic>>();
@@ -321,12 +348,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         _hasMore = d['has_more'] == true;
         _loadingEarlier = false;
       });
-      // 往上插了东西，把位置补回去，画面别跳
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_scroll.hasClients) return;
-        final added = _scroll.position.maxScrollExtent - oldMax;
-        _scroll.jumpTo(oldPix + added);
-      });
+      // reverse 列表往顶部插内容，视口本来就不动，不用再补偏移。
     } catch (_) {
       if (mounted) setState(() => _loadingEarlier = false);
     }
@@ -558,8 +580,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       await Api.post('/dm/$_peerId', {
         'body': text,
         'images': urls,
-        if (files.isNotEmpty)
-          'files': files.map((f) => f.toJson()).toList(),
+        if (files.isNotEmpty) 'files': files.map((f) => f.toJson()).toList(),
         if (reply != null) 'reply_id': reply['id'],
       });
       if (!mounted) return;
@@ -676,11 +697,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         ),
       if (_canRecall(m))
         _MsgAction(Icons.undo, Lc.current.dmRecall, () => _recall(m)),
-      _MsgAction(
-        Icons.delete_outline,
-        Lc.current.delete,
-        () => _deleteOne(m),
-      ),
+      _MsgAction(Icons.delete_outline, Lc.current.delete, () => _deleteOne(m)),
       _MsgAction(Icons.checklist, Lc.current.dmMulti, () {
         setState(() {
           _multi = true;
@@ -909,6 +926,13 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               child: Stack(
                 children: [
                   _msgArea(cs),
+                  if (_loading)
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: LinearProgressIndicator(minHeight: 2),
+                    ),
                   if (!_atBottom) _scrollButton(cs),
                 ],
               ),
@@ -943,7 +967,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                   _peerName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -1022,7 +1049,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   }
 
   Widget _msgArea(ColorScheme cs) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    // 载入时这块留白，不要把转圈摆在中间——等下内容一出来，
+    // 眼睛会觉得整块东西被人推了一下。进度看上面那条细线。
+    if (_loading) return const SizedBox.expand();
     if (_err != null) {
       return EmptyView(
         icon: Icons.cloud_off_rounded,
@@ -1056,8 +1085,13 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => FocusScope.of(context).unfocus(),
+        // reverse：列表从底部开始排。开页面第一帧就在最新一条上，
+        // 没有「先画顶部、再跳到底」那一帧；往上翻历史、上面的图晚一步
+        // 加载出来，也都不会推动眼前的内容。垫底的 SizedBox 是给
+        // 「正在加载更早」那个小圈留的位置。
         child: ListView.builder(
           controller: _scroll,
+          reverse: true,
           // 内容不满一屏也能拖，拖到边上有回弹，跟 QQ 微信一个手感
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
@@ -1065,7 +1099,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
           itemCount: _msgs.length + 1,
           itemBuilder: (context, i) {
-            if (i == 0) {
+            if (i == _msgs.length) {
               return SizedBox(
                 height: 30,
                 child: Center(
@@ -1079,7 +1113,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                 ),
               );
             }
-            final idx = i - 1;
+            final idx = _msgs.length - 1 - i;
             final w = _row(cs, idx);
             final id = (_msgs[idx]['id'] ?? 0) as int;
             if (_unreadFromId <= 0 || id != _unreadFromId) return w;
@@ -1483,10 +1517,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         runSpacing: 4,
         children: [
           for (var i = 0; i < imgs.length; i++)
-            GestureDetector(
-              onTap: () => tap(i),
-              child: _netImg(imgs[i], side),
-            ),
+            GestureDetector(onTap: () => tap(i), child: _netImg(imgs[i], side)),
         ],
       ),
     );
@@ -1610,7 +1641,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               padding: const EdgeInsets.symmetric(horizontal: 10),
             ),
             onPressed: _sending ? null : _send,
-            child: Text(Lc.current.retry, style: const TextStyle(fontSize: 12.5)),
+            child: Text(
+              Lc.current.retry,
+              style: const TextStyle(fontSize: 12.5),
+            ),
           ),
           IconButton(
             visualDensity: VisualDensity.compact,
@@ -1892,12 +1926,54 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   /// 表情面板。常用的一屏够了，不做分组，也不做贴纸。
   Widget _emojiPanel(ColorScheme cs) {
     const faces = [
-      '😀', '😄', '😁', '😆', '😅', '😂', '🙂', '😊',
-      '😉', '😍', '🥰', '😘', '😜', '🤪', '🤔', '🤨',
-      '😐', '😑', '😴', '😪', '😔', '😢', '😭', '😤',
-      '😠', '🤯', '🥵', '🥶', '😱', '🤗', '🤫', '🙄',
-      '😮', '😲', '🥺', '😎', '🤓', '👍', '👎', '👌',
-      '✌️', '🤝', '🙏', '👏', '💪', '❤️', '💔', '🎉',
+      '😀',
+      '😄',
+      '😁',
+      '😆',
+      '😅',
+      '😂',
+      '🙂',
+      '😊',
+      '😉',
+      '😍',
+      '🥰',
+      '😘',
+      '😜',
+      '🤪',
+      '🤔',
+      '🤨',
+      '😐',
+      '😑',
+      '😴',
+      '😪',
+      '😔',
+      '😢',
+      '😭',
+      '😤',
+      '😠',
+      '🤯',
+      '🥵',
+      '🥶',
+      '😱',
+      '🤗',
+      '🤫',
+      '🙄',
+      '😮',
+      '😲',
+      '🥺',
+      '😎',
+      '🤓',
+      '👍',
+      '👎',
+      '👌',
+      '✌️',
+      '🤝',
+      '🙏',
+      '👏',
+      '💪',
+      '❤️',
+      '💔',
+      '🎉',
     ];
     return Container(
       height: 208,
@@ -1917,7 +1993,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
             InkWell(
               onTap: () => _insertEmoji(e),
               borderRadius: BorderRadius.circular(8),
-              child: Center(child: Text(e, style: const TextStyle(fontSize: 22))),
+              child: Center(
+                child: Text(e, style: const TextStyle(fontSize: 22)),
+              ),
             ),
         ],
       ),
@@ -1997,10 +2075,7 @@ class _ChatSearchSheetState extends State<_ChatSearchSheet> {
     }
     setState(() => _busy = true);
     try {
-      final d = await Api.get(
-        '/dm/${widget.peerId}/search',
-        query: {'q': kw},
-      );
+      final d = await Api.get('/dm/${widget.peerId}/search', query: {'q': kw});
       if (!mounted) return;
       setState(() {
         _res = (d['items'] as List).cast<Map<String, dynamic>>();
@@ -2077,10 +2152,8 @@ class _ChatSearchSheetState extends State<_ChatSearchSheet> {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       itemCount: _res.length,
-      separatorBuilder: (_, i) => Divider(
-        height: 1,
-        color: cs.outlineVariant.withValues(alpha: 0.4),
-      ),
+      separatorBuilder: (_, i) =>
+          Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.4)),
       itemBuilder: (context, i) {
         final m = _res[i];
         final mine = (m['from_id'] ?? 0) == widget.myId;
@@ -2142,12 +2215,7 @@ class _MsgMenuPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bar = Rect.fromLTWH(
-      0,
-      above ? 0 : arrowH,
-      size.width,
-      barH,
-    );
+    final bar = Rect.fromLTWH(0, above ? 0 : arrowH, size.width, barH);
     final body = Path()
       ..addRRect(RRect.fromRectAndRadius(bar, const Radius.circular(9)));
 
