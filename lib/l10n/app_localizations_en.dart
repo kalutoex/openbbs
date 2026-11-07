@@ -2480,15 +2480,9 @@ class LEn extends L {
   String get dmEmoji => 'Emoji';
 
   @override
-  String get myMessageColor => 'My message color';
-
-  @override
-  String get myMessageColorHint =>
-      'Your messages use this color in chats, and others see it too. Leave it on auto to get a fixed one from your account.';
-
-  @override
   String get saved => 'Saved';
 
   @override
-  String get myMessageColorAuto => 'Auto';
+  String get accentIsIdentity =>
+      'This is also your color elsewhere: your chat bubbles, avatar ring and floor accents use it, and others see it too.';
 }

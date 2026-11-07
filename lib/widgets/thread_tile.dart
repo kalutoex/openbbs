@@ -3,6 +3,7 @@ import 'package:cached_network_image_platform_interface/cached_network_image_pla
     show ImageRenderMethodForWeb;
 import 'package:flutter/material.dart';
 
+import '../user_hue.dart';
 import '../api.dart';
 import '../img_cache.dart';
 import '../img_size_store.dart';
@@ -136,6 +137,7 @@ class ThreadTile extends StatelessWidget {
                         url: '${item['avatar'] ?? ''}',
                         name: author,
                         radius: UiConfig.px('threadCard.avatarRadius'),
+                        hue: hueOfUser(item),
                       ),
                       SizedBox(width: UiConfig.px('threadCard.gap')),
                       // 昵称在上、@账号在下，两行整体对着头像居中；

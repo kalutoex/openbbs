@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../user_hue.dart';
 import '../site_config.dart';
 import '../api.dart';
 import '../pages/admin_users_page.dart';
@@ -390,6 +391,7 @@ class _Top extends StatelessWidget {
                     url: '${u?['avatar'] ?? ''}',
                     name: nick,
                     radius: 20,
+                    hue: hueOfUser(u),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

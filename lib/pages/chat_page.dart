@@ -14,7 +14,7 @@ import '../img_compress.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../plat.dart';
-import '../user_color.dart';
+import '../user_hue.dart';
 import '../store.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/app_sheet.dart';
@@ -83,9 +83,9 @@ class _ChatPageState extends State<ChatPage> {
 
   String? _err;
 
-  /// 双方的消息颜色（色相）。对方那份每次拉取都刷新，可能人家刚换过。
-  late int _peerHue = hueOfUser(widget.peer);
-  int get _myHue => hueOfUser(AppState.instance.user);
+  /// 双方的主题色。对方那份每次拉取都刷新，可能人家刚换过。
+  late double _peerHue = hueOfUser(widget.peer);
+  double get _myHue => AppState.instance.accentHue.value;
 
   int get _peerId => (widget.peer['id'] ?? 0) as int;
   String get _peerName =>
@@ -722,7 +722,12 @@ class _ChatPageState extends State<ChatPage> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircleAvatarImg(url: _peerAvatar, name: _peerName, radius: 16),
+              CircleAvatarImg(
+                url: _peerAvatar,
+                name: _peerName,
+                radius: 16,
+                hue: _peerHue,
+              ),
               const SizedBox(width: 9),
               Flexible(
                 child: Text(
@@ -973,7 +978,7 @@ class _ChatPageState extends State<ChatPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (!mine) ...[
-                  _avatar(_peerAvatar, _peerName, _openPeer),
+                  _avatar(_peerAvatar, _peerName, _openPeer, _peerHue),
                   const SizedBox(width: 7.5),
                 ],
                 if (_multi && !mine) _check(cs, selected),
@@ -1010,7 +1015,7 @@ class _ChatPageState extends State<ChatPage> {
                 if (_multi && mine) _check(cs, selected),
                 if (mine) ...[
                   const SizedBox(width: 7.5),
-                  _avatar(_myAvatar, _myName, _openMe),
+                  _avatar(_myAvatar, _myName, _openMe, _myHue),
                 ],
               ],
             ),
@@ -1031,10 +1036,10 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _avatar(String url, String name, VoidCallback onTap) {
+  Widget _avatar(String url, String name, VoidCallback onTap, double hue) {
     return GestureDetector(
       onTap: onTap,
-      child: CircleAvatarImg(url: url, name: name, radius: 18),
+      child: CircleAvatarImg(url: url, name: name, radius: 18, hue: hue),
     );
   }
 

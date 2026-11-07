@@ -269,6 +269,41 @@ class AppState extends ChangeNotifier {
     accentHue.value = normalizeHue(h);
     final p = await SharedPreferences.getInstance();
     await p.setDouble(_kHue, accentHue.value);
+    // 主题色也是身份色：登录了就落一份到账号上，别人看你才认得出。
+    // 传不上去也不挡本机的改动，下次再设的时候补。
+    if (Api.token == null) return;
+    try {
+      final d = await Api.patch('/me', {'hue': accentHue.value.round()});
+      final u = d is Map ? d['user'] : null;
+      if (u is Map<String, dynamic>) {
+        user = u;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  /// 账号上的主题色是权威的：换设备登录、别人改了，这里跟着走。
+  /// 账号还没有（老账号、或者从没登过）就把本机这个推上去，一个会话推一次。
+  bool _huePushed = false;
+
+  Future<void> _applyHue(Map<String, dynamic> u) async {
+    final h = u['hue'];
+    if (h is int && h >= 0) {
+      final d = normalizeHue(h.toDouble());
+      if ((accentHue.value - d).abs() >= 0.5) {
+        accentHue.value = d;
+        final p = await SharedPreferences.getInstance();
+        await p.setDouble(_kHue, d);
+      }
+      return;
+    }
+    if (Api.token == null || _huePushed) return;
+    _huePushed = true;
+    try {
+      await Api.patch('/me', {'hue': accentHue.value.round()});
+    } catch (_) {
+      _huePushed = false;
+    }
   }
 
   Future<void> setLocale(String code) async {
@@ -662,6 +697,7 @@ class AppState extends ChangeNotifier {
   /// 外部改了资料后同步到内存里（比如编辑资料页）。
   void applyUser(Map<String, dynamic> u) {
     user = u;
+    _applyHue(u);
     notifyListeners();
   }
 
@@ -678,6 +714,7 @@ class AppState extends ChangeNotifier {
         _applyCacheScope(null);
       } else {
         _applyCacheScope(user!['id'] as int?);
+        await _applyHue(user!);
         await _syncAccount(tok!, user!);
       }
     } on ApiException catch (e) {
@@ -710,8 +747,11 @@ class AppState extends ChangeNotifier {
   Future<void> _saveToken(String token, Map<String, dynamic> u) async {
     Api.token = token;
     user = u;
+    _huePushed = false;
     await TokenStore.write(token);
     await _syncAccount(token, u);
+    // 登录后主题色跟账号走：这个账号以前设过，就用它的。
+    await _applyHue(u);
     notifyListeners();
   }
 

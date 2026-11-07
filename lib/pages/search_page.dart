@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../user_hue.dart';
 import '../api.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
@@ -507,6 +508,7 @@ class _SearchPageState extends State<SearchPage> {
             url: (u['avatar'] ?? '') as String,
             name: name,
             radius: 20,
+            hue: hueOfUser(u),
           ),
           title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
           subtitle: Text(

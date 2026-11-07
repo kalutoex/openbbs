@@ -104,6 +104,7 @@ class AccountsPage extends StatelessWidget {
                             url: a.avatar,
                             name: a.nickname,
                             radius: 22,
+                            hue: a.hue?.toDouble(),
                           ),
                           title: Text(a.nickname),
                           subtitle: Text(

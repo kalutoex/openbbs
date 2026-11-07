@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../user_hue.dart';
 import '../api.dart';
 import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
@@ -326,6 +327,7 @@ class _FollowPageState extends State<FollowPage> {
               url: '${u['avatar'] ?? ''}',
               name: name,
               radius: 22,
+              hue: hueOfUser(u),
             ),
             const SizedBox(width: 12),
             Expanded(

@@ -2437,14 +2437,8 @@ class LZh extends L {
   String get dmEmoji => '表情';
 
   @override
-  String get myMessageColor => '我的消息颜色';
-
-  @override
-  String get myMessageColorHint => '聊天里你发的消息会用这个颜色，别人看你也是这个色。不选就按账号分一个固定的。';
-
-  @override
   String get saved => '已保存';
 
   @override
-  String get myMessageColorAuto => '自动';
+  String get accentIsIdentity => '这个颜色也是你的颜色——私信气泡、头像外圈、楼层都跟着它，别人看得到。';
 }

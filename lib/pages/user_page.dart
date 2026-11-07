@@ -8,6 +8,7 @@ import '../plat.dart';
 import '../save_cover.dart';
 import '../img_compress.dart';
 import '../store.dart';
+import '../user_hue.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
@@ -551,7 +552,12 @@ class _UserPageState extends State<UserPage> {
                 color: cs.surface,
                 shape: BoxShape.circle,
               ),
-              child: CircleAvatarImg(url: avatar, name: nick, radius: 42),
+              child: CircleAvatarImg(
+                url: avatar,
+                name: nick,
+                radius: 42,
+                hue: hueOfUser(info),
+              ),
             ),
           ),
         ),

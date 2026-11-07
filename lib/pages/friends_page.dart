@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../user_hue.dart';
 import '../api.dart';
 import '../widgets/page_width.dart';
 import '../widgets/app_card.dart';
@@ -228,6 +229,7 @@ class _FriendsPageState extends State<FriendsPage> {
                       url: (u['avatar'] ?? '') as String,
                       name: nick,
                       radius: 20,
+                      hue: hueOfUser(u),
                     ),
                     title: Text(
                       nick,

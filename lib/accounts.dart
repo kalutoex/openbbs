@@ -14,6 +14,9 @@ class Account {
   final String uid;
   final String avatar;
 
+  /// 这个账号的主题色（也是身份色）。null = 没设过。
+  final int? hue;
+
   const Account({
     required this.token,
     required this.id,
@@ -22,6 +25,7 @@ class Account {
     required this.handle,
     required this.uid,
     required this.avatar,
+    this.hue,
   });
 
   /// 从 /me 返回的 user 里取字段。
@@ -33,6 +37,7 @@ class Account {
     handle: '${u['handle'] ?? ''}',
     uid: '${u['uid'] ?? ''}',
     avatar: '${u['avatar'] ?? ''}',
+    hue: u['hue'] is int ? u['hue'] as int : null,
   );
 
   factory Account.fromJson(Map<String, dynamic> j) => Account(
@@ -43,6 +48,7 @@ class Account {
     handle: '${j['handle'] ?? ''}',
     uid: '${j['uid'] ?? ''}',
     avatar: '${j['avatar'] ?? ''}',
+    hue: j['hue'] is int ? j['hue'] as int : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -53,6 +59,7 @@ class Account {
     'handle': handle,
     'uid': uid,
     'avatar': avatar,
+    'hue': hue,
   };
 
   /// 同一个账号的判定：id 是库里的主键，重登后 token 会换、id 不变。

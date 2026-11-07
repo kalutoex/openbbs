@@ -4454,29 +4454,17 @@ abstract class L {
   /// **'表情'**
   String get dmEmoji;
 
-  /// No description provided for @myMessageColor.
-  ///
-  /// In zh, this message translates to:
-  /// **'我的消息颜色'**
-  String get myMessageColor;
-
-  /// No description provided for @myMessageColorHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'聊天里你发的消息会用这个颜色，别人看你也是这个色。不选就按账号分一个固定的。'**
-  String get myMessageColorHint;
-
   /// No description provided for @saved.
   ///
   /// In zh, this message translates to:
   /// **'已保存'**
   String get saved;
 
-  /// No description provided for @myMessageColorAuto.
+  /// No description provided for @accentIsIdentity.
   ///
   /// In zh, this message translates to:
-  /// **'自动'**
-  String get myMessageColorAuto;
+  /// **'这个颜色也是你的颜色——私信气泡、头像外圈、楼层都跟着它，别人看得到。'**
+  String get accentIsIdentity;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

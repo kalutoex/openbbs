@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../user_hue.dart';
 import '../api.dart';
 import '../store.dart';
 import '../utils.dart';
@@ -321,6 +322,7 @@ class _MessagesPageState extends State<MessagesPage> {
               url: (row.peer!['avatar'] ?? '') as String,
               name: name,
               radius: 22,
+              hue: hueOfUser(row.peer),
             ),
       title: Row(
         children: [

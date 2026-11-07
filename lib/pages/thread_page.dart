@@ -11,6 +11,7 @@ import '../widgets/app_sheet.dart';
 import '../widgets/page_width.dart';
 import '../widgets/mention.dart';
 import '../store.dart';
+import '../user_hue.dart';
 import '../img_compress.dart';
 import 'gallery_picker_page.dart';
 import 'edit_thread_page.dart';
@@ -971,6 +972,7 @@ class _ThreadPageState extends State<ThreadPage> {
                       url: avatar,
                       name: author,
                       radius: 22,
+                      hue: hueOfUser(t),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1235,7 +1237,12 @@ class _ThreadPageState extends State<ThreadPage> {
             MentionStrip(watcher: _mention, controller: _input),
             Row(
               children: [
-                CircleAvatarImg(url: meAvatar, name: meName, radius: 16),
+                CircleAvatarImg(
+                  url: meAvatar,
+                  name: meName,
+                  radius: 16,
+                  hue: AppState.instance.accentHue.value,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
@@ -1487,6 +1494,9 @@ class _PostCardState extends State<_PostCard> {
     final created = (post['created_at'] ?? 0) as int;
     final isOp = post['is_op'] == true;
     final liked = agreed ? cs.primary : cs.outline;
+    // 这一层是谁的，描边里看得见。淡，但一层一层扫下去能分出人。
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final authHue = hueOfUser(post);
 
     // 楼层走卡片：和列表页一个语言，跳楼时靠描边和底色提示位置。
     return AnimatedContainer(
@@ -1500,12 +1510,8 @@ class _PostCardState extends State<_PostCard> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: widget.highlight
-              ? cs.primary.withValues(alpha: 0.40)
-              : cs.outlineVariant.withValues(
-                  alpha: Theme.of(context).brightness == Brightness.light
-                      ? .55
-                      : .35,
-                ),
+              ? hueRing(authHue, dark).withValues(alpha: 0.75)
+              : hueRing(authHue, dark).withValues(alpha: dark ? 0.22 : 0.30),
         ),
       ),
       child: GestureDetector(
@@ -1525,6 +1531,7 @@ class _PostCardState extends State<_PostCard> {
                       url: avatar,
                       name: author,
                       radius: 19,
+                      hue: hueOfUser(post),
                     ),
                   ),
                   const SizedBox(width: 10),
