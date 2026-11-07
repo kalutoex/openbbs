@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,6 +35,9 @@ class AppPerms {
   /// 第一次启动问一遍。问过就记下来，不再每次开都烦人；
   /// 之后想开想关，去设置页里的「权限」。
   static Future<void> firstRun() async {
+    // web 上既没有这些权限也没有 `Platform`：`dart:io` 在网页端是编译得过
+    // 但一调用就抛 UnsupportedError 的壳，首页每次打开都红一行日志。
+    if (kIsWeb) return;
     if (!Platform.isAndroid && !Platform.isIOS) return;
     final sp = await SharedPreferences.getInstance();
     if (sp.getBool(_askedKey) == true) return;

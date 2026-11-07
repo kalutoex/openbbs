@@ -20,6 +20,12 @@ source /vol1/1000/data/code/.fenv
 # shellcheck disable=SC2086
 flutter build web --release --base-href / --no-web-resources-cdn --pwa-strategy=none --no-pub
 
+# 留一份上一版的 main.dart.js。新版上去白屏或接口对不上时，回滚就三步：
+#   cp main.dart.js.prev main.dart.js && gzip -9 -f main.dart.js && 刷新
+if [ -f "$WEB/main.dart.js" ]; then
+  cp -f "$WEB/main.dart.js" "$WEB/main.dart.js.prev"
+fi
+
 cp -r build/web/. "$WEB"/
 
 rm -f "$WEB"/canvaskit/skwasm*.js "$WEB"/canvaskit/skwasm*.wasm \
