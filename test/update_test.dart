@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openbbs/api.dart';
 import 'package:openbbs/update.dart';
 import 'package:openbbs/update_prompt.dart';
 
@@ -154,6 +155,25 @@ void main() {
         force: true,
       ),
       isTrue,
+    );
+  });
+
+  test('没有下载地址时不拼首页，直接报错', () async {
+    final r = AppRelease(
+      version: '1.4.0',
+      build: 90,
+      size: 100,
+      url: '',
+      notes: '',
+      channel: 'stable',
+    );
+    // 以前这里会请求 `${Api.base}`，拿到 200 的网页存成 .apk，
+    // 用户装的时候才看见「解析包出错」。
+    await expectLater(
+      downloadApk(r, (_) {}),
+      throwsA(
+        isA<ApiException>().having((e) => e.code, 'code', 'downloadFailed'),
+      ),
     );
   });
 }

@@ -200,21 +200,27 @@ class _HomePageState extends State<HomePage> {
           ),
           // 站点比客户端新就顶一条提示。只提示，不拦着用——
           // 拦了人也没别的客户端可选，不如让人自己看到原因。
-          body: wide
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _rail(context),
-                    VerticalDivider(
-                      width: 1,
-                      thickness: 1,
-                      color: Theme.of(context).colorScheme.outlineVariant
-                          .withValues(alpha: .35),
-                    ),
-                    Expanded(child: _content(context)),
-                  ],
+          //
+          // 结构固定成三个孩子：窄屏时前两个是空盒子。以前是
+          // `wide ? Row(rail, content) : content`，拖窗口跨过 840 时
+          // content 的父链一变，整个 tab 页重建，滚动位置和草稿全丢。
+          body: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (wide) _rail(context) else const SizedBox.shrink(),
+              if (wide)
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: Theme.of(context).colorScheme.outlineVariant.withValues(
+                    alpha: .35,
+                  ),
                 )
-              : _content(context),
+              else
+                const SizedBox.shrink(),
+              Expanded(child: _content(context)),
+            ],
+          ),
           // 加号只在时间线这一页出现，翻到别的 tab 就收起来
           floatingActionButton: _index == 0
               ? FloatingActionButton(

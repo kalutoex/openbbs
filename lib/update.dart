@@ -88,6 +88,13 @@ Future<File> downloadApk(
   AppRelease r,
   void Function(double progress) onProgress,
 ) async {
+  // 服务端没给下载地址时，`'${Api.base}${r.url}'` 会退化成论坛首页：
+  // 200、有内容、存下来是个 .apk，装的时候才报「解析包出错」。在这儿挡住，
+  // 提示才能说人话。放在最前面，别先建临时目录。
+  if (r.url.trim().isEmpty) {
+    throw ApiException('no download url', code: 'downloadFailed');
+  }
+
   final dir = await getTemporaryDirectory();
   final file = File('${dir.path}/openbbs-${r.version}.apk');
   if (await file.exists()) await file.delete();
@@ -103,6 +110,11 @@ Future<File> downloadApk(
         code: 'downloadFailed',
         status: res.statusCode,
       );
+    }
+    // 同一种坑的另一半：地址被重定向到网页时也是 200。
+    final ct = res.headers['content-type'] ?? '';
+    if (ct.contains('text/html')) {
+      throw ApiException('download got a web page', code: 'downloadFailed');
     }
     final total = res.contentLength ?? r.size;
     final sink = file.openWrite();
