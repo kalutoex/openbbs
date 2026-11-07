@@ -129,13 +129,14 @@ class ThreadTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CircleAvatarImg(
                         url: '${item['avatar'] ?? ''}',
                         name: author,
-                        radius: 16,
+                        radius: 22,
                       ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 10),
                       // 昵称在上、@账号在下，两行都放大一号。
                       // 昵称和账号并排时，长名字一挤，@就只剩半个。
                       Expanded(
@@ -174,24 +175,40 @@ class ThreadTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        timeAgo(ts),
-                        style: tt.labelSmall?.copyWith(color: cs.outline),
+                      // 时间顶到卡片右上角，角标排在它下面一行，从右往左填：
+                      // 越靠前的标记越贴右边。
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            timeAgo(ts),
+                            style: tt.labelSmall?.copyWith(color: cs.outline),
+                          ),
+                          if (item['is_top'] == true ||
+                              good ||
+                              imgs.length >= 2) ...[
+                            const SizedBox(height: 5),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (imgs.length >= 2)
+                                  _tag(Lc.current.multiImage, cs.tertiary),
+                                if (good) ...[
+                                  if (imgs.length >= 2)
+                                    const SizedBox(width: 5),
+                                  _tag(Lc.current.featured, cs.error),
+                                ],
+                                if (item['is_top'] == true) ...[
+                                  if (good || imgs.length >= 2)
+                                    const SizedBox(width: 5),
+                                  _tag(Lc.current.pinned, cs.primary),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
-                      // 置顶 / 精华 / 多图挪到右上角，跟时间排一行。
-                      if (item['is_top'] == true) ...[
-                        const SizedBox(width: 5),
-                        _tag(Lc.current.pinned, cs.primary),
-                      ],
-                      if (good) ...[
-                        if (item['is_top'] == true || imgs.length >= 2)
-                          const SizedBox(width: 5),
-                        _tag(Lc.current.featured, cs.error),
-                      ],
-                      if (imgs.length >= 2) ...[
-                        const SizedBox(width: 5),
-                        _tag(Lc.current.multiImage, cs.tertiary),
-                      ],
                     ],
                   ),
                   SizedBox(height: gap),

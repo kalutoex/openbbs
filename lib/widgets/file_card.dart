@@ -82,11 +82,11 @@ class PostFileCard {
   static const double maxWidth = 420;
 
   /// 私信里塞在气泡中的尺寸。气泡本身自带底色和内边距，卡片再按 80 高、
-  /// 420 宽摆，就像气泡里又嵌了一块大板子。跟着气泡里的图片走：
-  /// 矮一点、窄一点，圆角跟图片的 13 对上。
-  static const double compactHeight = 64;
-  static const double compactMaxWidth = 260;
-  static const double compactRadius = 13;
+  /// 420 宽摆，就像气泡里又嵌了一块大板子。这里按「比字稍微大一圈」来做：
+  /// 一行文件名、一行大小，上下只留呼吸的余量。
+  static const double compactHeight = 46;
+  static const double compactMaxWidth = 220;
+  static const double compactRadius = 10;
 }
 
 /// 帖子里那一排附件卡片。点一下就下载。
@@ -196,7 +196,7 @@ class _FileCardState extends State<_FileCard> {
       compact ? PostFileCard.compactRadius : 10,
     );
     return Padding(
-      padding: EdgeInsets.only(bottom: compact ? 6 : 8),
+      padding: EdgeInsets.only(bottom: compact ? 4 : 8),
       // 别用 LayoutBuilder：私信气泡外面套着 IntrinsicWidth，它会去问子节点的
       // 固有宽度，而 LayoutBuilder 答不上来，release 下拿到的就是 0 ——
       // 卡片宽度 0，看着像没发出去，也点不中。宽度交给父约束去压。
@@ -211,23 +211,25 @@ class _FileCardState extends State<_FileCard> {
             onTap: widget.onRemove == null ? _open : null,
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? 10 : 12,
-                vertical: compact ? 7 : 10,
+                horizontal: compact ? 8 : 12,
+                vertical: compact ? 4 : 10,
               ),
               child: Row(
                 children: [
                   _busy
                       ? SizedBox(
-                          width: compact ? 24 : 30,
-                          height: compact ? 24 : 30,
-                          child: const CircularProgressIndicator(strokeWidth: 2.5),
+                          width: compact ? 18 : 30,
+                          height: compact ? 18 : 30,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                          ),
                         )
                       : Icon(
                           fileIconFor(widget.file.name),
-                          size: compact ? 24 : 30,
+                          size: compact ? 18 : 30,
                           color: scheme.primary,
                         ),
-                  SizedBox(width: compact ? 8 : 10),
+                  SizedBox(width: compact ? 7 : 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,11 +237,14 @@ class _FileCardState extends State<_FileCard> {
                       children: [
                         Text(
                           widget.file.name,
-                          maxLines: compact ? 1 : 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: t.textTheme.bodyMedium?.copyWith(height: 1.25),
+                          style: (compact
+                                  ? t.textTheme.bodySmall
+                                  : t.textTheme.bodyMedium)
+                              ?.copyWith(height: 1.2),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: compact ? 2 : 4),
                         Row(
                           children: [
                             Expanded(
@@ -249,9 +254,12 @@ class _FileCardState extends State<_FileCard> {
                                     : widget.file.sizeText,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: t.textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
+                                style: (compact
+                                        ? t.textTheme.labelSmall
+                                        : t.textTheme.bodySmall)
+                                    ?.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
                               ),
                             ),
                             if (widget.onRemove != null)
@@ -262,7 +270,7 @@ class _FileCardState extends State<_FileCard> {
                                   padding: const EdgeInsets.all(2),
                                   child: Icon(
                                     Icons.close,
-                                    size: 18,
+                                    size: compact ? 14 : 18,
                                     color: scheme.outline,
                                   ),
                                 ),
@@ -270,7 +278,7 @@ class _FileCardState extends State<_FileCard> {
                             else if (!_busy)
                               Icon(
                                 Icons.download_outlined,
-                                size: 16,
+                                size: compact ? 13 : 16,
                                 color: scheme.onSurfaceVariant,
                               ),
                           ],
