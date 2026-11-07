@@ -24,7 +24,7 @@ class UiConfig {
     'fileCard.compactHeight': 56,
     'fileCard.maxWidth': 420,
     // 私信的气泡比整页窄，卡片跟着收一点，别横着撑破气泡。
-    'fileCard.compactWidth': 240,
+    'fileCard.compactWidth': 180,
     'fileCard.padV': 2,
     'fileCard.padH': 8,
     'fileCard.radius': 10,

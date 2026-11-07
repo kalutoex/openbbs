@@ -31,6 +31,10 @@ class _FeedTabState extends State<FeedTab> {
   bool _hasMore = true;
   bool _first = true;
   String? _err;
+
+  /// 冷启动静默重试的次数。第一次进软件时网络栈往往还没就绪，
+  /// 这时候把「连不上服务器」甩给用户没意义——先自己再试两回。
+  int _coldRetry = 0;
   int _seen = 0;
 
   /// 请求代号：刷新会换号，旧请求回来自动作废。
@@ -130,9 +134,20 @@ class _FeedTabState extends State<FeedTab> {
         _first = false;
         _err = null;
         _offline = cached;
+        _coldRetry = 0;
       });
     } on ApiException catch (e) {
       if (!mounted || seq != _seq) return;
+      // 首屏还没出过内容、又是连不上：不报错，自己再来一次。
+      // 清后台后第一次打开就撞这个，用户看到的应该是首页，不是错误提示。
+      if (_items.isEmpty && e.code == 'connectFailed' && _coldRetry < 2) {
+        _coldRetry++;
+        _busy = false;
+        Future<void>.delayed(Duration(milliseconds: 1200 * _coldRetry), () {
+          if (mounted && seq == _seq) _reload();
+        });
+        return;
+      }
       setState(() {
         _first = false;
         _err = errorText(context, e);
