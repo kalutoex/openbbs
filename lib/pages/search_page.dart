@@ -485,10 +485,20 @@ class _SearchPageState extends State<SearchPage> {
                   style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 4),
+                // 名字一行，@ 标识另起一行
                 Text(
-                  handle.isEmpty ? who : '$who  @$handle',
+                  who,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 11, color: cs.outline),
                 ),
+                if (handle.isNotEmpty)
+                  Text(
+                    '@$handle',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: cs.outline),
+                  ),
               ],
             ),
           ),

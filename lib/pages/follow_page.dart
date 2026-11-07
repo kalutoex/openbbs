@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../user_hue.dart';
 import '../api.dart';
 import '../widgets/page_width.dart';
+import '../widgets/segmented_pages.dart';
 import '../widgets/avatar.dart';
 import '../widgets/name_tag.dart';
 import '../widgets/user_link.dart';
@@ -163,108 +164,15 @@ class _FollowPageState extends State<FollowPage> {
     return Scaffold(
       appBar: AppBar(title: Text(Lc.current.follow)),
       body: PageWidth(
-        child: Column(
+        child: SegmentedPages(
+          initial: _tab,
+          onChanged: (i) => setState(() => _tab = i),
+          labels: [Lc.current.follow, Lc.current.fans],
+          counts: [_following.items.length, _followers.items.length],
           children: [
-            _segmented(),
-            Expanded(
-              child: IndexedStack(
-                index: _tab,
-                children: [
-                  _list(_following, following: true),
-                  _list(_followers, following: false),
-                ],
-              ),
-            ),
+            _list(_following, following: true),
+            _list(_followers, following: false),
           ],
-        ),
-      ),
-    );
-  }
-
-  // ── 分段控件 ───────────────────────────────────────────
-
-  Widget _segmented() {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-      child: Container(
-        height: 40,
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: LayoutBuilder(
-          builder: (context, cons) {
-            final half = cons.maxWidth / 2;
-            return Stack(
-              children: [
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutCubic,
-                  left: _tab == 0 ? 0 : half,
-                  top: 0,
-                  bottom: 0,
-                  width: half,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: cs.surface,
-                      borderRadius: BorderRadius.circular(9),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    _seg(Lc.current.follow, _following.items.length, 0),
-                    _seg(Lc.current.fans, _followers.items.length, 1),
-                  ],
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _seg(String label, int count, int index) {
-    final cs = Theme.of(context).colorScheme;
-    final on = _tab == index;
-    return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _tab = index),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: on ? FontWeight.w600 : FontWeight.w500,
-                  color: on ? cs.onSurface : cs.onSurfaceVariant,
-                ),
-              ),
-              if (count > 0) ...[
-                const SizedBox(width: 5),
-                Text(
-                  '$count',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: on ? cs.primary : cs.outline,
-                  ),
-                ),
-              ],
-            ],
-          ),
         ),
       ),
     );

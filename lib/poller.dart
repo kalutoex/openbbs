@@ -33,6 +33,10 @@ class Poller with WidgetsBindingObserver {
 
   /// 前台这么快，是为了让「对方刚发完」到「我这边弹出来」之间几乎无感。
   static const _fgSeconds = 5;
+
+  /// 聊天页开着时用这个：人正盯着屏幕等下一句，5 秒像卡住。
+  /// 只在会话页生效，别的页面还是 5 秒，别为了一处把整机折腾起来。
+  static const _chatSeconds = 1;
   static const _bgSeconds = 60;
 
   Timer? _t;
@@ -151,7 +155,9 @@ class Poller with WidgetsBindingObserver {
   void _arm() {
     _t?.cancel();
     if (!_on) return;
-    var secs = _fore ? _fgSeconds : _bgSeconds;
+    var secs = _fore
+        ? (activePeer != 0 ? _chatSeconds : _fgSeconds)
+        : _bgSeconds;
     // 连着失败就别按 5 秒死磕，断了网还每 5 秒捅一次很费电。
     if (_fails >= 3 && secs < 30) secs = 30;
     _t = Timer(Duration(seconds: secs), () => unawaited(tick()));

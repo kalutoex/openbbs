@@ -461,7 +461,7 @@ class _VersionRowState extends State<_VersionRow> {
   @override
   Widget build(BuildContext context) {
     final p = _pkg;
-    final text = p == null ? '…' : '${p.version} (${p.buildNumber})';
+    final text = p == null ? '…' : p.version;
     final row = ListTile(
       leading: const Icon(Icons.system_update_alt),
       title: Text(Lc.current.version),

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import '../widgets/fade_indexed_stack.dart';
 import '../widgets/live_time.dart';
 
 import 'package:flutter/material.dart';
@@ -17,7 +16,6 @@ import 'feed_tab.dart';
 import 'login_page.dart';
 import 'me_tab.dart';
 import 'messages_page.dart';
-import 'site_catalog_page.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n.dart';
@@ -40,11 +38,6 @@ class _HomePageState extends State<HomePage> {
   /// 页面和索引都留着，想放回来把 1 加回这个列表就行。
   static const _barTabs = <int>[0, 2, 3];
 
-  /// IndexedStack 会把四个 tab 全部建出来、initState 一起发请求，
-  /// 启动瞬间四路网络 + 四份骨架一起刷，看着就是一阵乱闪。
-  /// 这里只建访问过的那个。
-  late final Set<int> _started = {_index};
-
   /// 历史版本存过 0..3（1 是站点），语义和现在这张表一致，越界就回首页。
   /// 站点没入口了，存着 1 的老设置直接给首页。
   static int _tabOf(int v) => v >= 0 && v <= 3 && v != 1 ? v : 0;
@@ -55,7 +48,31 @@ class _HomePageState extends State<HomePage> {
     Haptics.tap();
     setState(() {
       _index = i;
-      _started.add(i);
+    });
+    // 底栏点的：滑过去，别直接跳。
+    if (_pc.hasClients) {
+      _pc.animateToPage(
+        _pages.indexOf(i),
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  /// PageView 的页码 -> 页面索引。站点（1）不在这条线上。
+  static const _pages = <int>[0, 2, 3];
+
+  late final PageController _pc = PageController(
+    initialPage: _pages.indexOf(_index),
+  );
+
+  /// 手指划过一半就认这一页，底栏跟着亮。
+  void _onPage(int p) {
+    final i = _pages[p];
+    if (!mounted || i == _index) return;
+    Haptics.tap();
+    setState(() {
+      _index = i;
     });
   }
 
@@ -92,6 +109,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _pc.dispose();
     AppState.instance.autoUnread.removeListener(_syncTick);
     _tick?.cancel();
     _beat?.cancel();
@@ -212,9 +230,8 @@ class _HomePageState extends State<HomePage> {
                 VerticalDivider(
                   width: 1,
                   thickness: 1,
-                  color: Theme.of(context).colorScheme.outlineVariant.withValues(
-                    alpha: .35,
-                  ),
+                  color: Theme.of(context).colorScheme.outlineVariant
+                      .withValues(alpha: .35),
                 )
               else
                 const SizedBox.shrink(),
@@ -252,22 +269,17 @@ class _HomePageState extends State<HomePage> {
             ),
             if (meta != null && meta.tooNew) _tooNewBanner(context, meta.api),
             Expanded(
-              child: FadeIndexedStack(
-                index: _index,
+              // 三页并排，手指拖到哪就停在哪，松手自己吸附过去。
+              // 站点不在这条线上，也不在底栏，本来就没入口。
+              child: PageView(
+                controller: _pc,
+                onPageChanged: _onPage,
                 children: [
-                  FeedTab(onMenu: _menu, onCompose: _compose),
-                  if (_started.contains(1))
-                    SiteCatalogPage(onMenu: _menu)
-                  else
-                    const SizedBox.shrink(),
-                  if (_started.contains(2))
-                    MessagesPage(onMenu: _menu)
-                  else
-                    const SizedBox.shrink(),
-                  if (_started.contains(3))
-                    MeTab(onMenu: _menu)
-                  else
-                    const SizedBox.shrink(),
+                  _KeepAlive(
+                    child: FeedTab(onMenu: _menu, onCompose: _compose),
+                  ),
+                  _KeepAlive(child: MessagesPage(onMenu: _menu)),
+                  _KeepAlive(child: MeTab(onMenu: _menu)),
                 ],
               ),
             ),
@@ -367,5 +379,28 @@ class _HomePageState extends State<HomePage> {
     if (tab == 2) return Lc.current.messagesTab;
     if (tab == 3) return Lc.current.me;
     return Lc.current.home;
+  }
+}
+
+/// 滑走的那页别把状态扔了。首页的滚动位置、消息的未读、
+/// 我的那一堆开关，回来还得在原处。
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

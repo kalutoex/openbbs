@@ -1,13 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-import '../l10n/l10n.dart';
+import '../api.dart';
 import '../cloud.dart';
 import '../download_manager.dart';
+import '../file_browser.dart';
+import '../file_pick.dart';
+import '../l10n/error_text.dart';
+import '../l10n/l10n.dart';
 import '../upload_manager.dart';
 import '../utils.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/file_card.dart';
 import '../widgets/page_width.dart';
+import '../widgets/segmented_pages.dart';
+import '../widgets/toast.dart';
+import 'cloud_pick_page.dart';
 import 'downloads_page.dart';
 
 /// 传输：上传的和已经下到本机的，一个地方看。
@@ -20,39 +30,120 @@ class TransfersPage extends StatefulWidget {
   State<TransfersPage> createState() => _TransfersPageState();
 }
 
-class _TransfersPageState extends State<TransfersPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
+class _TransfersPageState extends State<TransfersPage> {
+  /// 0 = 下载，1 = 上传。下边那个大按钮跟着换。
+  int _tab = 0;
 
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
+  void _toast(String text) {
+    if (!mounted) return;
+    toast(context, text);
+  }
+
+  /// 下载的起点。以前是在云盘里点一下文件就开始下，
+  /// 现在云盘只剩看和管理，要取文件就来这儿挑。
+  Future<void> _pickToDownload() async {
+    final picked = await Navigator.push<List<CloudFile>>(
+      context,
+      MaterialPageRoute(builder: (_) => const CloudPickPage(maxCount: 20)),
+    );
+    if (picked == null || picked.isEmpty || !mounted) return;
+    for (final f in picked) {
+      final key = DownloadManager.keyForCloud(f.id);
+      if (DownloadManager.i.isDownloading(key)) continue;
+      final url = f.url.startsWith('http') ? f.url : '${Api.base}${f.url}';
+      try {
+        await DownloadManager.i.start(
+          key,
+          url,
+          f.name,
+          total: f.size,
+          cloudId: '${f.id}',
+        );
+      } catch (e) {
+        if (!mounted) return;
+        _toast(errorText(context, e));
+        return;
+      }
+    }
+  }
+
+  /// 上传入口。手机上有内置的文件浏览器，可以翻整个存储；
+  /// 别的地方（网页、桌面）还是系统选择器。
+  Future<void> _uploadEntry() async {
+    if (!fileBrowserSupported) {
+      await _upload();
+      return;
+    }
+    final v = await showAppSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_outlined),
+              title: Text(Lc.current.browseFiles),
+              subtitle: Text(Lc.current.browseFilesHint),
+              onTap: () => Navigator.pop(ctx, 'phone'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_open_outlined),
+              title: Text(Lc.current.pickFromSystem),
+              onTap: () => Navigator.pop(ctx, 'system'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || v == null) return;
+    if (v == 'phone') {
+      await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const FileBrowserPage()),
+      );
+    } else {
+      await _upload();
+    }
+  }
+
+  Future<void> _upload() async {
+    final f = await pickFile();
+    if (f == null || !mounted) return;
+    // 进队列前先自己看一眼额度。服务端也会拦，但那是传了几分钟之后才知道。
+    try {
+      final u = await CloudApi.usage();
+      if (!u.unlimited) {
+        // 排在队里的也要算进去，不然一次选十个就都放行了
+        var pending = 0;
+        for (final j in UploadManager.i.activeJobs) {
+          if (j.size > j.offset) pending += j.size - j.offset;
+        }
+        if (f.size + pending > u.left) {
+          _toast(Lc.current.cloudNoRoom(bytesText(u.left)));
+          return;
+        }
+      }
+    } catch (_) {
+      // 额度问不到就先放行，交给服务端兜着
+    }
+    UploadManager.i.add(f);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(Lc.current.transfers),
-        bottom: TabBar(
-          controller: _tabs,
-          // 底下那道线比字宽一圈，不贴着字
-          indicatorSize: TabBarIndicatorSize.tab,
-          indicatorPadding: const EdgeInsets.symmetric(horizontal: 28),
-          indicator: const UnderlineTabIndicator(
-            borderSide: BorderSide(width: 3),
-            borderRadius: BorderRadius.all(Radius.circular(2)),
-          ),
-          tabs: [
-            Tab(text: Lc.current.download),
-            Tab(text: Lc.current.uploadsTab),
-          ],
-        ),
+      appBar: AppBar(title: Text(Lc.current.transfers)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _tab == 0 ? _pickToDownload : _uploadEntry,
+        icon: Icon(_tab == 0 ? Icons.download_rounded : Icons.upload_file),
+        label: Text(_tab == 0 ? Lc.current.download : Lc.current.upload),
       ),
-      body: TabBarView(
-        controller: _tabs,
-        children: const [DownloadsTab(), UploadsView()],
+      body: PageWidth(
+        child: SegmentedPages(
+          onChanged: (i) => setState(() => _tab = i),
+          labels: [Lc.current.download, Lc.current.uploadsTab],
+          children: const [DownloadsTab(), UploadsView()],
+        ),
       ),
     );
   }
@@ -133,10 +224,7 @@ class _DownloadRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  sub,
-                  style: TextStyle(fontSize: 11.5, color: cs.outline),
-                ),
+                Text(sub, style: TextStyle(fontSize: 11.5, color: cs.outline)),
               ],
             ),
           ),
@@ -182,10 +270,7 @@ class UploadsView extends StatelessWidget {
               if (active.isNotEmpty) ...[
                 _SectionTitle(Lc.current.uploadsRunningN('${active.length}')),
                 for (final j in active)
-                  _JobTile(
-                    job: j,
-                    onCancel: () => m.cancel(j),
-                  ),
+                  _JobTile(job: j, onCancel: () => m.cancel(j)),
               ],
               if (waiting.isNotEmpty) ...[
                 _SectionTitle(Lc.current.uploadsFailedN('${waiting.length}')),

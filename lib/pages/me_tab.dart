@@ -131,42 +131,36 @@ class MeTab extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: NameTag(
-                                            name:
-                                                (u['nickname'] ?? u['name'])
-                                                    as String,
-                                            handle: '${u['handle'] ?? ''}',
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                    NameTag(
+                                      name:
+                                          (u['nickname'] ?? u['name'])
+                                              as String,
+                                      handle: '${u['handle'] ?? ''}',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      // 徽章挂在名字行里，跟着名字走
+                                      trailing: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 5,
+                                          vertical: 1,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: cs.tertiaryContainer,
+                                          borderRadius: BorderRadius.circular(
+                                            4,
                                           ),
                                         ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 5,
-                                            vertical: 1,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: cs.tertiaryContainer,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'Lv${u['level'] ?? 1}',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: cs.onTertiaryContainer,
-                                            ),
+                                        child: Text(
+                                          'Lv${u['level'] ?? 1}',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: cs.onTertiaryContainer,
                                           ),
                                         ),
-                                      ],
+                                      ),
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
@@ -289,16 +283,14 @@ class _TrashEntryState extends State<_TrashEntry> {
   }
 
   Future<void> _open() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const TrashPage()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const TrashPage()));
     if (mounted) _load();
   }
 
   Future<void> _openAdmin() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AdminTrashPage()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const AdminTrashPage()));
   }
 
   @override
@@ -372,7 +364,7 @@ class _VersionFooter extends StatelessWidget {
         final p = snap.data;
         final text = p == null
             ? SiteConfig.brand
-            : '${SiteConfig.brand} · ${p.version} (${p.buildNumber})';
+            : '${SiteConfig.brand} · ${p.version}';
         return Text(text, style: TextStyle(fontSize: 11, color: color));
       },
     );

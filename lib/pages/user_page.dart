@@ -12,6 +12,7 @@ import '../user_hue.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
+import '../widgets/post_images.dart';
 import '../widgets/thread_tile.dart';
 import 'edit_profile_page.dart';
 import 'follow_page.dart';
@@ -284,12 +285,20 @@ class _UserPageState extends State<UserPage> {
     );
   }
 
+  /// 头像、封面点开看大图。用的是帖子里那个查看器：双指缩放、双击放大。
+  void _viewLarge(String url) {
+    if (url.isEmpty) return;
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => ImageViewerPage(urls: [url])));
+  }
+
   /// 封面。有图就铺图，没有就一层渐变。
   Widget _cover(Map<String, dynamic> info, ColorScheme cs) {
     final cover = '${info['cover'] ?? ''}';
     final has = cover.isNotEmpty;
     return GestureDetector(
-      onTap: _isMe ? _pickCover : null,
+      // 别人的封面点开看大图，自己的还是换图。
+      onTap: _isMe ? _pickCover : (has ? () => _viewLarge(cover) : null),
       onLongPress: !_isMe && has ? _askSaveCover : null,
       child: SizedBox(
         height: 168,
@@ -545,7 +554,9 @@ class _UserPageState extends State<UserPage> {
           left: 16,
           top: -46,
           child: GestureDetector(
-            onTap: _isMe ? _edit : null,
+            onTap: _isMe
+                ? _edit
+                : (avatar.isEmpty ? null : () => _viewLarge(avatar)),
             child: Container(
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(

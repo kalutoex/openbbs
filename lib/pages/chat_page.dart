@@ -164,9 +164,57 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  /// 连着几轮补增量了。撤回和「对方删了」改的是已经落屏的那几条，
+  /// 增量接口看不见，隔十来轮全量扫一遍补上。
+  int _pollTicks = 0;
+
   void _onPollerSignal() {
     if (!mounted || _sending) return;
-    _load();
+    _pollTicks++;
+    if (_pollTicks % 10 == 0 && _atBottom) {
+      _load();
+      return;
+    }
+    _loadNew();
+  }
+
+  /// 只补比手上最后一条更新的。一秒一轮时全量重拉会把整段消息重建，
+  /// 图片跟着闪，流量也白花。
+  Future<void> _loadNew() async {
+    if (_fetching) {
+      _reloadPending = true;
+      return;
+    }
+    if (_msgs.isEmpty) return _load();
+    _fetching = true;
+    try {
+      final lastId = (_msgs.last['id'] ?? 0) as int;
+      final d = await Api.get('/dm/$_peerId', query: {'after_id': '$lastId'});
+      if (!mounted) return;
+      final list = (d['items'] as List).cast<Map<String, dynamic>>();
+      if (list.isEmpty) {
+        final canSend = d['can_send'] != false;
+        if (canSend != _canSend) setState(() => _canSend = canSend);
+        return;
+      }
+      final stay = _isBottom();
+      setState(() {
+        _msgs.addAll(list);
+        _canSend = d['can_send'] != false;
+        if (!stay) _newCount += list.length;
+      });
+      AppState.instance.refreshDmUnread();
+      unawaited(_markSeen());
+      if (stay) _toBottom();
+    } catch (_) {
+      // 这一轮没拉上就算了，下一秒接着来
+    } finally {
+      _fetching = false;
+      if (_reloadPending && mounted) {
+        _reloadPending = false;
+        unawaited(_loadNew());
+      }
+    }
   }
 
   /// reverse 列表，offset 0 就是最底下（最新一条）。
@@ -772,62 +820,67 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         final dark = Theme.of(ctx).brightness == Brightness.dark;
         final bg = dark ? const Color(0xFF2C2C2E) : Colors.white;
         final fg = dark ? const Color(0xFFEDEDED) : const Color(0xFF1B1B1B);
-        return Stack(
-          children: [
-            Positioned(
-              left: left,
-              top: top,
-              child: SizedBox(
-                width: barW,
-                height: barH + arrowH,
-                child: CustomPaint(
-                  painter: _MsgMenuPainter(
-                    bg: bg,
-                    above: above,
-                    arrowX: arrowX,
-                    barH: barH,
-                    arrowH: arrowH,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      top: above ? 0 : arrowH,
-                      bottom: above ? arrowH : 0,
+        // 工具条自己是个独立的浮层。不套一层 Material，Text 在 debug 下会
+        // 画出黄色双下划线，InkResponse 的水波也没有落点。
+        return Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            children: [
+              Positioned(
+                left: left,
+                top: top,
+                child: SizedBox(
+                  width: barW,
+                  height: barH + arrowH,
+                  child: CustomPaint(
+                    painter: _MsgMenuPainter(
+                      bg: bg,
+                      above: above,
+                      arrowX: arrowX,
+                      barH: barH,
+                      arrowH: arrowH,
                     ),
-                    child: Row(
-                      children: [
-                        for (final a in actions)
-                          SizedBox(
-                            width: itemW,
-                            height: barH,
-                            child: InkResponse(
-                              radius: 26,
-                              onTap: () => Navigator.pop(ctx, a),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(a.icon, size: 19, color: fg),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    a.label,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: fg,
-                                      height: 1.15,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: above ? 0 : arrowH,
+                        bottom: above ? arrowH : 0,
+                      ),
+                      child: Row(
+                        children: [
+                          for (final a in actions)
+                            SizedBox(
+                              width: itemW,
+                              height: barH,
+                              child: InkResponse(
+                                radius: 26,
+                                onTap: () => Navigator.pop(ctx, a),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(a.icon, size: 19, color: fg),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      a.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: fg,
+                                        height: 1.15,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
       transitionBuilder: (ctx, anim, _, child) {

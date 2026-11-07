@@ -7,6 +7,7 @@ import '../trash.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/file_card.dart';
 import '../widgets/page_width.dart';
+import '../widgets/segmented_pages.dart';
 import '../widgets/toast.dart';
 
 /// 回收站：自己删掉的帖子、自己删掉的云盘文件，都在这儿，还能捞回来。
@@ -20,39 +21,16 @@ class TrashPage extends StatefulWidget {
   State<TrashPage> createState() => _TrashPageState();
 }
 
-class _TrashPageState extends State<TrashPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
-
+class _TrashPageState extends State<TrashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(Lc.current.recycleBin),
-        bottom: TabBar(
-          controller: _tabs,
-          // 底下那道线比字宽一圈，不贴着字
-          indicatorSize: TabBarIndicatorSize.tab,
-          indicatorPadding: const EdgeInsets.symmetric(horizontal: 28),
-          indicator: const UnderlineTabIndicator(
-            borderSide: BorderSide(width: 3),
-            borderRadius: BorderRadius.all(Radius.circular(2)),
-          ),
-          tabs: [
-            Tab(text: Lc.current.trashThreadsTab),
-            Tab(text: Lc.current.trashFilesTab),
-          ],
+      appBar: AppBar(title: Text(Lc.current.recycleBin)),
+      body: PageWidth(
+        child: SegmentedPages(
+          labels: [Lc.current.trashThreadsTab, Lc.current.trashFilesTab],
+          children: const [ThreadTrashView(), CloudTrashView()],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabs,
-        children: const [ThreadTrashView(), CloudTrashView()],
       ),
     );
   }
