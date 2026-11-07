@@ -4,8 +4,12 @@ import '../widgets/page_width.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../api.dart';
 import '../store.dart';
+import '../user_color.dart';
+import '../widgets/toast.dart';
 
+import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 
 /// 36 档，0° 到 350°，和 AppState 的色相范围、Slider 的 max 对齐。
@@ -146,6 +150,7 @@ class ThemeColorPage extends StatelessWidget {
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
+                    const _MyColorPicker(),
                     const _IconPicker(),
                   ],
                 ),
@@ -153,6 +158,173 @@ class ThemeColorPage extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+
+/// 我的消息颜色。只影响私信里自己那条气泡，不跟着 App 主题色走——
+/// 主题色是「我这台设备看着舒服」，这个是「别人看我的时候是什么色」。
+class _MyColorPicker extends StatefulWidget {
+  const _MyColorPicker();
+
+  @override
+  State<_MyColorPicker> createState() => _MyColorPickerState();
+}
+
+class _MyColorPickerState extends State<_MyColorPicker> {
+  int? _sel;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final c = AppState.instance.user?['color'];
+    _sel = c is int && c >= 0 ? c : null;
+  }
+
+  Future<void> _pick(int? hue) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final d = await Api.patch('/me', {'color': hue ?? -1});
+      final u = d is Map ? d['user'] : null;
+      if (u is Map<String, dynamic>) AppState.instance.applyUser(u);
+      if (!mounted) return;
+      setState(() {
+        _sel = hue;
+        _busy = false;
+      });
+      toast(context, Lc.current.saved);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      toast(context, errorText(context, e));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      toast(context, '$e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final scheme = t.colorScheme;
+    final dark = t.brightness == Brightness.dark;
+    final mine = _sel ?? hueOfUser(AppState.instance.user);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 28),
+        Text(Lc.current.myMessageColor, style: t.textTheme.titleMedium),
+        const SizedBox(height: 6),
+        Text(
+          Lc.current.myMessageColorHint,
+          style: t.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+        // 先给一条预览：跟我聊天的人看到的就是这个样子
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: bubbleMineBg(mine, dark),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(6),
+                ),
+              ),
+              child: Text(
+                Lc.current.send,
+                style: TextStyle(fontSize: 14, color: bubbleMineFg(mine)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              _sel == null ? Lc.current.myMessageColorAuto : '${_sel!}°',
+              style: t.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            if (_busy) ...[
+              const SizedBox(width: 10),
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (var i = 0; i < 36; i++)
+              _swatch(i * 10, i * 10 == _sel),
+            _autoSwatch(),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _swatch(int hue, bool on) {
+    final c = HSLColor.fromAHSL(1, hue.toDouble(), 0.55, 0.55).toColor();
+    return InkWell(
+      onTap: _busy ? null : () => _pick(hue),
+      customBorder: const CircleBorder(),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: c,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: on
+                ? Theme.of(context).colorScheme.onSurface
+                : Colors.transparent,
+            width: 2.5,
+          ),
+        ),
+        child: on
+            ? const Icon(Icons.check, size: 17, color: Colors.white)
+            : null,
+      ),
+    );
+  }
+
+  Widget _autoSwatch() {
+    final on = _sel == null;
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: _busy ? null : () => _pick(null),
+      customBorder: const CircleBorder(),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: on ? cs.onSurface : cs.outlineVariant,
+            width: on ? 2.5 : 1,
+          ),
+        ),
+        child: Icon(
+          Icons.autorenew,
+          size: 16,
+          color: on ? cs.onSurface : cs.onSurfaceVariant,
+        ),
       ),
     );
   }

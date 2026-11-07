@@ -4387,6 +4387,96 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'有 {count} 条被拒绝：\n{lines}'**
   String uiConfigRejected(int count, String lines);
+
+  /// No description provided for @today.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天'**
+  String get today;
+
+  /// No description provided for @dmRecall.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回'**
+  String get dmRecall;
+
+  /// No description provided for @dmRecalledMine.
+  ///
+  /// In zh, this message translates to:
+  /// **'你撤回了一条消息'**
+  String get dmRecalledMine;
+
+  /// No description provided for @dmRecalledPeer.
+  ///
+  /// In zh, this message translates to:
+  /// **'对方撤回了一条消息'**
+  String get dmRecalledPeer;
+
+  /// No description provided for @dmRead.
+  ///
+  /// In zh, this message translates to:
+  /// **'已读'**
+  String get dmRead;
+
+  /// No description provided for @dmMulti.
+  ///
+  /// In zh, this message translates to:
+  /// **'多选'**
+  String get dmMulti;
+
+  /// No description provided for @dmSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索聊天记录'**
+  String get dmSearchHint;
+
+  /// No description provided for @dmSearchEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有匹配的消息'**
+  String get dmSearchEmpty;
+
+  /// No description provided for @dmNewBelow.
+  ///
+  /// In zh, this message translates to:
+  /// **'{n} 条新消息'**
+  String dmNewBelow(int n);
+
+  /// No description provided for @dmSelectCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选 {n} 条'**
+  String dmSelectCount(int n);
+
+  /// No description provided for @dmEmoji.
+  ///
+  /// In zh, this message translates to:
+  /// **'表情'**
+  String get dmEmoji;
+
+  /// No description provided for @myMessageColor.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的消息颜色'**
+  String get myMessageColor;
+
+  /// No description provided for @myMessageColorHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天里你发的消息会用这个颜色，别人看你也是这个色。不选就按账号分一个固定的。'**
+  String get myMessageColorHint;
+
+  /// No description provided for @saved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存'**
+  String get saved;
+
+  /// No description provided for @myMessageColorAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动'**
+  String get myMessageColorAuto;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

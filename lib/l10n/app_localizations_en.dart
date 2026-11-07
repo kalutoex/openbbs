@@ -2441,4 +2441,54 @@ class LEn extends L {
   String uiConfigRejected(int count, String lines) {
     return '$count rejected:\n$lines';
   }
+
+  @override
+  String get today => 'today';
+
+  @override
+  String get dmRecall => 'Recall';
+
+  @override
+  String get dmRecalledMine => 'You recalled a message';
+
+  @override
+  String get dmRecalledPeer => 'A message was recalled';
+
+  @override
+  String get dmRead => 'Read';
+
+  @override
+  String get dmMulti => 'Select';
+
+  @override
+  String get dmSearchHint => 'Search messages';
+
+  @override
+  String get dmSearchEmpty => 'No matching messages';
+
+  @override
+  String dmNewBelow(int n) {
+    return '$n new messages';
+  }
+
+  @override
+  String dmSelectCount(int n) {
+    return '$n selected';
+  }
+
+  @override
+  String get dmEmoji => 'Emoji';
+
+  @override
+  String get myMessageColor => 'My message color';
+
+  @override
+  String get myMessageColorHint =>
+      'Your messages use this color in chats, and others see it too. Leave it on auto to get a fixed one from your account.';
+
+  @override
+  String get saved => 'Saved';
+
+  @override
+  String get myMessageColorAuto => 'Auto';
 }

@@ -1611,5 +1611,34 @@
         "type": "String"
       }
     }
-  }
+  },
+  "today": "今天",
+  "dmRecall": "撤回",
+  "dmRecalledMine": "你撤回了一条消息",
+  "dmRecalledPeer": "对方撤回了一条消息",
+  "dmRead": "已读",
+  "dmMulti": "多选",
+  "dmSearchHint": "搜索聊天记录",
+  "dmSearchEmpty": "没有匹配的消息",
+  "dmNewBelow": "{n} 条新消息",
+  "dmSelectCount": "已选 {n} 条",
+  "@dmNewBelow": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@dmSelectCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "dmEmoji": "表情",
+  "myMessageColor": "我的消息颜色",
+  "myMessageColorHint": "聊天里你发的消息会用这个颜色，别人看你也是这个色。不选就按账号分一个固定的。",
+  "saved": "已保存",
+  "myMessageColorAuto": "自动"
 }

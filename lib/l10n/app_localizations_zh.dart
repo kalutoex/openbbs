@@ -2398,4 +2398,53 @@ class LZh extends L {
   String uiConfigRejected(int count, String lines) {
     return '有 $count 条被拒绝：\n$lines';
   }
+
+  @override
+  String get today => '今天';
+
+  @override
+  String get dmRecall => '撤回';
+
+  @override
+  String get dmRecalledMine => '你撤回了一条消息';
+
+  @override
+  String get dmRecalledPeer => '对方撤回了一条消息';
+
+  @override
+  String get dmRead => '已读';
+
+  @override
+  String get dmMulti => '多选';
+
+  @override
+  String get dmSearchHint => '搜索聊天记录';
+
+  @override
+  String get dmSearchEmpty => '没有匹配的消息';
+
+  @override
+  String dmNewBelow(int n) {
+    return '$n 条新消息';
+  }
+
+  @override
+  String dmSelectCount(int n) {
+    return '已选 $n 条';
+  }
+
+  @override
+  String get dmEmoji => '表情';
+
+  @override
+  String get myMessageColor => '我的消息颜色';
+
+  @override
+  String get myMessageColorHint => '聊天里你发的消息会用这个颜色，别人看你也是这个色。不选就按账号分一个固定的。';
+
+  @override
+  String get saved => '已保存';
+
+  @override
+  String get myMessageColorAuto => '自动';
 }

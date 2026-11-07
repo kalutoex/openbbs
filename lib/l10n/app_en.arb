@@ -1014,5 +1014,20 @@
         "type": "String"
       }
     }
-  }
+  },
+  "today": "today",
+  "dmRecall": "Recall",
+  "dmRecalledMine": "You recalled a message",
+  "dmRecalledPeer": "A message was recalled",
+  "dmRead": "Read",
+  "dmMulti": "Select",
+  "dmSearchHint": "Search messages",
+  "dmSearchEmpty": "No matching messages",
+  "dmNewBelow": "{n} new messages",
+  "dmSelectCount": "{n} selected",
+  "dmEmoji": "Emoji",
+  "myMessageColor": "My message color",
+  "myMessageColorHint": "Your messages use this color in chats, and others see it too. Leave it on auto to get a fixed one from your account.",
+  "saved": "Saved",
+  "myMessageColorAuto": "Auto"
 }
