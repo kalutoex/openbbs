@@ -53,6 +53,10 @@ class Api {
   /// 上次连通的地址。切站和冷启动先用它，省一轮探路。
   static String lastGood = '';
 
+  /// 上次「冷启动救援」的时间。系统网络栈刚起来时首批请求常全超时，
+  /// 这里记一笔，免得每次失败都去重探。
+  static DateTime? _lastRescueAt;
+
   /// 通道被换掉时通知外面（存盘、刷新界面），由 store 挂上去。
   static void Function(String base)? onChannelChanged;
 
@@ -466,6 +470,30 @@ class Api {
         if (old != null) {
           lastFromCache = true;
           return old;
+        }
+      }
+      // 冷启动补救：清理后台再打开时，第一条请求经常赶在系统网络栈就绪
+      // 之前，所有入口一起超时，界面就停在「连不上服务器」。
+      // 这里等半秒、重新探一次路，把请求再发一遍——用户不该为此手动刷新。
+      // 30 秒内只补一次，真断网时不会变成死循环重试。
+      final now = DateTime.now();
+      final prev = _lastRescueAt;
+      if (prev == null || now.difference(prev) > const Duration(seconds: 30)) {
+        _lastRescueAt = now;
+        try {
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+          final ok = await probe();
+          if (ok != null) {
+            final r = await http
+                .get(_uri(path, query), headers: _headers)
+                .timeout(const Duration(seconds: 15));
+            final d = _decode(r);
+            lastFromCache = false;
+            if (cache) unawaited(DiskCache.write(key, d));
+            return d;
+          }
+        } catch (_) {
+          // 补救也失败，照旧把原始错误报上去。
         }
       }
       throw ApiException(

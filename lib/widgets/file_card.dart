@@ -198,7 +198,9 @@ class _FileCardState extends State<_FileCard> {
         width: UiConfig.px(
           compact ? 'fileCard.compactWidth' : 'fileCard.maxWidth',
         ),
-        height: UiConfig.px('fileCard.height'),
+        height: UiConfig.px(
+          compact ? 'fileCard.compactHeight' : 'fileCard.height',
+        ),
         child: Material(
           // 不要底板、不要描边：只有图标、文件名、大小，直接摆在背景上。
           // 水波纹还得有 Material 托着，所以留一层透明的。

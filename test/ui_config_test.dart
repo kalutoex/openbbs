@@ -11,6 +11,7 @@ void main() {
 
   test('什么都没配的时候用出厂值', () {
     expect(UiConfig.px('fileCard.height'), 80);
+    expect(UiConfig.px('fileCard.compactHeight'), 56);
     expect(UiConfig.px('fileCard.padV'), 2);
     expect(UiConfig.str('threadCard.tagSide'), 'leftOfTime');
   });
@@ -32,7 +33,7 @@ void main() {
   testWidgets('后台给的高度真的画到卡片上', (tester) async {
     SharedPreferences.setMockInitialValues({
       'ui_spec_cache':
-          '{"rev":9,"values":{"fileCard.height":100,"fileCard.compactWidth":180}}',
+          '{"rev":9,"values":{"fileCard.height":100,"fileCard.compactHeight":60,"fileCard.compactWidth":180}}',
     });
     await UiConfig.load();
 
@@ -54,8 +55,9 @@ void main() {
 
     expect(tester.takeException(), isNull);
     // FileCards 外面还有一层 Padding，量里面那张卡片本身
+    // compact（私信气泡里）走 compactHeight，跟详情页那张大卡互不牵连
     final size = tester.getSize(find.byType(InkWell));
-    expect(size.height, 100);
+    expect(size.height, 60);
     expect(size.width, 180);
   });
 }

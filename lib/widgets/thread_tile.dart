@@ -138,29 +138,60 @@ class ThreadTile extends StatelessWidget {
                         radius: UiConfig.px('threadCard.avatarRadius'),
                       ),
                       SizedBox(width: UiConfig.px('threadCard.gap')),
-                      // 昵称在上、@账号在下，两行都放大一号。
-                      // 昵称和账号并排时，长名字一挤，@就只剩半个。
+                      // 昵称在上、@账号在下，两行整体对着头像居中；
+                      // 角标和时间跟着昵称那一行走，不跟两行块居中。
                       Expanded(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => openUserPage(context, handle),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                author,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: tt.bodyMedium?.copyWith(
-                                  fontSize:
-                                      (tt.bodyMedium?.fontSize ?? 14) + 1,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () => openUserPage(context, handle),
+                                    child: Text(
+                                      author,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: tt.bodyMedium?.copyWith(
+                                        fontSize:
+                                            (tt.bodyMedium?.fontSize ?? 14) + 1,
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              if (handle.trim().isNotEmpty)
-                                Text(
+                                const SizedBox(width: 8),
+                                // 角标相对时间的位置由后台配：默认排在时间左边，
+                                // 从右往左越靠前越贴近时间。也能换成右侧或另起一行。
+                                _tail(
+                                  tt,
+                                  cs,
+                                  [
+                                    if (imgs.length >= 2)
+                                      _tag(Lc.current.multiImage, cs.tertiary),
+                                    if (good)
+                                      _tag(Lc.current.featured, cs.error),
+                                    if (item['is_top'] == true)
+                                      _tag(Lc.current.pinned, cs.primary),
+                                  ],
+                                  Text(
+                                    timeAgo(ts),
+                                    style: tt.labelSmall
+                                        ?.copyWith(color: cs.outline),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (handle.trim().isNotEmpty)
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => openUserPage(context, handle),
+                                child: Text(
                                   '@${handle.trim().replaceFirst(RegExp(r'^@'), '')}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -171,26 +202,8 @@ class ThreadTile extends StatelessWidget {
                                     height: 1.2,
                                   ),
                                 ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 角标相对时间的位置由后台配：默认排在时间左边，
-                      // 从右往左越靠前越贴近时间。也能换成右侧或另起一行。
-                      _tail(
-                        tt,
-                        cs,
-                        [
-                          if (imgs.length >= 2)
-                            _tag(Lc.current.multiImage, cs.tertiary),
-                          if (good) _tag(Lc.current.featured, cs.error),
-                          if (item['is_top'] == true)
-                            _tag(Lc.current.pinned, cs.primary),
-                        ],
-                        Text(
-                          timeAgo(ts),
-                          style: tt.labelSmall?.copyWith(color: cs.outline),
+                              ),
+                          ],
                         ),
                       ),
                     ],
