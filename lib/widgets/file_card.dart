@@ -359,20 +359,16 @@ class _CompactFilesState extends State<CompactFiles> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (var i = 0; i < shown.length; i++) ...[
-                if (i > 0) const SizedBox(height: 8),
+                if (i > 0) const SizedBox(height: 6),
                 _card(context, shown[i], i, w, scheme, tt),
               ],
               if (rest > 0) ...[
-                if (shown.isNotEmpty) const SizedBox(height: 8),
-                SizedBox(
-                  width: w,
-                  height: UiConfig.px('fileCard.height'),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '+$rest',
-                      style: tt.labelLarge?.copyWith(color: scheme.outline),
-                    ),
+                if (shown.isNotEmpty) const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, bottom: 2, left: 4),
+                  child: Text(
+                    '+$rest 个',
+                    style: tt.labelSmall?.copyWith(color: scheme.outline),
                   ),
                 ),
               ],
@@ -394,7 +390,7 @@ class _CompactFilesState extends State<CompactFiles> {
     final busy = _busy == i;
     return SizedBox(
       width: w,
-      height: UiConfig.px('fileCard.height'),
+      height: UiConfig.px('fileCard.compactHeight'),
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(

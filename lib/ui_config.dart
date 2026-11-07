@@ -20,6 +20,8 @@ class UiConfig {
   static const Map<String, dynamic> defaults = {
     // 附件卡片。主页、帖子内、私信三处共用一套。
     'fileCard.height': 80,
+    // 主页/列表里的紧凑附件卡：没有底板，比详情页的大卡矮一截。
+    'fileCard.compactHeight': 56,
     'fileCard.maxWidth': 420,
     // 私信的气泡比整页窄，卡片跟着收一点，别横着撑破气泡。
     'fileCard.compactWidth': 240,
