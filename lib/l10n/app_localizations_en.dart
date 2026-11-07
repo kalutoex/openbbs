@@ -10,6 +10,10 @@ class LEn extends L {
   LEn([String locale = 'en']) : super(locale);
 
   @override
+  String get netDownBanner =>
+      'Can\'t reach the server — this goes away once you\'re back online';
+
+  @override
   String get ok => 'OK';
 
   @override

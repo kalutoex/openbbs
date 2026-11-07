@@ -1,5 +1,6 @@
 {
   "@@locale": "en",
+  "netDownBanner": "Can't reach the server — this goes away once you're back online",
   "ok": "OK",
   "cancel": "Cancel",
   "save": "Save",

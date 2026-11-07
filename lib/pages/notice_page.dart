@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../widgets/page_width.dart';
 import '../store.dart';
-import '../utils.dart';
 import '../widgets/app_card.dart';
 import '../widgets/empty_view.dart';
+import '../widgets/live_time.dart';
+
 import 'thread_page.dart';
 
 import '../l10n/error_text.dart';
@@ -190,8 +191,8 @@ class _NoticePageState extends State<NoticePage> {
                             ),
                           ),
                           const Spacer(),
-                          Text(
-                            timeAgo((n['created_at'] ?? 0) as int),
+                          LiveTime(
+                            (n['created_at'] ?? 0) as int,
                             style: tt.labelSmall?.copyWith(color: cs.outline),
                           ),
                         ],

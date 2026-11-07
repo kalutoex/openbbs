@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb;
 import 'package:http/http.dart' as http;
 
 import 'disk_cache.dart';
@@ -47,6 +47,20 @@ class Api {
 
   /// 当前站点的全部入口，v6 在前。换站时整组换掉。
   static List<String> endpoints = const [];
+
+  /// 最近一次请求通没通。
+  ///
+  /// 不做主动探测：探测费电，而且用户一动界面就发请求，自然会把它改回来。
+  /// 界面挂一条提示条读这个值，通了就自己收起来。
+  static final ValueNotifier<bool> netDown = ValueNotifier<bool>(false);
+
+  static void _netOk() {
+    if (netDown.value) netDown.value = false;
+  }
+
+  static void _netBad() {
+    if (!netDown.value) netDown.value = true;
+  }
 
   static String? token;
 
@@ -364,7 +378,10 @@ class Api {
   /// 服务端靠它把分片接回同一个 .part。
   static String newUploadId() {
     final r = math.Random();
-    final tail = List.generate(8, (_) => r.nextInt(36).toRadixString(36)).join();
+    final tail = List.generate(
+      8,
+      (_) => r.nextInt(36).toRadixString(36),
+    ).join();
     return '${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}$tail';
   }
 
@@ -384,8 +401,10 @@ class Api {
     }
     final path = f.path;
     if (path == null) {
-      throw ApiException(Lc.current.uploadFailedWith('no path'),
-          code: 'uploadFailed');
+      throw ApiException(
+        Lc.current.uploadFailedWith('no path'),
+        code: 'uploadFailed',
+      );
     }
     var got = from.clamp(0, f.size);
     onProgress?.call(got, f.size);
@@ -409,8 +428,10 @@ class Api {
       );
       final received = (r['received'] as num?)?.toInt();
       if (received == null) {
-        throw ApiException(Lc.current.uploadFailedWith('bad chunk reply'),
-            code: 'uploadFailed');
+        throw ApiException(
+          Lc.current.uploadFailedWith('bad chunk reply'),
+          code: 'uploadFailed',
+        );
       }
       if (received <= got) {
         // 服务端说它手里比我们还少，就退回它那个位置重来；
@@ -419,8 +440,10 @@ class Api {
           got = received;
           continue;
         }
-        throw ApiException(Lc.current.uploadFailedWith('stalled'),
-            code: 'uploadFailed');
+        throw ApiException(
+          Lc.current.uploadFailedWith('stalled'),
+          code: 'uploadFailed',
+        );
       }
       got = received;
       if (cancel?.cancelled == true) {
@@ -494,8 +517,12 @@ class Api {
     try {
       final d = await _withFailover(
         retryOnTimeout: false,
-        () => postFile(_uri('/file').toString(), _headers, f,
-            onProgress: onProgress),
+        () => postFile(
+          _uri('/file').toString(),
+          _headers,
+          f,
+          onProgress: onProgress,
+        ),
       );
       final url = '${d['url'] ?? ''}';
       if (url.isEmpty) {
@@ -600,6 +627,7 @@ class Api {
       );
       final d = _decode(r);
       lastFromCache = false;
+      _netOk();
       if (cache) unawaited(DiskCache.write(key, d));
       return d;
     } on ApiException {
@@ -609,6 +637,7 @@ class Api {
         final old = await DiskCache.read(key);
         if (old != null) {
           lastFromCache = true;
+          _netBad();
           return old;
         }
       }
@@ -629,6 +658,7 @@ class Api {
                 .timeout(const Duration(seconds: 15));
             final d = _decode(r);
             lastFromCache = false;
+            _netOk();
             if (cache) unawaited(DiskCache.write(key, d));
             return d;
           }
@@ -636,6 +666,7 @@ class Api {
           // 补救也失败，照旧把原始错误报上去。
         }
       }
+      _netBad();
       throw ApiException(
         Lc.current.connectFailed('$e'),
         code: 'connectFailed',
@@ -653,10 +684,13 @@ class Api {
             .post(_uri(path), headers: _headers, body: jsonEncode(body))
             .timeout(const Duration(seconds: 15)),
       );
-      return _decode(r);
+      final d = _decode(r);
+      _netOk();
+      return d;
     } on ApiException {
       rethrow;
     } catch (e) {
+      _netBad();
       throw ApiException(
         Lc.current.connectFailed('$e'),
         code: 'connectFailed',
@@ -674,10 +708,13 @@ class Api {
             .delete(_uri(path), headers: _headers)
             .timeout(const Duration(seconds: 15)),
       );
-      return _decode(r);
+      final d = _decode(r);
+      _netOk();
+      return d;
     } on ApiException {
       rethrow;
     } catch (e) {
+      _netBad();
       throw ApiException(
         Lc.current.connectFailed('$e'),
         code: 'connectFailed',
@@ -695,10 +732,13 @@ class Api {
             .patch(_uri(path), headers: _headers, body: jsonEncode(body))
             .timeout(const Duration(seconds: 15)),
       );
-      return _decode(r);
+      final d = _decode(r);
+      _netOk();
+      return d;
     } on ApiException {
       rethrow;
     } catch (e) {
+      _netBad();
       throw ApiException(
         Lc.current.connectFailed('$e'),
         code: 'connectFailed',

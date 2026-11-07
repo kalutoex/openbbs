@@ -10,6 +10,8 @@ import '../utils.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/empty_view.dart';
+import '../widgets/live_time.dart';
+
 import '../widgets/page_width.dart';
 import '../widgets/avatar.dart';
 import '../l10n/error_text.dart';
@@ -445,8 +447,8 @@ class _MessagesPageState extends State<MessagesPage> {
               ],
             ),
           ),
-          Text(
-            row.at > 0 ? timeAgo(row.at) : '',
+          LiveTimeText(
+            () => row.at > 0 ? timeAgo(row.at) : '',
             style: TextStyle(fontSize: 11.5, color: cs.outline),
           ),
         ],

@@ -11,6 +11,8 @@ import '../store.dart';
 import '../utils.dart';
 import 'avatar.dart';
 import 'file_card.dart';
+import 'live_time.dart';
+
 import 'user_link.dart';
 
 import '../l10n/error_text.dart';
@@ -187,8 +189,8 @@ class ThreadTile extends StatelessWidget {
                                     if (item['is_top'] == true)
                                       _tag(Lc.current.pinned, cs.primary),
                                   ],
-                                  Text(
-                                    timeAgo(ts),
+                                  LiveTime(
+                                    ts,
                                     style: tt.labelSmall?.copyWith(
                                       color: cs.outline,
                                     ),

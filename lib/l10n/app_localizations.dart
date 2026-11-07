@@ -97,6 +97,12 @@ abstract class L {
     Locale('zh'),
   ];
 
+  /// No description provided for @netDownBanner.
+  ///
+  /// In zh, this message translates to:
+  /// **'连不上服务器，网络一通就自己收起来'**
+  String get netDownBanner;
+
   /// No description provided for @ok.
   ///
   /// In zh, this message translates to:

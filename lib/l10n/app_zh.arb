@@ -1,5 +1,6 @@
 {
   "@@locale": "zh",
+  "netDownBanner": "连不上服务器，网络一通就自己收起来",
   "ok": "好",
   "cancel": "取消",
   "save": "保存",

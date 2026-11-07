@@ -10,6 +10,9 @@ class LZh extends L {
   LZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get netDownBanner => '连不上服务器，网络一通就自己收起来';
+
+  @override
   String get ok => '好';
 
   @override

@@ -397,6 +397,21 @@ class _SearchPageState extends State<SearchPage> {
       return EmptyView(
         icon: Icons.search_off_rounded,
         title: Lc.current.noSearchResult(_q),
+        action: TextButton.icon(
+          onPressed: () {
+            _ctl.clear();
+            setState(() {
+              _q = '';
+              _items.clear();
+              _replies.clear();
+              _users.clear();
+              _searched = false;
+            });
+            _focus.requestFocus();
+          },
+          icon: const Icon(Icons.backspace_outlined, size: 18),
+          label: Text(Lc.current.clear),
+        ),
       );
     }
 

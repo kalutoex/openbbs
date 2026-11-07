@@ -12,6 +12,8 @@ import '../widgets/app_card.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/page_width.dart';
 import '../widgets/mention.dart';
+import '../widgets/live_time.dart';
+
 import '../haptics.dart';
 import '../read_pos.dart';
 import '../store.dart';
@@ -1189,11 +1191,7 @@ class _ThreadPageState extends State<ThreadPage> {
                             },
                           ),
                         ),
-                        Positioned(
-                          right: 14,
-                          bottom: 14,
-                          child: _backTop(cs),
-                        ),
+                        Positioned(right: 14, bottom: 14, child: _backTop(cs)),
                       ],
                     ),
                   ),
@@ -1296,11 +1294,7 @@ class _ThreadPageState extends State<ThreadPage> {
                 ),
               if (imgs.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                PostImages(
-                  urls: imgs,
-                  sizes: sizes,
-                  heroPrefix: 'p${t['id']}',
-                ),
+                PostImages(urls: imgs, sizes: sizes, heroPrefix: 'p${t['id']}'),
               ],
               if (files.isNotEmpty) FileCards(files: files),
               const SizedBox(height: 10),
@@ -1874,8 +1868,8 @@ class _PostCardState extends State<_PostCard> {
                               ),
                             const SizedBox(width: 6),
                             Flexible(
-                              child: Text(
-                                [
+                              child: LiveTimeText(
+                                () => [
                                   if (handle.isNotEmpty) '@$handle',
                                   timeAgo(created),
                                   if (((post['edited_at'] ?? 0) as int) > 0)

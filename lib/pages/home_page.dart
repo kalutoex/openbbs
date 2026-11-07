@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import '../widgets/fade_indexed_stack.dart';
+import '../widgets/live_time.dart';
 
 import 'package:flutter/material.dart';
 
+import '../api.dart';
 import '../permissions.dart';
 import '../site_meta.dart';
 import '../store.dart';
@@ -59,6 +61,9 @@ class _HomePageState extends State<HomePage> {
 
   Timer? _tick;
 
+  /// 「3 分钟前」这类字样得自己走。半分钟敲一下，挂了 LiveTime 的地方跟着重算。
+  Timer? _beat;
+
   @override
   void initState() {
     super.initState();
@@ -70,6 +75,7 @@ class _HomePageState extends State<HomePage> {
     });
     AppState.instance.refreshUnread();
     AppState.instance.autoUnread.addListener(_syncTick);
+    _beat = Timer.periodic(const Duration(seconds: 30), (_) => beatClock());
     _syncTick();
   }
 
@@ -88,6 +94,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     AppState.instance.autoUnread.removeListener(_syncTick);
     _tick?.cancel();
+    _beat?.cancel();
     super.dispose();
   }
 
@@ -132,6 +139,45 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// 连不上服务器时顶一条细提示。不拦人、不弹窗：
+  /// 大多数断网是十几秒的事，弹窗只会让人手忙脚乱。
+  /// 哪个请求通了它就自己收起来，不用点。
+  Widget _netBanner(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
+        child: Row(
+          children: [
+            Icon(Icons.wifi_off_rounded, size: 16, color: cs.onSurfaceVariant),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                Lc.current.netDownBanner,
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                AppState.instance.refreshUnread();
+                AppState.instance.bumpFeed();
+              },
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 32),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
+              child: Text(
+                Lc.current.retry,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -193,12 +239,17 @@ class _HomePageState extends State<HomePage> {
         final meta = AppState.instance.siteMeta;
         return Column(
           children: [
+            ValueListenableBuilder<bool>(
+              valueListenable: Api.netDown,
+              builder: (context, down, _) =>
+                  down ? _netBanner(context) : const SizedBox.shrink(),
+            ),
             if (meta != null && meta.tooNew) _tooNewBanner(context, meta.api),
             Expanded(
               child: FadeIndexedStack(
                 index: _index,
                 children: [
-                  FeedTab(onMenu: _menu),
+                  FeedTab(onMenu: _menu, onCompose: _compose),
                   if (_started.contains(1))
                     SiteCatalogPage(onMenu: _menu)
                   else

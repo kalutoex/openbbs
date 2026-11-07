@@ -16,8 +16,9 @@ import '../l10n/l10n.dart';
 /// 时间线：全站最新的帖子。
 class FeedTab extends StatefulWidget {
   final VoidCallback onMenu;
+  final VoidCallback? onCompose;
 
-  const FeedTab({super.key, required this.onMenu});
+  const FeedTab({super.key, required this.onMenu, this.onCompose});
 
   @override
   State<FeedTab> createState() => _FeedTabState();
@@ -338,6 +339,16 @@ class _FeedTabState extends State<FeedTab> {
                                       icon: Icons.forum_outlined,
                                       title: Lc.current.noPostsYet,
                                       hint: Lc.current.noPostsHint,
+                                      action: widget.onCompose == null
+                                          ? null
+                                          : FilledButton.tonalIcon(
+                                              onPressed: widget.onCompose,
+                                              icon: const Icon(
+                                                Icons.edit_outlined,
+                                                size: 18,
+                                              ),
+                                              label: Text(Lc.current.newThread),
+                                            ),
                                     );
                                   }
                                   return Padding(

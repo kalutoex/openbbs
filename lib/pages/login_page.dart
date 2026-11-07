@@ -212,92 +212,107 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 22),
-              AppCard(
-                padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (!_reset) ...[
-                      TextField(
-                        controller: _name,
-                        autocorrect: false,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          labelText: Lc.current.usernameOrEmail,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    TextField(
-                      controller: _pw,
-                      obscureText: !_showPw,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      decoration: InputDecoration(
-                        labelText: _reset
-                            ? Lc.current.newPassword
-                            : Lc.current.password,
-                        helperText: (_register || _reset)
-                            ? Lc.current.atLeast8
-                            : null,
-                        suffixIcon: IconButton(
-                          tooltip: _showPw
-                              ? Lc.current.hidePassword
-                              : Lc.current.showPassword,
-                          onPressed: () => setState(() => _showPw = !_showPw),
-                          icon: Icon(
-                            _showPw
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            size: 20,
+              // 让系统和密码管理器认得出这几个框：
+              // 登录过的账号点一下就填，注册完也会问一句要不要存。
+              AutofillGroup(
+                child: AppCard(
+                  padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (!_reset) ...[
+                        TextField(
+                          controller: _name,
+                          autocorrect: false,
+                          keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [
+                            AutofillHints.username,
+                            AutofillHints.email,
+                          ],
+                          decoration: InputDecoration(
+                            labelText: Lc.current.usernameOrEmail,
                           ),
                         ),
-                      ),
-                      onSubmitted: (_) => _submit(),
-                    ),
-                    if (_register || _reset) ...[
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
+                      ],
                       TextField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
+                        controller: _pw,
+                        obscureText: !_showPw,
                         autocorrect: false,
+                        enableSuggestions: false,
+                        autofillHints: [
+                          (_register || _reset)
+                              ? AutofillHints.newPassword
+                              : AutofillHints.password,
+                        ],
                         decoration: InputDecoration(
-                          labelText: Lc.current.email,
-                          hintText: _reset
-                              ? Lc.current.emailUsedToRegister
-                              : Lc.current.emailForCode,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _code,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: Lc.current.code,
-                          suffixIcon: TextButton(
-                            onPressed: (_sending || _cooldown > 0 || _busy)
-                                ? null
-                                : _sendCode,
-                            child: Text(
-                              _cooldown > 0
-                                  ? '${_cooldown}s'
-                                  : (_sending
-                                        ? Lc.current.sending
-                                        : Lc.current.getCode),
+                          labelText: _reset
+                              ? Lc.current.newPassword
+                              : Lc.current.password,
+                          helperText: (_register || _reset)
+                              ? Lc.current.atLeast8
+                              : null,
+                          suffixIcon: IconButton(
+                            tooltip: _showPw
+                                ? Lc.current.hidePassword
+                                : Lc.current.showPassword,
+                            onPressed: () => setState(() => _showPw = !_showPw),
+                            icon: Icon(
+                              _showPw
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 20,
                             ),
                           ),
                         ),
+                        onSubmitted: (_) => _submit(),
                       ),
-                      if (_register && _chQ.isNotEmpty) ...[
+                      if (_register || _reset) ...[
                         const SizedBox(height: 12),
                         TextField(
-                          controller: _chAns,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(labelText: _chQ),
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          autocorrect: false,
+                          autofillHints: const [AutofillHints.email],
+                          decoration: InputDecoration(
+                            labelText: Lc.current.email,
+                            hintText: _reset
+                                ? Lc.current.emailUsedToRegister
+                                : Lc.current.emailForCode,
+                          ),
                         ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _code,
+                          keyboardType: TextInputType.number,
+                          autofillHints: const [AutofillHints.oneTimeCode],
+                          decoration: InputDecoration(
+                            labelText: Lc.current.code,
+                            suffixIcon: TextButton(
+                              onPressed: (_sending || _cooldown > 0 || _busy)
+                                  ? null
+                                  : _sendCode,
+                              child: Text(
+                                _cooldown > 0
+                                    ? '${_cooldown}s'
+                                    : (_sending
+                                          ? Lc.current.sending
+                                          : Lc.current.getCode),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (_register && _chQ.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _chAns,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(labelText: _chQ),
+                          ),
+                        ],
                       ],
                     ],
-                  ],
+                  ),
                 ),
               ),
               if (_err != null) ...[
