@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +9,7 @@ import 'bg_poll.dart';
 import 'l10n/l10n.dart';
 import 'notify.dart';
 import 'pages/notice_page.dart' show noticeActionText;
+import 'power.dart';
 import 'store.dart';
 
 /// 全站唯一的消息轮询。
@@ -178,6 +180,7 @@ class Poller with WidgetsBindingObserver {
       await _handleNotice(nt);
       // 顺手把「当前在哪座站、哪个号」留给后台任务，它那边读不到 AppState。
       await _syncBgContext();
+      await _maybeAskBattery();
     } catch (e) {
       _fails++;
       // 以前这里全吞掉。服务端把 dm 改成数组，这里就每天静默失败一万多次，
@@ -205,6 +208,30 @@ class Poller with WidgetsBindingObserver {
       endpoints: Api.endpoints,
       uid: st.uid,
     );
+  }
+
+  /// 电池优化豁免只会自动问一次。
+  ///
+  /// 放在这里而不是启动时：轮询能跑是在登录、读站完成之后，那时候弹系统窗口
+  /// 才不打断冷启动。问过就记一笔，拒了也不再提，免得每次开 App 都来一下。
+  static const _kBgAsked = 'bg_battery_asked';
+  static bool _askedBattery = false;
+
+  Future<void> _maybeAskBattery() async {
+    if (_askedBattery) return;
+    _askedBattery = true;
+    try {
+      if (!Platform.isAndroid) return;
+      final p = await SharedPreferences.getInstance();
+      if (p.getBool(_kBgAsked) ?? false) return;
+      if (await Power.ignoringBattery()) return;
+      await p.setBool(_kBgAsked, true);
+      // 等首帧那点动画过去，别跟启动抢镜头。
+      await Future.delayed(const Duration(milliseconds: 1200));
+      await Power.requestIgnore();
+    } catch (_) {
+      // 弹不出来就算了，设置页那一行还在
+    }
   }
 
   Future<void> _handleDm(Map<String, dynamic> dm) async {
