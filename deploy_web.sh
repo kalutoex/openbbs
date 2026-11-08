@@ -32,6 +32,40 @@ rm -f "$WEB"/canvaskit/skwasm*.js "$WEB"/canvaskit/skwasm*.wasm \
       "$WEB"/canvaskit/wimp*.js "$WEB"/canvaskit/wimp*.wasm \
       "$WEB"/canvaskit/*.symbols
 
+# 字体文件名固定（MaterialIcons-Regular.otf），内容却每版都变。浏览器按名字缓存，
+# 名字不变就一年不来问，新代码用到的图标在老字体里没有字形，页面上是白块一块——
+# 「web 端有几个图标刷不出来」就是它。把内容指纹塞进文件名，URL 一变旧缓存自然失效。
+# FontManifest.json 指向改名后的文件，它本身走 no-cache（见 server/app/main.py）。
+python3 - "$WEB" <<'PY'
+import hashlib, json, os, re, sys
+
+web = sys.argv[1]
+manp = os.path.join(web, 'assets', 'FontManifest.json')
+if os.path.isfile(manp):
+    man = json.load(open(manp, encoding='utf-8'))
+    keep = set()
+    for fam in man:
+        for f in fam.get('fonts', []):
+            rel = f.get('asset') or ''
+            src = os.path.join(web, 'assets', rel)
+            if not os.path.isfile(src):
+                continue
+            h = hashlib.sha256(open(src, 'rb').read()).hexdigest()[:8]
+            root, ext = os.path.splitext(rel)
+            root = re.sub(r'\.[0-9a-f]{8}$', '', root)
+            new = f'{root}.{h}{ext}'
+            if new != rel:
+                os.replace(src, os.path.join(web, 'assets', new))
+                f['asset'] = new
+            keep.add(os.path.basename(new))
+    json.dump(man, open(manp, 'w', encoding='utf-8'), separators=(',', ':'))
+    # 上一版留下的带指纹字体，没人引用了，顺手清掉。
+    fdir = os.path.join(web, 'assets', 'fonts')
+    for name in os.listdir(fdir) if os.path.isdir(fdir) else []:
+        if re.search(r'\.[0-9a-f]{8}\.(otf|ttf)$', name) and name not in keep:
+            os.remove(os.path.join(fdir, name))
+PY
+
 # 自毁 SW：安装即接管，激活时清空所有缓存并注销自己。
 cat > "$WEB"/flutter_service_worker.js <<'SW'
 self.addEventListener('install', function (e) { self.skipWaiting(); });
