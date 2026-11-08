@@ -22,6 +22,9 @@ class SysNotify {
       // release 里可能被剥掉，剥掉之后 initialize 直接失败，每条通知都
       // 静默丢掉——表面上看就是「消息收到了，通知栏什么都没有」。
       android: AndroidInitializationSettings('ic_notify'),
+      // iOS 走这条：弹窗、角标、声音都在首次 init 时一次问完，
+      // 之后 ask() 只是复查，不会二次弹系统对话框。
+      iOS: DarwinInitializationSettings(),
     );
     // App 是被通知点开的这一种情况，冷启动时补一次跳转。
     final launch = await _p.getNotificationAppLaunchDetails();
@@ -51,6 +54,14 @@ class SysNotify {
 
   /// Android 13 起要问，问过就不再弹窗。
   static Future<bool> ask() async {
+    final ios = _p
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    if (ios != null) {
+      return await ios.requestPermissions(alert: true, badge: true, sound: true) ??
+          false;
+    }
     final a = _p
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -61,6 +72,14 @@ class SysNotify {
 
   /// 系统设置里关掉了就是 false，用来在设置页给个提示。
   static Future<bool> granted() async {
+    final ios = _p
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    if (ios != null) {
+      final st = await ios.checkPermissions();
+      return st?.isEnabled ?? false;
+    }
     final a = _p
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -134,7 +153,10 @@ class SysNotify {
         title: title,
         body: body,
         payload: payload,
-        notificationDetails: NotificationDetails(android: details),
+        notificationDetails: NotificationDetails(
+          android: details,
+          iOS: const DarwinNotificationDetails(),
+        ),
       );
       lastError = null;
       return null;
@@ -150,6 +172,19 @@ class SysNotify {
     final out = <String>[];
     out.add('插件就绪: ${_ready ? '是' : '否'}');
     if (lastError != null) out.add('上次失败: $lastError');
+    final ios = _p
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    if (ios != null) {
+      try {
+        final st = await ios.checkPermissions();
+        out.add('系统允许通知: ${st?.isEnabled ?? false}');
+      } catch (e) {
+        out.add('系统允许通知: 查询失败 $e');
+      }
+      return out;
+    }
     final a = _p
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin

@@ -4,6 +4,11 @@
 <dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>拍一张照片，用在帖子里或者发给对方。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
