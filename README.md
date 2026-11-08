@@ -1,41 +1,142 @@
+<div align="center">
+
 # OpenBBS
 
-一个能自己部署的轻论坛。服务端 FastAPI + SQLite，客户端 Flutter（Android / Windows / Web）。
+**一个能自己部署的轻论坛 —— 服务端 FastAPI + SQLite，客户端 Flutter，一套代码出 Android / Windows / Web。**
 
-## 自己开一座
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+[![Server](https://img.shields.io/badge/server-FastAPI%20%2B%20SQLite-0b7285)](server)
+[![Client](https://img.shields.io/badge/client-Flutter-02569B?logo=flutter&logoColor=white)](lib)
+[![Version](https://img.shields.io/badge/version-1.1.1-2f9e44)](pubspec.yaml)
+
+<img src="docs/screenshots/overview.png" width="860" alt="OpenBBS：首页信息流、帖子详情、个人中心" />
+
+</div>
+
+## 这是什么
+
+一个给少数人用的论坛。发帖、评论、私聊、传文件，够用就行。
+
+服务端只有一层：FastAPI 接请求，SQLite 存数据，文件落本地目录。没有 Redis，没有消息队列，没有对象存储。整站是一个目录加一个数据库文件，拷走就能搬，`tar` 一下就能备份。
+
+客户端是 Flutter 写的，安卓、Windows、网页共用一套代码 —— 手机装 APK，电脑开桌面端，别人临时想看就发个网址。
+
+## 功能
+
+**讨论**
+- 帖子支持正文 + 多图（九宫格展开，点开看大图）
+- 评论、回复、点赞、收藏、关注
+- 浏览历史、站内搜索
+- 草稿本地保存，切换页面不丢
+
+**私聊与消息**
+- 一对一私聊，支持多图
+- 未读红点、消息列表按时间排
+
+**云盘**
+- 每用户 5 GB 配额，上传的图片和附件都走这里
+- 回收站，误删能捞回来；管理员可彻底删除
+- 占用进度条在「我的」页直接看
+
+**管理**
+- 站点配置、用户管理、内容审核、黑名单
+- 一键备份 / 恢复脚本，附校验脚本（大小、表数量、最新一条 id）
+- 升级检查：`check_update.sh` 对比版本，客户端里能看到新版本提示
+
+**接入**
+- 网页版免安装，发个网址就能看
+- `server/BOT_API.md`：给机器人留的接口，脚本和 bot 可以直接发帖、读帖
+
+## 快速开始
+
+### 一条命令起站
+
+```bash
+git clone https://github.com/kalutoex/openbbs.git
+cd openbbs/server
+./install.sh      # 交互问答：站名、端口、访问地址
+./run.sh          # 起站，默认 http://127.0.0.1:8092
+```
+
+`install.sh` 做四件事：查依赖 → 写 `config/site.json` → 建 venv 装依赖 → 建库并生成管理码，最后把下一步该干什么打印出来。重复跑不会覆盖已经填好的值。
+
+非交互也行：
+
+```bash
+./install.sh --name 我的站 --port 8092 --url https://bbs.example.com --yes
+```
+
+### Docker
 
 ```bash
 cd server
-./install.sh     # 检依赖、写配置、建库、打印管理码
-./run.sh         # 起站
+./install.sh --docker --name 我的站 --port 8092 --url https://bbs.example.com
+docker compose up -d --build
+docker compose logs -f
 ```
 
-十分钟，详见 [docs/DEPLOY.md](docs/DEPLOY.md)。配置全在 `server/config/site.json`，
-每一项见 [docs/CONFIG.md](docs/CONFIG.md)。
-
-| 日常 | 命令 |
-|---|---|
-| 起 / 停 | `./run.sh` / `./run.sh --stop` |
-| 立刻备份 | `./backup.sh`（建议挂 cron，默认留 30 份） |
-| 从备份恢复 | `./restore.sh data/backups/<文件>.tar.gz` |
-| 看有没有新版本 | `./check_update.sh`（只提示，不自动升） |
-| 容器跑 | `./install.sh --docker && docker compose up -d --build` |
-
-改端口、上证书、接主站，都只改 `site.json` 的 `site` / `server` 两段，重启生效。
+默认 host 网络，端口由 `config/site.json` 的 `server.port` 决定。IPv6 也能直接用，想套反向代理看 [docs/DEPLOY.md](docs/DEPLOY.md)。
 
 ## 客户端
 
 ```bash
 flutter pub get
-flutter build apk --release
-flutter run -d windows
+
+flutter build apk --release        # Android
+flutter run -d windows             # Windows
+flutter build web --release        # Web
 ```
 
-打包后可用 `./release.sh stable` 放进服务端的更新通道。测试：
+指向自己的站有两种方式：
+
+- **运行时**：App 内「我的 → 站点」，填地址即可，支持多站点切换和备用通道
+- **编译时**：`--dart-define=SERVERS=https://bbs.example.com,https://backup.example.com`（逗号分隔，第一个为主通道）
+
+## 数据与备份
+
+数据只有三样东西：`server/data/` 下的 SQLite 库、`server/uploads/` 下的文件、`config/site.json`。
 
 ```bash
-flutter test
-flutter analyze
+cd server
+./backup.sh           # 每天跑一次足够，保留最近 30 份
+./check_update.sh     # 确认备份文件没被截断
+./restore.sh <备份>    # 恢复到空目录再起个临时端口验一遍
 ```
 
-各段设计与落地细节在 [docs/PLAN-5-STEPS.md](docs/PLAN-5-STEPS.md)。
+备份没演练过就不算备份 —— 这条写在脚本注释里，也写在这里。
+
+## 项目结构
+
+```
+openbbs/
+├── lib/                  Flutter 客户端
+│   ├── pages/            页面：首页、帖子、私聊、云盘、设置……
+│   ├── store.dart        状态与数据层
+│   └── api.dart          HTTP 客户端
+├── server/               FastAPI 服务端
+│   ├── app/              路由、鉴权、数据库、文件处理
+│   ├── web/              编译好的网页版
+│   ├── install.sh        一键部署
+│   ├── run.sh            起站
+│   ├── backup.sh         备份
+│   ├── restore.sh        恢复
+│   └── docker-compose.yml
+└── docs/                 部署、配置、项目说明
+```
+
+## 文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | 从空机器到能访问，含证书和反向代理 |
+| [docs/CONFIG.md](docs/CONFIG.md) | `site.json` 每个配置项的含义 |
+| [docs/PROJECT-OVERVIEW.md](docs/PROJECT-OVERVIEW.md) | 项目结构与数据流 |
+| [server/BOT_API.md](server/BOT_API.md) | 机器人 / 脚本接入接口 |
+
+## 说明
+
+这个项目最早是自己和几个朋友用，所以接口按需改、偶尔不向后兼容。要拿去开站没问题，但请先跑通备份和恢复再往里放东西。
+
+## 许可
+
+[GPL-3.0](LICENSE)
