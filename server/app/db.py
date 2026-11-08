@@ -7,6 +7,7 @@ App（api.py）用后加的列，两边共用一个库，谁也别去动对方�
 import hashlib
 import json
 import os
+import random
 import re
 import sqlite3
 import time
@@ -125,6 +126,13 @@ CREATE TABLE IF NOT EXISTS dm_state (
   muted       INTEGER NOT NULL DEFAULT 0,
   hidden_upto INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (user_id, thread_id)
+);
+
+-- 单条消息的「我这边删掉」。私信删一条只清自己，对方那边还在。
+CREATE TABLE IF NOT EXISTS dm_msg_del (
+  msg_id INTEGER NOT NULL,
+  uid    INTEGER NOT NULL,
+  PRIMARY KEY (msg_id, uid)
 );
 
 -- 举报：thread_id / reply_id 二选一，handled=0 表示待处理。
@@ -249,6 +257,14 @@ CREATE VIRTUAL TABLE IF NOT EXISTS replies_fts USING fts5(
   body, tokenize='trigram'
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_handle ON users(handle);
+-- 浏览量按人计：同一个人对同一帖最多算 10 次，再多不涨。
+CREATE TABLE IF NOT EXISTS thread_views (
+  thread_id INTEGER NOT NULL,
+  user_id   INTEGER NOT NULL,
+  hits      INTEGER NOT NULL DEFAULT 0,
+  last_at   INTEGER NOT NULL,
+  PRIMARY KEY (thread_id, user_id)
+);
 CREATE INDEX IF NOT EXISTS idx_fr_status ON feature_requests(status, id DESC);
 CREATE INDEX IF NOT EXISTS idx_fr_user ON feature_requests(user_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_replies_parent ON replies(parent_id);
@@ -256,6 +272,17 @@ CREATE INDEX IF NOT EXISTS idx_dm_msg_thread ON dm_messages(thread_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_dm_unread ON dm_messages(to_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_dm_last ON dm_threads(last_id DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;
+-- 写请求的幂等回执：客户端带 X-Request-Id，60 秒内同一个 id 只执行一次，
+-- 重试（超时换入口重发）拿回的是第一次的结果，不会发两条帖。
+-- status=0 表示「已认领、还在跑」。body 存原始响应字节，回放时原样吐回去。
+CREATE TABLE IF NOT EXISTS idem (
+  key        TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  status     INTEGER NOT NULL DEFAULT 0,
+  ctype      TEXT,
+  body       BLOB
+);
+CREATE INDEX IF NOT EXISTS idx_idem_created ON idem(created_at);
 """
 
 # (表, 列, 定义) —— 加列时往这里追加，init() 会自动补，重复执行安全。
@@ -266,6 +293,8 @@ EXTRA_COLUMNS = [
     ("users", "level", "INTEGER NOT NULL DEFAULT 1"),
     ("users", "is_admin", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "uid", "INTEGER"),
+    # 密码版本号：改密码/踢掉所有设备时 +1，旧 token 随之作废。
+    ("users", "pw_ver", "INTEGER NOT NULL DEFAULT 0"),
     ("threads", "view_count", "INTEGER NOT NULL DEFAULT 0"),
     ("threads", "is_good", "INTEGER NOT NULL DEFAULT 0"),
     ("replies", "parent_id", "INTEGER"),
@@ -278,6 +307,8 @@ EXTRA_COLUMNS = [
     ("replies", "floor_no", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "handle", "TEXT"),
     ("users", "cover", "TEXT NOT NULL DEFAULT ''"),
+    # 粉丝/关注列表是否公开。默认公开，本人可在编辑资料里关掉。
+    ("users", "show_follows", "INTEGER NOT NULL DEFAULT 1"),
     # 云盘额度（字节）。NULL = 用全局默认 limits.cloud_quota_mb，VIP 就是改这一列。
     ("users", "quota_bytes", "INTEGER"),
     # 编辑过的帖子记一下时间，界面上标「已编辑」
@@ -285,6 +316,13 @@ EXTRA_COLUMNS = [
     ("replies", "edited_at", "INTEGER"),
     # 置顶：列表里排最前
     ("threads", "is_top", "INTEGER NOT NULL DEFAULT 0"),
+    # 主题色（0–350，跟客户端的色带同一套档位）。同时是身份色：
+    # 气泡、头像圈、楼层都用它，所以必须存在账号上、能被别人读到。
+    ("users", "hue", "INTEGER"),
+    # 撤回：自己发的两分钟内可以收回，正文和图片清掉，双方都显示「已撤回」
+    ("dm_messages", "recalled", "INTEGER NOT NULL DEFAULT 0"),
+    # 楼层撤回：同上，只是楼层留着占位，不删行
+    ("replies", "recalled", "INTEGER NOT NULL DEFAULT 0"),
     # 注册邮箱。老用户是 NULL，不补、不管。
     ("users", "email", "TEXT"),
     ("users", "email_verified", "INTEGER NOT NULL DEFAULT 0"),
@@ -293,6 +331,12 @@ EXTRA_COLUMNS = [
     ("users", "master_uid", "INTEGER"),
     # 老库的黑名单表没有 banned 列，补上（1=封禁，0=解封墓碑）。
     ("blacklist", "banned", "INTEGER NOT NULL DEFAULT 1"),
+    # 私信引用：指回同一会话里的另一条，0 表示不是引用。
+    ("dm_messages", "reply_id", "INTEGER NOT NULL DEFAULT 0"),
+    # 私信附件：和帖子附件同一种结构 [{url,name,size}]
+    ("dm_messages", "files", "TEXT NOT NULL DEFAULT '[]'"),
+    # 云盘文件是谁删的。NULL = 老记录（当时只有主人能删），按主人算。
+    ("user_files", "deleted_by", "INTEGER"),
 ]
 
 # 用户名太长不好看，handle 统一小写、字母数字下划线。
@@ -316,6 +360,22 @@ def unique_handle(c, raw, uid=None):
         if row is None or (uid is not None and row["id"] == uid):
             return cand
     return "%s%d" % (base, os.getpid())
+
+
+def random_hue(c):
+    """给新账号抽一个主题色：0–350 的整数，尽量避开库里已有的颜色。
+
+    色环首尾相接，距离按 min(d, 350-d) 算。先把够远的候选全筛出来再随机挑，
+    人多到塞不下就一步步放宽阈值——随机本来就不保证唯一。
+    """
+    used = [r[0] for r in c.execute("SELECT hue FROM users WHERE hue IS NOT NULL")
+            if isinstance(r[0], int)]
+    for gap in (24, 18, 12, 6):
+        ok = [h for h in range(0, 351)
+              if all(min(abs(h - u), 350 - abs(h - u)) >= gap for u in used)]
+        if ok:
+            return random.choice(ok)
+    return random.randint(0, 350)
 
 
 def conn():
@@ -352,6 +412,17 @@ def init():
                     # 另一个进程（IPv4/IPv6 各一个）同时补了同一列，忽略
                     pass
         c.executescript(LATE_SCHEMA)
+        # 帖子回收站：结构直接照抄 threads，再加「什么时候删的、谁删的」。
+        # 用 CTAS 建而不是手抄字段，以后 threads 加列这里自动跟上。
+        if not c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                         "AND name='thread_trash'").fetchone():
+            c.execute("CREATE TABLE thread_trash AS SELECT * FROM threads WHERE 0")
+            c.execute("ALTER TABLE thread_trash ADD COLUMN deleted_at INTEGER")
+            c.execute("ALTER TABLE thread_trash ADD COLUMN deleted_by INTEGER")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_thread_trash_by "
+                  "ON thread_trash(deleted_by, deleted_at DESC)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_thread_trash_age "
+                  "ON thread_trash(deleted_at)")
         # 云盘账本：老附件补记录，帖子引用过的标公开。幂等。
         backfill_user_files(c)
         # 全文索引落后就整体重建（老库第一次启动会走到这里）。
@@ -487,3 +558,28 @@ def backfill_user_files(c):
         c.commit()
     except sqlite3.OperationalError:
         pass
+
+
+def purge_thread_trash(c, days=7):
+    """清过期的帖子回收站记录，返回删掉的条数。
+
+    帖子被删时，回复、点赞、通知、收藏、历史、搜索索引都已经清过了，
+    所以这里只要把回收站里那行扔掉就行。
+    """
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        days = 7
+    if days < 0:
+        days = 0
+    cutoff = int(time.time()) - days * 86400
+    rows = c.execute("SELECT id FROM thread_trash WHERE deleted_at <= ?",
+                     (cutoff,)).fetchall()
+    if not rows:
+        return 0
+    ids = [r["id"] for r in rows]
+    for i in range(0, len(ids), 400):
+        chunk = ids[i:i + 400]
+        c.execute("DELETE FROM thread_trash WHERE id IN (%s)" % ",".join("?" * len(chunk)), chunk)
+    c.commit()
+    return len(ids)

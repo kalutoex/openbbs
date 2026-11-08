@@ -130,10 +130,14 @@ def _site_id() -> str:
     return str(config.get("site", "site_id") or "")
 
 
-def make_token(uid: int) -> str:
-    """签发。没有 exp —— C3 定的不过期。"""
+def make_token(uid: int, ver: int = 0) -> str:
+    """签发。没有 exp —— C3 定的不过期。
+
+    ver 是密码版本号（users.pw_ver）。改密码/退出所有设备时把它加一，
+    老 token 里带的还是旧值，对不上就作废——没有 exp 也能踢人。
+    """
     header = {"alg": "EdDSA", "typ": "JWT"}
-    payload = {"uid": int(uid), "iat": int(time.time())}
+    payload = {"uid": int(uid), "iat": int(time.time()), "v": int(ver)}
     sid = _site_id()
     if sid:
         payload["iss"] = sid
@@ -147,8 +151,8 @@ def make_token(uid: int) -> str:
     return "%s.%s.%s" % (h, p, _b64e(sig))
 
 
-def read_token(tok: str, pub_pem: str = ""):
-    """验签取 uid。JWT 优先，认不出来再按老格式试一遍。
+def read_claims(tok: str, pub_pem: str = ""):
+    """验签通过返回 payload（uid/v/iat/iss），否则 None。
 
     pub_pem 留给小站：传主站 /meta 给的公钥即可离线验签。
     不传就按本机角色自动选（见 verify_pem）。
@@ -171,14 +175,23 @@ def read_token(tok: str, pub_pem: str = ""):
                 try:
                     pub.verify(sig, msg)
                     payload = json.loads(_b64d(p))
-                    uid = payload.get("uid")
-                    return int(uid) if uid is not None else None
+                    if payload.get("uid") is None:
+                        return None
+                    payload["uid"] = int(payload["uid"])
+                    return payload
                 except Exception:
                     continue
             return None
         except Exception:
             return None
-    return _read_legacy_token(tok)
+    uid = _read_legacy_token(tok)
+    # 老格式没有版本号：按 0 算。真改过密码（pw_ver>0）它自然就废了。
+    return {"uid": uid, "v": 0} if uid is not None else None
+
+
+def read_token(tok: str, pub_pem: str = ""):
+    claims = read_claims(tok, pub_pem)
+    return claims["uid"] if claims else None
 
 
 # ---------------------------------------------------------------- 老格式（兼容用）

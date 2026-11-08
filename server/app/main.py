@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """论坛主程序。服务端渲染，不依赖 Node。"""
-import asyncio, math, os, time
+import asyncio, hashlib, math, os, sqlite3, time
 from fastapi import FastAPI, Request, Form, Depends, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import api, auth, blacklist, config, db, files as filesvc, sites, thumbs
+from . import api, auth, blacklist, config, db, files as filesvc, sites, thumbs, words
 
 ROOT = config.ROOT
 PER_PAGE = config.get("limits", "per_page", 20)
@@ -39,19 +39,64 @@ tpl = Jinja2Templates(directory=TEMPLATE_DIR)
 # Flutter 的 service worker 会自己管版本，但入口和 sw 本身必须每次回源。
 _NOCACHE = {"/", "/index.html", "/flutter_service_worker.js", "/version.json",
             "/flutter_bootstrap.js", "/manifest.json", "/main.dart.js"}
-_IMMUTABLE_PREFIX = ("/assets/", "/canvaskit/")
+# 带指纹（文件名里含 hash）的才配 immutable。Flutter 的 assets 和 canvaskit
+# 文件名是固定的，之前按 immutable 发，一年内浏览器都不来问一句。结果发版换了
+# 字体子集，新代码用到的图标在老字体里没有字形，界面上就是一块空白——网页端
+# 「有的图标显示不出来」就是这么来的。这类一律 no-cache + ETag，命中就是 304。
+_NOFPRINT_PREFIX = ("/assets/", "/canvaskit/")
+_IMMUTABLE_PREFIX = ()
 _IMMUTABLE_FILE = set()
 
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 # 跨源放行名单写在配置里（http.cors_origins）。
 # 网页和接口同域名不同端口算跨源，不放行的话页面调不动接口。
+# 站点自己的入口一律放行：网页版换入口（v6 直连 ↔ v4 中转）之后，
+# 页面在 A 域、接口和图片在 B 域，不回跨源头的话浏览器会把回应整个挡掉，
+# 表现是「接口全挂」「图片一片灰」。配的名单是额外加的，不是替代。
+_CORS_SELF = []
+for _e in (config.get("site", "endpoints") or []):
+    _u = _e if isinstance(_e, str) else (_e or {}).get("url") if isinstance(_e, dict) else ""
+    _u = str(_u or "").strip().rstrip("/")
+    if _u and _u not in _CORS_SELF:
+        _CORS_SELF.append(_u)
+_b = str(config.get("site", "base_url") or "").strip().rstrip("/")
+if _b and _b not in _CORS_SELF:
+    _CORS_SELF.append(_b)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config.get("http", "cors_origins") or [],
+    allow_origins=_CORS_SELF + list(config.get("http", "cors_origins") or []),
     allow_origin_regex=config.get("http", "cors_origin_regex") or None,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# 网页端的 main.dart.js 将近 4MB、canvaskit.wasm 7MB，不压缩传得太慢。
+# 只在客户端接受 gzip 且内容超过 1KB 时才压，图片这类本来就不再压的跳过。
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=1024,
+    # 附件多半是已经压过的包，再 gzip 一遍纯费 CPU，还会把流式下载拖慢。
+    exclude_content_types=(
+        "application/grpc",
+        "application/gzip",
+        "application/x-gzip",
+        "application/zip",
+        "application/x-7z-compressed",
+        "application/x-rar-compressed",
+        "application/x-tar",
+        "application/octet-stream",
+        "application/vnd.android.package-archive",
+        "application/pdf",
+        "audio/*",
+        "font/woff",
+        "font/woff2",
+        "image/*",
+        "text/event-stream",
+        "video/*",
+    ),
 )
 
 
@@ -94,6 +139,113 @@ async def body_limit(request: Request, call_next):
     return await call_next(request)
 
 
+# ---------------------------------------------------------------- 写请求幂等
+#
+# 客户端的写操作超时后不再重发（重发会变成发两条帖、上传两份）。根治靠这层：
+# 每个写请求带一个客户端生成的 X-Request-Id，同一个人同一个 id 在 60 秒内
+# 只真正执行一次，后面的重试直接拿第一次的响应回放。
+#
+# 上传（/api/file*）不掺和：它自己按 offset 续传，重复发是无害的，而且请求体
+# 是流式的，缓冲它没意义。老网页的表单 POST 也带不了这个头，走原路。
+IDEM_WINDOW = 60
+_IDEM_SKIP = ("/api/file", "/api/upload")
+
+
+def _idem_key(rid: str, auth: str) -> str:
+    # 带上 Authorization：别人的 id 撞上来也读不到你的结果。
+    return hashlib.sha256((rid + "|" + auth).encode()).hexdigest()[:32]
+
+
+def _idem_claim(key: str) -> bool:
+    """认领这个 id。True = 归我干；False = 已经有人干过或正在干。"""
+    c = db.conn()
+    try:
+        now = int(time.time())
+        c.execute("DELETE FROM idem WHERE created_at < ?", (now - IDEM_WINDOW,))
+        try:
+            c.execute("INSERT INTO idem(key, created_at, status) VALUES(?,?,0)", (key, now))
+            c.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+    finally:
+        c.close()
+
+
+def _idem_get(key: str):
+    c = db.conn()
+    try:
+        return c.execute("SELECT status, ctype, body FROM idem WHERE key=?", (key,)).fetchone()
+    finally:
+        c.close()
+
+
+def _idem_finish(key: str, status: int, ctype: str, body: bytes):
+    c = db.conn()
+    try:
+        c.execute("UPDATE idem SET status=?, ctype=?, body=? WHERE key=?",
+                  (status, ctype, body, key))
+        c.commit()
+    finally:
+        c.close()
+
+
+def _idem_drop(key: str):
+    # 服务端自己出错了（5xx）：别把这份错误缓存 60 秒，让人能重试。
+    c = db.conn()
+    try:
+        c.execute("DELETE FROM idem WHERE key=?", (key,))
+        c.commit()
+    finally:
+        c.close()
+
+
+def _idem_replay(row):
+    return Response(content=row["body"] or b"", status_code=row["status"],
+                    media_type=row["ctype"] or "application/json")
+
+
+@app.middleware("http")
+async def idempotent(request: Request, call_next):
+    rid = (request.headers.get("x-request-id") or "").strip()
+    if (not rid or request.method not in ("POST", "PUT", "PATCH", "DELETE")
+            or not 8 <= len(rid) <= 64
+            or not all(ch.isalnum() or ch in "-_" for ch in rid)):
+        return await call_next(request)
+    path = request.url.path
+    if any(path.startswith(p) for p in _IDEM_SKIP):
+        return await call_next(request)
+
+    key = _idem_key(rid, request.headers.get("authorization", ""))
+    if not _idem_claim(key):
+        # 有人在跑（或已经跑完）：等它的结果，别自己再来一遍。
+        for _ in range(50):  # 最多 5 秒
+            row = _idem_get(key)
+            if row is None:
+                break  # 那条记录被清掉了，那就自己干
+            if row["status"]:
+                return _idem_replay(row)
+            await asyncio.sleep(0.1)
+        else:
+            # 认领了却一直没交卷，多半是那个进程死了。接管过来。
+            _idem_drop(key)
+            _idem_claim(key)
+
+    resp = await call_next(request)
+    if resp.status_code >= 500:
+        _idem_drop(key)
+        return resp
+    body = b""
+    async for chunk in resp.body_iterator:
+        body += chunk.encode() if isinstance(chunk, str) else chunk
+    ctype = resp.headers.get("content-type")
+    _idem_finish(key, resp.status_code, ctype, body)
+    headers = {k: v for k, v in resp.headers.items()
+               if k.lower() not in ("content-length", "content-encoding", "content-type")}
+    return Response(content=body, status_code=resp.status_code, headers=headers,
+                    media_type=ctype)
+
+
 @app.middleware("http")
 async def cache_headers(request: Request, call_next):
     resp = await call_next(request)
@@ -103,11 +255,39 @@ async def cache_headers(request: Request, call_next):
     elif path == "/.well-known/bbs.json":
         # 站点自述变动不频繁，给客户端 5 分钟缓存，避免每次进站都问。
         resp.headers["Cache-Control"] = "public, max-age=300"
+    elif path.startswith(_NOFPRINT_PREFIX):
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
     elif path in _IMMUTABLE_FILE or path.startswith(_IMMUTABLE_PREFIX):
         resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     elif path.startswith("/img/"):
         resp.headers["Cache-Control"] = "public, max-age=2592000"
     return resp
+
+
+# 预压缩：deploy_web.sh 会给 JS / WASM 各留一份 .gz，这里直接发压缩好的那份。
+# 不这么做的话，每个新访客都让服务端现场压 4MB 的 JS 和 7MB 的 wasm，一次约一秒 CPU。
+_GZ_TYPES = {".js": "application/javascript", ".wasm": "application/wasm"}
+
+
+@app.middleware("http")
+async def static_gz(request: Request, call_next):
+    if request.method in ("GET", "HEAD") and "gzip" in request.headers.get("accept-encoding", ""):
+        path = os.path.normpath(request.url.path)
+        ext = os.path.splitext(path)[1]
+        if ext in _GZ_TYPES:
+            fp = os.path.join(_WEB_DIR, path.lstrip("/"))
+            if os.path.isfile(fp + ".gz"):
+                resp = FileResponse(fp + ".gz", media_type=_GZ_TYPES[ext])
+                resp.headers["Content-Encoding"] = "gzip"
+                resp.headers["Vary"] = "Accept-Encoding"
+                resp.headers["Cache-Control"] = (
+                    "public, max-age=31536000, immutable"
+                    if path in _IMMUTABLE_FILE
+                    or (path.startswith(_IMMUTABLE_PREFIX) and _IMMUTABLE_PREFIX)
+                    else "no-cache, must-revalidate"
+                )
+                return resp
+    return await call_next(request)
 
 
 def ts(v):
@@ -116,6 +296,7 @@ def ts(v):
 
 tpl.env.filters["ts"] = ts
 db.init()
+words.ensure_file()
 api.seed()
 app.include_router(api.router)
 
@@ -147,8 +328,13 @@ def get_conn():
 
 def current_user(request: Request, c=Depends(get_conn)):
     tok = request.cookies.get("sid")
-    uid = auth.read_token(tok) if tok else None
+    claims = auth.read_claims(tok) if tok else None
+    uid = claims["uid"] if claims else None
     if not uid:
+        return None
+    # 改过密码之后，旧 cookie 里的版本落后，按未登录处理。
+    row = c.execute("SELECT pw_ver FROM users WHERE id=?", (uid,)).fetchone()
+    if row is not None and int(row["pw_ver"] or 0) > int(claims.get("v") or 0):
         return None
     # 封号在网页版也算没登录：接口层挡住了，界面别留个能点的壳。
     if blacklist.is_banned(c, uid):
@@ -241,14 +427,17 @@ def login_get(request: Request, nxt: str = "/", user=Depends(current_user)):
 @app.post("/login")
 def login_post(request: Request, name: str = Form(""), password: str = Form(""), nxt: str = Form("/"),
                c=Depends(get_conn)):
-    row = c.execute("SELECT * FROM users WHERE name=?", (name.strip(),)).fetchone()
+    who = name.strip()
+    row = c.execute(
+        "SELECT * FROM users WHERE name=? OR (email IS NOT NULL AND lower(email)=lower(?))",
+        (who, who)).fetchone()
     if not row or not auth.check_pw(password, row["pw"]):
         return tpl.TemplateResponse(request, "login.html",
                                     {"user": None, "err": "用户名或密码不对", "nxt": nxt, "name": name},
                                     status_code=400)
     resp = RedirectResponse(nxt or "/classic", status_code=303)
-    resp.set_cookie("sid", auth.make_token(row["id"]), httponly=True, samesite="lax",
-                    max_age=86400 * 30, path="/")
+    resp.set_cookie("sid", auth.make_token(row["id"], row["pw_ver"] or 0), httponly=True,
+                    samesite="lax", max_age=86400 * 30, path="/")
     return resp
 
 
@@ -272,8 +461,8 @@ def register_post(request: Request, name: str = Form(""), password: str = Form("
         return tpl.TemplateResponse(request, "register.html",
                                     {"user": None, "err": err, "name": name}, status_code=400)
     now = int(time.time())
-    cur = c.execute("INSERT INTO users(name, pw, created_at) VALUES(?,?,?)",
-                    (name, auth.hash_pw(password), now))
+    cur = c.execute("INSERT INTO users(name, pw, created_at, hue) VALUES(?,?,?,?)",
+                    (name, auth.hash_pw(password), now, db.random_hue(c)))
     c.commit()
     resp = RedirectResponse("/classic", status_code=303)
     resp.set_cookie("sid", auth.make_token(cur.lastrowid), httponly=True, samesite="lax",
@@ -306,6 +495,12 @@ async def _trash_loop():
             c = db.conn()
             try:
                 n = filesvc.purge_trash(c)
+                try:
+                    days = int(config.get("limits", "trash_days",
+                                          config.get("limits", "cloud_trash_days", 7)) or 7)
+                except (TypeError, ValueError):
+                    days = 7
+                n += db.purge_thread_trash(c, days)
             finally:
                 c.close()
             if n:
@@ -317,4 +512,11 @@ async def _trash_loop():
 
 @app.on_event("startup")
 async def _start_trash_loop():
+    # 上次没传完的分片，留一天就够了。
+    try:
+        n = filesvc.sweep_parts()
+        if n:
+            print("[cloud] 清了 %d 个残片" % n, flush=True)
+    except Exception as e:  # noqa: BLE001
+        print("[cloud] 清残片出错：%r" % (e,), flush=True)
     asyncio.create_task(_trash_loop())

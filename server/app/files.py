@@ -94,6 +94,64 @@ async def ingest(upload, limit):
             os.unlink(tmp)
 
 
+# ------------------------------------------------------------ 分片续传
+
+def parts_dir():
+    """分片暂存区。跟正式文件不同目录，serve_file 永远扫不到。"""
+    d = os.path.join(root(), ".parts")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def part_path(user_id, upload_id):
+    # upload_id 只允许字母数字，路由里已经掐过一遍，这里再兜一层，
+    # 免得哪天有人从别处调进来，拼出 ../ 这种东西。
+    safe = "".join(ch for ch in str(upload_id) if ch.isalnum())
+    return os.path.join(parts_dir(), f"{int(user_id)}-{safe}.part")
+
+
+def part_size(user_id, upload_id):
+    p = part_path(user_id, upload_id)
+    return os.path.getsize(p) if os.path.exists(p) else 0
+
+
+def drop_part(user_id, upload_id):
+    p = part_path(user_id, upload_id)
+    try:
+        os.unlink(p)
+    except FileNotFoundError:
+        pass
+
+
+def digest_of(path):
+    """整份文件重新算一遍 sha256。分片传的时候没法边收边算，
+    收完读一遍盘，1GB 也就几秒。"""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while True:
+            b = f.read(CHUNK * 4)
+            if not b:
+                break
+            h.update(b)
+    return h.hexdigest()[:20]
+
+
+def sweep_parts(hours=24):
+    """清掉没传完的残片。服务启动时跑一次就够。"""
+    d = parts_dir()
+    cut = time.time() - hours * 3600
+    n = 0
+    for name in os.listdir(d):
+        p = os.path.join(d, name)
+        try:
+            if os.path.isfile(p) and os.path.getmtime(p) < cut:
+                os.unlink(p)
+                n += 1
+        except OSError:
+            pass
+    return n
+
+
 # ---------------------------------------------------------------- 云盘额度
 
 def quota_of(user):
@@ -112,10 +170,17 @@ def quota_of(user):
 
 
 def used(c, user_id):
-    """已占用字节。回收站里的不算——删掉立刻还空间。"""
+    """已占用字节。
+
+    回收站里的也算——删进回收站不还空间，彻底删除才还。
+    唯一的例外是管理员删掉的：东西在管理员回收站里，原主人看不到也拿不回来，
+    再让他顶着这份占用不合理。
+    """
     row = c.execute(
         "SELECT COALESCE(SUM(size),0) AS s FROM user_files "
-        "WHERE user_id=? AND deleted_at IS NULL", (user_id,)).fetchone()
+        "WHERE user_id=? AND (deleted_at IS NULL "
+        "OR deleted_by IS NULL OR deleted_by=user_id)",
+        (user_id,)).fetchone()
     return int(row["s"])
 
 
@@ -155,6 +220,35 @@ def quota(c, user_id, since):
 
 # ---------------------------------------------------------------- 回收站清理
 
+def purge_one(c, user_id, fid):
+    """彻底删掉回收站里的一条。物理文件没人用了一起删。
+
+    user_id 传 None 表示不按主人过滤——管理员回收站清东西走这条。
+    返回 False 表示没这条。
+    """
+    if user_id is None:
+        r = c.execute("SELECT digest, size FROM user_files WHERE id=?",
+                      (fid,)).fetchone()
+    else:
+        r = c.execute(
+            "SELECT digest, size FROM user_files "
+            "WHERE id=? AND user_id=? AND deleted_at IS NOT NULL",
+            (fid, user_id)).fetchone()
+    if not r:
+        return False
+    c.execute("DELETE FROM user_files WHERE id=?", (fid,))
+    c.commit()
+    d = r["digest"]
+    if not c.execute("SELECT 1 FROM user_files WHERE digest=? LIMIT 1", (d,)).fetchone():
+        c.execute("DELETE FROM files WHERE digest=?", (d,))
+        c.commit()
+        try:
+            os.unlink(path_of(d))
+        except OSError:
+            pass
+    return True
+
+
 def purge_trash(c):
     """清回收站，返回删掉的记录条数。
 
@@ -179,7 +273,8 @@ def purge_trash(c):
             continue
         rows = c.execute(
             "SELECT id, size FROM user_files WHERE user_id=? AND deleted_at IS NOT NULL "
-            "ORDER BY deleted_at", (u["id"],)).fetchall()
+            "AND COALESCE(deleted_by, user_id)=? ORDER BY deleted_at",
+            (u["id"], u["id"])).fetchall()
         total = sum(int(r["size"]) for r in rows)
         for r in rows:
             if total <= q:

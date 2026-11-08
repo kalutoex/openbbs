@@ -1,0 +1,34 @@
+# OpenBBS 服务端。默认 host 网络：端口由 config/site.json 的 server.port 说了算，
+# 不用改这里的映射，IPv6 也能直接用。
+#
+#   ./install.sh --docker --name 我的站 --port 8080 --url https://bbs.example.com
+#   docker compose up -d --build
+#   docker compose logs -f
+#
+# 不想用 host 网络（比如 Docker Desktop）就把 network_mode 换成 ports 映射，
+# 并把下面注释掉的那行放开，注意 ports 两边的端口要跟 site.json 对上。
+
+services:
+  openbbs:
+    build: .
+    image: openbbs:latest
+    container_name: openbbs
+    restart: unless-stopped
+    network_mode: host
+    # ports:
+    #   - "8080:8080"
+    environment:
+      TZ: Asia/Shanghai
+      OPENBBS_CONFIG: /app/config/site.json
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+      # 要网页版就放开，把构建好的 Flutter web 放到 ./web
+      # - ./web:/app/web:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$$(python -c 'import sys;sys.path.insert(0,\"/app\");from app import config;print(config.get(\"server\",\"port\",8080))')/api/meta > /dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

@@ -1,4 +1,4 @@
-# 时间線（shijianxian_app）
+# OpenBBS
 
 一个能自己部署的轻论坛。服务端 FastAPI + SQLite，客户端 Flutter（Android / Windows / Web）。
 

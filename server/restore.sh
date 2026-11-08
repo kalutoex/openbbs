@@ -4,6 +4,7 @@
 #   ./restore.sh data/backups/forum_backups_20260101_0400.tar.gz
 #   ./restore.sh <文件> --yes        不问直接来
 #   ./restore.sh <文件> --db-only    只还数据库，不动 uploads
+#   ./restore.sh --from-mirror --yes 从 backup.mirror_dir 里挑最新一份
 #
 # 流程：解到临时目录 → 验快照 → 现有数据打包留底 → 停站 → 覆盖 → 起站。
 # 中途任何一步失败都会在覆盖前退出，旧数据不会被写坏。
@@ -19,16 +20,33 @@ die() { printf '✗ %s\n' "$*" >&2; exit 1; }
 SRC=""
 ASSUME=0
 DB_ONLY=0
+FROM_MIRROR=0
 for a in "$@"; do
   case "$a" in
     --yes|-y) ASSUME=1 ;;
     --db-only) DB_ONLY=1 ;;
+    --from-mirror) FROM_MIRROR=1 ;;
     -*) die "不认识的参数：$a" ;;
     *) SRC="$a" ;;
   esac
 done
 
-[ -n "$SRC" ] || die "用法：./restore.sh <备份文件> [--yes] [--db-only]"
+if [ "$FROM_MIRROR" = "1" ]; then
+  # 镜像里挑最新的一份。本地那份坏了才走这条路，所以别问选哪份。
+  MIRROR="$(cfg backup mirror_dir)"
+  [ -n "$MIRROR" ] || die "没配 backup.mirror_dir，不知道镜像在哪"
+  [ -d "$MIRROR" ] || die "镜像目录不存在：$MIRROR"
+  SRC=$(ls -1t "$MIRROR"/forum_backups_*.tar.gz 2>/dev/null | head -1)
+  if [ -z "$SRC" ]; then
+    say "镜像目录 $MIRROR 里没有 forum_backups_*.tar.gz，实际有的是："
+    ls -1 "$MIRROR" 2>/dev/null | sed 's/^/  /'
+    exit 1
+  fi
+  say "== 来源：镜像 $SRC"
+elif [ -z "$SRC" ]; then
+  die "用法：./restore.sh <备份文件> [--yes] [--db-only]，或 ./restore.sh --from-mirror [--yes]"
+fi
+
 [ -f "$SRC" ] || die "找不到文件：$SRC"
 
 DATA="$(cfg paths data "$ROOT/data")"

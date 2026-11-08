@@ -1,0 +1,51 @@
+#!/bin/bash
+# OpenBBS 每日备份：SQLite 走 .backup（WAL 安全），uploads 打包，只留最近 N 份。
+#
+#   ./backup.sh                        备份到 data/backups，留 30 份
+#   OPENBBS_KEEP=7 ./backup.sh         临时改保留份数
+#
+# 目录和份数默认读 config/site.json 的 backup.dir / backup.keep，环境变量优先。
+# 建议挂 cron：0 4 * * * /path/to/server/backup.sh
+set -u
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT" || exit 1
+. "$ROOT/_cfg.sh"
+
+DEST="${OPENBBS_BACKUP_DIR:-$(cfg backup dir "$ROOT/data/backups")}"
+KEEP="${OPENBBS_BACKUP_KEEP:-${OPENBBS_KEEP:-$(cfg backup keep 30)}}"
+LOG="${OPENBBS_LOG_DIR:-$(cfg paths logs "$ROOT/logs")}/backup.log"
+DB="${OPENBBS_DB:-$(cfg paths db "$ROOT/data/forum.db")}"
+UP="${OPENBBS_UPLOAD_DIR:-$(cfg paths uploads "$ROOT/data/uploads")}"
+STAMP=$(date +%Y%m%d_%H%M%S)
+
+PY="$(command -v python3)"
+[ -n "$PY" ] || { echo "没有 python3，备份做不了"; exit 1; }
+
+mkdir -p "$DEST" "$(dirname "$LOG")"
+
+exec >> "$LOG" 2>&1
+echo "== $(date '+%F %T') 开始"
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+if ! "$PY" "$ROOT/db_snapshot.py" "$DB" "$tmp/forum.db"; then
+  echo "数据库备份失败"; exit 1
+fi
+
+if ! "$PY" "$ROOT/db_snapshot.py" --check "$tmp/forum.db"; then
+  echo "快照自检失败，本次不写备份"; exit 1
+fi
+
+if [ -d "$UP" ]; then
+  tar -czf "$tmp/uploads.tgz" -C "$(dirname "$UP")" "$(basename "$UP")" || echo "上传目录打包失败（继续）"
+fi
+
+tar -czf "$DEST/forum_backups_$STAMP.tar.gz" -C "$tmp" . || { echo "打包失败"; exit 1; }
+echo "写入 $DEST/forum_backups_$STAMP.tar.gz $(du -h "$DEST/forum_backups_$STAMP.tar.gz" | cut -f1)"
+
+ls -1t "$DEST"/forum_backups_*.tar.gz 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r f; do
+  rm -f "$f"; echo "清理旧备份 $(basename "$f")"
+done
+echo "== 完成"

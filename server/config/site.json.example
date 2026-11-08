@@ -1,123 +1,57 @@
 {
-  "_说明": [
-    "复制成 site.json 就生效，不改代码。",
-    "优先级：环境变量 > site.json > 程序内默认值。",
-    "改完要重启进程。删除本文件就回到全默认。"
-  ],
-
+  "_说明": "模板。install.sh 会去掉所有 _ 开头的键再写成 config/site.json，真实配置里不留注释。改完不用改命令行，重启即生效。",
   "site": {
+    "_说明": "站名、对外地址、身份。site_id 留空就用目录名；master_url 留空表示自己是主站，填了就是小站（跟着主站同步黑名单）。",
     "name": "OpenBBS",
-    "description": "一个能自己部署的轻论坛",
+    "description": "",
     "base_url": "",
-    "_说明_身份": [
-      "base_url 是这座站对外的地址，客户端和主站登记都认它。",
-      "site_id 由主站分配，留空 + 配了 master_url 就自动去拿。",
-      "master_url 留空 = 本机就是主站。"
-    ],
     "site_id": "",
-    "master_url": "",
-
-    "_说明_自述": "下面几项是 /.well-known/bbs.json 和 /meta 里对外的自述。endpoints 写多个入口（v6/v4），留空则只报 base_url。",
     "lang": "zh-Hans",
-    "icon": "",
     "tags": [],
+    "open": true,
     "contact": "",
-    "endpoints": [],
-    "open": true
+    "master_url": ""
   },
-
-  "sites": {
-    "_说明": "站点登记接口。allow_private 只在测试时打开，线上开着会被拿来探内网。",
-    "allow_private": false,
-    "register_per_hour_ip": 10
+  "server": {
+    "_说明": "tls_cert_dir 填含 fullchain.pem 和 privkey.pem 的目录，填了就自己开 HTTPS；留空 = 明文，交给前面的 nginx 终止 TLS。",
+    "host": "0.0.0.0",
+    "port": 8080,
+    "tls_cert_dir": ""
   },
-
-  "paths": {
-    "_说明": "留空就用 server/data。容器里一般全挂卷，写绝对路径。",
-    "data": "",
-    "db": "",
-    "uploads": "",
-    "apk": "",
-    "secret": "",
-    "mail_config": "",
-    "logs": ""
+  "safety": {
+    "_说明": "sensitive 关掉后 config/sensitive.txt 整个不生效，发帖回帖不再查词；image_block 关掉后上传不查图片黑名单，管理接口仍可用。",
+    "sensitive": true,
+    "image_block": true
   },
-
+  "auth": {
+    "_说明": "public_key 是主站公钥，小站断网也能验主站签发的 token；register_challenge 打开后注册要答题，客户端得先支持再开。",
+    "public_key": "",
+    "blacklist_pull_seconds": 60,
+    "register_challenge": false
+  },
   "limits": {
+    "_说明": "硬上限，服务端说了算。客户端压过图，超过 max_anim_mb 就是没压。",
     "per_page": 20,
     "floor_per_page": 20,
+    "max_images": 9,
     "max_image_mb": 5,
     "max_anim_mb": 10,
-    "max_images": 9,
-    "file_mb": 0,
-    "files_per_post": 5,
-    "files_per_day": 0,
-    "files_mb_per_day": 0,
-    "cloud_quota_mb": 5120,
-    "cloud_trash_days": 7,
-    "cloud_full_msg": "空间不足，还差 {need}",
-    "max_level": 99,
+    "title_max": 120,
+    "body_max": 20000,
     "username_min": 2,
     "username_max": 20,
     "password_min": 8,
-    "title_max": 120,
-    "body_max": 20000
+    "max_level": 99
   },
-
-  "auth": {
-    "register_open": true,
-    "require_email": true,
-    "code_ttl": 600,
-    "code_max_tries": 5,
-    "send_cooldown": 60,
-    "send_per_hour_email": 3,
-    "send_per_hour_ip": 5,
-    "reg_per_hour_ip": 5,
-    "login_fail_max": 5,
-    "login_fail_window": 60
-  },
-
-  "http": {
-    "cors_origins": [],
-    "cors_origin_regex": "http://(localhost|127\\.0\\.0\\.1)(:\\d+)?"
-  },
-
-  "update": {
-    "_说明": "客户端更新检查。enabled=false 时 /api/app/latest 返回 404，自动检查静默跳过。",
-    "_说明_站长自检": "check_url 给 check_update.sh 用，填官方的 /api/app/latest；留空 = 拿 master_url 拼。只提示，不自动升级。",
-    "enabled": true,
-    "check_url": "",
-    "check_hours": 24,
-    "remind_hours": 24,
-    "force_below": 0,
-    "title": "发现新版本 {version}",
-    "message": "当前版本 {current}，最新 {version}。\n\n{notes}"
-  },
-
-  "server": {
-    "_说明": "run.sh 和容器都读这里。改端口只改这个数，不用碰命令行，也不用改 compose。",
-    "host": "0.0.0.0",
-    "port": 8092,
-    "_说明_证书": "证书目录，里面放 fullchain.pem 和 privkey.pem。填了就自动开 HTTPS；留空 = 明文，交给前面的 nginx 终止 TLS。",
-    "tls_cert_dir": ""
-  },
-
   "backup": {
-    "_说明": "backup.sh 用。dir 留空 = data/backups。keep 是保留份数，超出的从旧往新删。",
+    "_说明": "dir 留空 = data/backups。mirror_dir 填另一块盘上的目录做第二份，留空 = 只留本地一份；两份在同一块盘时日志会提醒。",
     "dir": "",
-    "keep": 30
+    "keep": 30,
+    "mirror_dir": "",
+    "mirror_keep": 14
   },
-
-  "admin": {
-    "name": "admin",
-    "password": ""
-  },
-
-  "mail": {
-    "from_name": "OpenBBS",
-    "subject_register": "注册验证码",
-    "subject_reset": "找回密码验证码",
-    "subject_bind": "绑定邮箱验证码",
-    "body": "你的验证码是：{code}\n\n{minutes} 分钟内有效，只能用一次。不是你本人操作就忽略这封邮件。"
+  "update": {
+    "_说明": "只用来提示有新版本，不会自动升级。填 version.json 的地址。",
+    "check_url": ""
   }
 }

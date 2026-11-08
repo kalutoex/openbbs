@@ -154,6 +154,14 @@ else:
     if cert:
         srv["tls_cert_dir"] = cert
 
+# backup 段的键写在明面上，站长看得见有镜像这回事；
+# 镜像路径不替他猜（猜错了就是往错盘写），留空 = 只用本地一份。
+b = cfg.setdefault("backup", {})
+b.setdefault("dir", "")
+b.setdefault("keep", 30)
+b.setdefault("mirror_dir", "")
+b.setdefault("mirror_keep", 14)
+
 with open(path, "w", encoding="utf-8") as f:
     json.dump(cfg, f, ensure_ascii=False, indent=2)
     f.write("\n")

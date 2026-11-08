@@ -1,20 +1,12 @@
-# 镜像里不该有真数据、真配置、虚拟环境这些东西。
+# 镜像里不要的东西：数据、日志、真实配置、本地虚拟环境、缓存。
 data/
 logs/
 config/site.json
+config/site.json.bak*
 config/mail.json
 .venv/
-venv/
 __pycache__/
 *.pyc
-*.pyo
-tool/
-web/
 tests/
-*.log
-forum.pid
-.git/
-.gitignore
-Dockerfile
-docker-compose.yml
-.dockerignore
+tool/
+*.md

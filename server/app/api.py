@@ -8,14 +8,18 @@
 
 楼层号不落库，按 id 顺序算，省一层状态。
 """
-import base64, hashlib, hmac, json, os, random, re, secrets, shutil, struct, time
+import base64, hashlib, hmac, json, logging, os, random, re, secrets, shutil, struct, time, zlib
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import auth, blacklist, config, db, files as filesvc, mailer, sites, words
+
+# 上传这种一次几分钟的请求，access log 要等结束才有一行，
+# 中途卡住就完全看不见。收的时候自己打一行，卡在哪一头一眼能分。
+_log = logging.getLogger("uvicorn.error")
 
 router = APIRouter(prefix="/api")
 
@@ -57,10 +61,14 @@ def user_json(row):
         "level": min(MAX_LEVEL, row["level"] or 1),
         "is_admin": bool(row["is_admin"]),
         "email": (row["email"] or "") if "email" in row.keys() else "",
+        "show_follows": bool(row["show_follows"]) if "show_follows" in row.keys() else True,
+        # 主题色，也是身份色；NULL = 没设过，客户端用默认档位
+        "hue": (row["hue"] if "hue" in row.keys() else None),
     }
 
 
-USER_COLS = "id, uid, name, nickname, handle, avatar, cover, signature, level, is_admin, email, quota_bytes"
+USER_COLS = ("id, uid, name, nickname, handle, avatar, cover, signature, level, is_admin, "
+             "email, quota_bytes, show_follows, hue")
 
 
 HANDLE_RE = re.compile(r"[a-z0-9_]{3,16}")
@@ -163,17 +171,33 @@ def _ensure_shadow(c, muid):
     else:
         return None
     try:
-        c.execute("INSERT INTO users(name, pw, created_at, master_uid, nickname) "
-                  "VALUES(?,?,?,?,?)",
-                  (name, "", int(time.time()), int(muid), base))
+        c.execute("INSERT INTO users(name, pw, created_at, master_uid, nickname, hue) "
+                  "VALUES(?,?,?,?,?,?)",
+                  (name, "", int(time.time()), int(muid), base, db.random_hue(c)))
         c.commit()
     except Exception:
         c.rollback()
     return c.execute("SELECT %s FROM users WHERE master_uid=?" % USER_COLS, (int(muid),)).fetchone()
 
 
+def _auth_uid(request: Request, c):
+    """取当前登录者。token 里的密码版本比库里旧就算失效。
+
+    没 exp 的 token 只能这么踢：改密码、退出所有设备时把 pw_ver 加一，
+    别的设备手里那个 token 的 v 就永远落后了。
+    """
+    claims = auth.read_claims(_token(request))
+    if not claims:
+        return None
+    uid = claims["uid"]
+    row = c.execute("SELECT pw_ver FROM users WHERE id=?", (uid,)).fetchone()
+    if row is not None and int(row["pw_ver"] or 0) > int(claims.get("v") or 0):
+        return None
+    return uid
+
+
 def optional_user(request: Request, c=Depends(get_conn)):
-    uid = auth.read_token(_token(request))
+    uid = _auth_uid(request, c)
     # 读接口也拦：封号之后这个账号什么都看不到。
     if blacklist.is_banned(c, uid):
         raise HTTPException(403, blacklist.BANNED_MSG)
@@ -181,7 +205,7 @@ def optional_user(request: Request, c=Depends(get_conn)):
 
 
 def require_user(request: Request, c=Depends(get_conn)):
-    uid = auth.read_token(_token(request))
+    uid = _auth_uid(request, c)
     if blacklist.is_banned(c, uid):
         raise HTTPException(403, blacklist.BANNED_MSG)
     u = _load_user(c, uid)
@@ -291,6 +315,8 @@ UPLOAD_DIR = config.path("uploads")
 MAX_IMAGE = config.get("limits", "max_image_mb", 5) * 1024 * 1024
 MAX_ANIM = config.get("limits", "max_anim_mb", 10) * 1024 * 1024  # 客户端已经压过，超过就是没压
 MAX_IMAGES = config.get("limits", "max_images", 9)
+# 浏览量按人算：同一个人对同一帖最多计这么多次，再刷不涨。
+VIEWS_PER_USER = config.get("limits", "views_per_user", 10)
 
 NAME_MIN = config.get("limits", "username_min", 2)
 NAME_MAX = config.get("limits", "username_max", 20)
@@ -734,14 +760,15 @@ def register(p: RegisterIn, request: Request, c=Depends(get_conn)):
         "SELECT COALESCE(MAX(uid),0)+1 FROM users WHERE uid < ?",
         (TEST_UID_START,)).fetchone()[0]
     cur = c.execute(
-        "INSERT INTO users(name, pw, created_at, uid, email, email_verified, reg_ip) VALUES(?,?,?,?,?,1,?)",
-        (name, auth.hash_pw(p.password), now, next_uid, email, ip))
+        "INSERT INTO users(name, pw, created_at, uid, email, email_verified, reg_ip, hue) "
+        "VALUES(?,?,?,?,?,1,?,?)",
+        (name, auth.hash_pw(p.password), now, next_uid, email, ip, db.random_hue(c)))
     c.commit()
     uid = cur.lastrowid
     c.execute("UPDATE users SET handle=? WHERE id=?",
               (db.unique_handle(c, name, uid), uid))
     c.commit()
-    return {"token": auth.make_token(uid), "user": user_json(_load_user(c, uid))}
+    return {"token": auth.make_token(uid, 0), "user": user_json(_load_user(c, uid))}
 
 
 # 找回密码：发码 → 校验 → 改密码。
@@ -818,9 +845,13 @@ def password_reset(p: ResetIn, c=Depends(get_conn)):
         raise HTTPException(400, "这个邮箱没绑账号")
 
     c.execute("DELETE FROM email_codes WHERE email=?", (key,))
-    c.execute("UPDATE users SET pw=? WHERE id=?", (auth.hash_pw(p.password), user["id"]))
+    ver = int(user["pw_ver"] or 0) + 1
+    c.execute("UPDATE users SET pw=?, pw_ver=? WHERE id=?",
+              (auth.hash_pw(p.password), ver, user["id"]))
     c.commit()
-    return {"token": auth.make_token(user["id"]), "user": user_json(_load_user(c, user["id"]))}
+    # 新 token 拿新版本；改密码之前发出去的 token 全部作废。
+    return {"token": auth.make_token(user["id"], ver),
+            "user": user_json(_load_user(c, user["id"]))}
 
 
 # ---------------------------------------------------------------- 账号安全
@@ -902,6 +933,46 @@ def account_email_bind(p: BindEmailIn, user=Depends(require_user), c=Depends(get
     return {"user": user_json(_load_user(c, user["id"]))}
 
 
+# ---------------------------------------------------------------- 改密码 / 踢设备
+
+
+class PasswordChangeIn(BaseModel):
+    old: str = ""
+    new: str = ""
+
+
+@router.post("/account/password")
+def account_password(p: PasswordChangeIn, c=Depends(get_conn),
+                     user=Depends(require_user)):
+    """登录状态下改密码。旧的不问清楚不给改。"""
+    new = p.new or ""
+    if len(new) < PW_MIN:
+        raise HTTPException(400, "密码至少 %d 位" % PW_MIN)
+    row = c.execute("SELECT pw, pw_ver FROM users WHERE id=?", (user["id"],)).fetchone()
+    if not row or not auth.check_pw(p.old or "", row["pw"]):
+        raise HTTPException(400, "原密码不对")
+    if auth.check_pw(new, row["pw"]):
+        raise HTTPException(400, "新密码跟原来一样")
+    ver = int(row["pw_ver"] or 0) + 1
+    c.execute("UPDATE users SET pw=?, pw_ver=? WHERE id=?",
+              (auth.hash_pw(new), ver, user["id"]))
+    c.commit()
+    # 这台设备换新 token 继续用，其它设备上的一律失效。
+    return {"token": auth.make_token(user["id"], ver),
+            "user": user_json(_load_user(c, user["id"]))}
+
+
+@router.post("/account/sessions/revoke")
+def revoke_sessions(c=Depends(get_conn), user=Depends(require_user)):
+    """退出所有设备。当前这台换新 token，别的机器下次请求就是未登录。"""
+    row = c.execute("SELECT pw_ver FROM users WHERE id=?", (user["id"],)).fetchone()
+    ver = int((row["pw_ver"] if row else 0) or 0) + 1
+    c.execute("UPDATE users SET pw_ver=? WHERE id=?", (ver, user["id"]))
+    c.commit()
+    return {"token": auth.make_token(user["id"], ver),
+            "user": user_json(_load_user(c, user["id"]))}
+
+
 # ---------------------------------------------------------------- 管理员：重置密码
 # 没邮箱、也没旧设备留着登录凭证的账号，最后就靠这条路。
 
@@ -964,7 +1035,11 @@ def login(p: Credentials, request: Request, c=Depends(get_conn)):
         if len(hits) >= LOGIN_FAIL_MAX:
             raise HTTPException(429, "密码错太多次，%d 秒后再试"
                                 % (LOGIN_FAIL_WINDOW - (now - hits[0])))
-    row = c.execute("SELECT * FROM users WHERE name=?", (p.name.strip(),)).fetchone()
+    # 账号栏填用户名或邮箱都行：忘了名字的人还有条路。
+    who = p.name.strip()
+    row = c.execute(
+        "SELECT * FROM users WHERE name=? OR (email IS NOT NULL AND lower(email)=lower(?))",
+        (who, who)).fetchone()
     if not row or not auth.check_pw(p.password, row["pw"]):
         if ip:
             _LOGIN_FAIL.setdefault(ip, []).append(now)
@@ -974,7 +1049,8 @@ def login(p: Credentials, request: Request, c=Depends(get_conn)):
         raise HTTPException(403, blacklist.BANNED_MSG)
     if ip:
         _LOGIN_FAIL.pop(ip, None)
-    return {"token": auth.make_token(row["id"]), "user": user_json(_load_user(c, row["id"]))}
+    return {"token": auth.make_token(row["id"], row["pw_ver"] or 0),
+            "user": user_json(_load_user(c, row["id"]))}
 
 
 @router.get("/me")
@@ -1090,7 +1166,7 @@ def feed(page: int = 1, sort: str = "created", c=Depends(get_conn), user=Depends
     order = "t.created_at DESC, t.id DESC" if sort == "created" else "t.updated_at DESC, t.id DESC"
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.is_top, t.images, t.files, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "t.is_good, t.is_top, t.images, t.files, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, u.avatar AS author_avatar, u.hue AS author_hue "
         "FROM threads t JOIN users u ON u.id=t.user_id "
         "ORDER BY t.is_top DESC, "
         "(CASE WHEN t.is_top=1 THEN t.created_at ELSE 0 END) ASC, " + order + " LIMIT ? OFFSET ?",
@@ -1101,6 +1177,8 @@ def feed(page: int = 1, sort: str = "created", c=Depends(get_conn), user=Depends
         "excerpt": _excerpt(r["body"] if "body" in r.keys() else ""),
         "author": r["author_nick"] or r["author"],
         "handle": r["author_handle"] or "",
+        "avatar": (r["author_avatar"] or "") if "author_avatar" in r.keys() else "",
+        "hue": (r["author_hue"] if "author_hue" in r.keys() else None),
         "reply_count": r["reply_count"],
         "view_count": r["view_count"],
         "is_good": bool(r["is_good"]),
@@ -1114,13 +1192,16 @@ def feed(page: int = 1, sort: str = "created", c=Depends(get_conn), user=Depends
 
 
 def _reply_json(row):
+    recalled = bool(row["recalled"]) if "recalled" in row.keys() else False
     return {
         "id": row["id"],
-        "body": row["body"],
+        "body": "" if recalled else row["body"],
+        "recalled": recalled,
         "author": row["author_nick"] or row["author"],
         "handle": row["author_handle"] or "",
         "author_name": row["author"] or "",
         "author_avatar": row["author_avatar"] or "",
+        "author_hue": row["author_hue"] if "author_hue" in row.keys() else None,
         "author_id": row["user_id"],
         "level": row["level"] or 1,
         "signature": row["signature"] or "",
@@ -1133,16 +1214,40 @@ def _reply_json(row):
     }
 
 
+def _count_view(c, tid: int, user, request):
+    """给帖子加一次浏览，但同一个人最多算 VIEWS_PER_USER 次。
+
+    超过就彻底不写了 —— 刷不出来，也不白占一次 insert。
+    没登录的按 IP 记，存成负数，不会和真实 uid 撞。
+    """
+    if user:
+        who = user["id"]
+    else:
+        ip = (request.client.host if request.client else "") or ""
+        who = -(zlib.crc32(ip.encode("utf-8")) % 1000000000 + 1) if ip else 0
+    row = c.execute("SELECT hits FROM thread_views WHERE thread_id=? AND user_id=?",
+                    (tid, who)).fetchone()
+    if (row["hits"] if row else 0) >= VIEWS_PER_USER:
+        return 0
+    c.execute("UPDATE threads SET view_count=view_count+1 WHERE id=?", (tid,))
+    c.execute("INSERT INTO thread_views(thread_id, user_id, hits, last_at) VALUES(?,?,1,?) "
+              "ON CONFLICT(thread_id, user_id) "
+              "DO UPDATE SET hits=hits+1, last_at=excluded.last_at",
+              (tid, who, int(time.time())))
+    return 1
+
+
 @router.get("/t/{tid}")
-def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depends(get_conn), user=Depends(optional_user)):
+def thread_detail(tid: int, request: Request, page: int = 1, post: int = 0, floor: int = 0,
+                  c=Depends(get_conn), user=Depends(optional_user)):
     t = c.execute(
         "SELECT t.*, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, u.signature, u.level, "
-        "u.name AS author_name, u.avatar AS author_avatar "
+        "u.name AS author_name, u.avatar AS author_avatar, u.hue AS author_hue "
         "FROM threads t JOIN users u ON u.id=t.user_id "
         " WHERE t.id=?", (tid,)).fetchone()
     if not t:
         raise HTTPException(404, "帖子不存在")
-    c.execute("UPDATE threads SET view_count=view_count+1 WHERE id=?", (tid,))
+    _count_view(c, tid, user, request)
     if user:
         c.execute(
             "INSERT INTO history(user_id, thread_id, viewed_at) VALUES(?,?,?) "
@@ -1179,6 +1284,7 @@ def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depe
             "handle": t["author_handle"] or "",
             "author_name": t["author_name"] or "",
             "author_avatar": t["author_avatar"] or "",
+            "author_hue": t["author_hue"] if "author_hue" in t.keys() else None,
             "author_id": t["user_id"],
             "level": t["level"] or 1,
             "signature": t["signature"] or "",
@@ -1198,7 +1304,7 @@ def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depe
     offset = max(0, (page - 1) * PER_FLOOR_PAGE - 1)
     rows = c.execute(
         "SELECT r.*, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, u.signature, u.level, "
-        "u.avatar AS author_avatar "
+        "u.avatar AS author_avatar, u.hue AS author_hue "
         "FROM replies r JOIN users u ON u.id=r.user_id "
         "WHERE r.thread_id=? AND (r.parent_id IS NULL OR r.parent_id = 0) "
         "ORDER BY r.id LIMIT ? OFFSET ?",
@@ -1212,7 +1318,7 @@ def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depe
         marks = ",".join("?" * len(ids))
         for s in c.execute(
             "SELECT r2.*, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, "
-            "u.signature, u.level, u.avatar AS author_avatar "
+            "u.signature, u.level, u.avatar AS author_avatar, u.hue AS author_hue "
             "FROM replies r2 JOIN users u ON u.id=r2.user_id "
             "WHERE r2.thread_id=? AND r2.parent_id IN (" + marks + ") ORDER BY r2.id",
             (tid, *ids)).fetchall():
@@ -1222,24 +1328,35 @@ def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depe
                 subs_of[pid].append(s)
 
     base = 1 + (page - 1) * PER_FLOOR_PAGE if page > 1 else 1
+    now_s = int(time.time())
     for i, r in enumerate(rows):
         item = _reply_json(r)
         item["floor"] = r["floor_no"] or (base + i + (0 if page > 1 else 1))
         item["is_op"] = r["user_id"] == t["user_id"]
         item["can_edit"] = bool(user and (user["id"] == r["user_id"] or user["is_admin"]))
         item["can_delete"] = _may_delete(user, r["user_id"])
+        # 撤回只给作者本人，且两分钟内。删和撤回是两回事：删掉楼层就没了。
+        item["can_recall"] = bool(
+            user and user["id"] == r["user_id"] and not r["recalled"]
+            and now_s - r["created_at"] <= DM_RECALL_WINDOW)
         subs = subs_of.get(r["id"], [])
         item["subs"] = [{
             "id": s["id"],
-            "body": s["body"],
+            "body": "" if ("recalled" in s.keys() and s["recalled"]) else s["body"],
+            "recalled": bool(s["recalled"]) if "recalled" in s.keys() else False,
             "author": s["author_nick"] or s["author"],
             "handle": s["author_handle"] or "",
             "author_name": s["author"] or "",
             "author_avatar": s["author_avatar"] or "",
+            "author_hue": s["author_hue"] if "author_hue" in s.keys() else None,
             "author_id": s["user_id"],
             "created_at": s["created_at"],
             "edited_at": s["edited_at"] or 0,
             "can_edit": bool(user and (user["id"] == s["user_id"] or user["is_admin"])),
+            "can_recall": bool(
+                user and user["id"] == s["user_id"]
+                and not ("recalled" in s.keys() and s["recalled"])
+                and now_s - s["created_at"] <= DM_RECALL_WINDOW),
             **_imgs_payload(s["images"]),
             **_files_payload(s["files"]),
             "can_delete": _may_delete(user, s["user_id"]),
@@ -1279,6 +1396,7 @@ def thread_detail(tid: int, page: int = 1, post: int = 0, floor: int = 0, c=Depe
             "handle": t["author_handle"] or "",
             "author_name": t["author_name"] or "",
             "author_avatar": t["author_avatar"] or "",
+            "author_hue": t["author_hue"] if "author_hue" in t.keys() else None,
             "reply_count": total_replies,
             "view_count": t["view_count"] + 1,
             "created_at": t["created_at"],
@@ -1435,6 +1553,17 @@ def delete_thread(tid: int, c=Depends(get_conn), user=Depends(require_user)):
     c.execute("DELETE FROM history WHERE thread_id=?", (tid,))
     c.execute("DELETE FROM replies WHERE thread_id=?", (tid,))
     db.fts_delete(c, "thread", tid)
+    # 帖子本身进回收站（作者删的进作者回收站，管理员删的进管理员回收站）。
+    # 上面那些回复、点赞、通知、收藏、历史、索引照旧清掉——恢复帖子时
+    # 它们不该诈尸，帖子回来就是干干净净一条。
+    now = int(time.time())
+    cols = ",".join(_thread_cols(c))
+    c.execute(
+        "INSERT INTO thread_trash(%s, deleted_at, deleted_by) "
+        "SELECT %s, ?, ? FROM threads WHERE id=?" % (cols, cols),
+        (now, user["id"], tid))
+    # 回复已经清干净了，回收站里那条别留个假数字。
+    c.execute("UPDATE thread_trash SET reply_count=0 WHERE id=?", (tid,))
     c.execute("DELETE FROM threads WHERE id=?", (tid,))
     # 指向已删帖子的那栏清空，免得客户端点进去 404
     c.execute("UPDATE user_files SET thread_id=NULL WHERE thread_id=?", (tid,))
@@ -1479,6 +1608,259 @@ def delete_reply(cid: int, c=Depends(get_conn), user=Depends(require_user)):
         _notify(c, r["user_id"], user["id"], "del", r["thread_id"], None,
                 "回复被删：" + (trow["title"] if trow else ""), int(time.time()))
     c.commit()
+    return {"ok": True}
+
+
+@router.post("/c/{cid}/recall")
+def recall_reply(cid: int, c=Depends(get_conn), user=Depends(require_user)):
+    """两分钟内撤回自己的回复。
+
+    跟删除不是一回事：行留着，楼层号不动，正文/图/附件清空，
+    别人看到的是「该回复已撤回」。这样上下文不会突然缺一块。
+    """
+    r = c.execute("SELECT id, thread_id, user_id, created_at, recalled, images, files "
+                  "FROM replies WHERE id=?", (cid,)).fetchone()
+    if not r:
+        raise HTTPException(404, "回复不存在")
+    if r["user_id"] != user["id"]:
+        raise HTTPException(403, "只能撤回自己发的")
+    if r["recalled"]:
+        return {"ok": True, "already": True}
+    if int(time.time()) - r["created_at"] > DM_RECALL_WINDOW:
+        raise HTTPException(400, "超过两分钟了，撤不回来了")
+    gone = {_digest_of_url(it.get("url")) for it in _load_files(r["files"])}
+    c.execute("UPDATE replies SET recalled=1, body='', images='[]', files='[]' WHERE id=?",
+              (cid,))
+    db.fts_delete(c, "reply", cid)
+    _sync_public(c, gone)
+    c.execute("UPDATE threads SET updated_at=? WHERE id=?",
+              (int(time.time()), r["thread_id"]))
+    c.commit()
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- 回收站（帖子 + 云盘）
+
+def _thread_cols(c):
+    """threads 和 thread_trash 都有的列。
+
+    thread_trash 是拿 threads 做 CTAS 建的，后来给 threads 加的列它没有，
+    写 SQL 时按交集来才不会撞 unknown column。
+    """
+    have = {r["name"] for r in c.execute("PRAGMA table_info(thread_trash)")}
+    return [r["name"] for r in c.execute("PRAGMA table_info(threads)")
+            if r["name"] in have]
+
+
+def _trash_days():
+    """回收站保留天数。一个开关管两样东西，云盘老配置名继续认。"""
+    try:
+        v = config.get("limits", "trash_days",
+                       config.get("limits", "cloud_trash_days", 7))
+        return max(0, int(v or 7))
+    except (TypeError, ValueError):
+        return 7
+
+
+def _trash_left(deleted_at):
+    return max(0, int(deleted_at or 0) + _trash_days() * 86400 - int(time.time()))
+
+
+def _thread_trash_item(r):
+    body = re.sub(r"\s+", " ", (r["body"] or "")).strip()
+    return {
+        "id": r["id"],
+        "title": r["title"] or "",
+        "excerpt": body[:120],
+        "created_at": r["created_at"],
+        "deleted_at": r["deleted_at"],
+        "expires_in": _trash_left(r["deleted_at"]),
+        "reply_count": r["reply_count"],
+        # 原主人。管理员回收站里要看是谁的。
+        "owner_id": r["user_id"],
+        "owner_name": (r["owner_nick"] or r["owner_name"] or "") if "owner_nick" in r.keys() else "",
+        "owner_handle": r["owner_handle"] if "owner_handle" in r.keys() else "",
+        "deleted_by": r["deleted_by"],
+    }
+
+
+_TRASH_THREAD_COLS = (
+    "t.id, t.title, t.body, t.user_id, t.created_at, t.reply_count, "
+    "t.deleted_at, t.deleted_by, u.name AS owner_name, u.nickname AS owner_nick, "
+    "u.handle AS owner_handle")
+
+
+@router.get("/trash/summary")
+def trash_summary(c=Depends(get_conn), user=Depends(require_user)):
+    """「我的」里那一行旁边的数字：两边加起来。"""
+    t = c.execute("SELECT COUNT(*) AS n FROM thread_trash WHERE deleted_by=?",
+                  (user["id"],)).fetchone()["n"]
+    f = c.execute("SELECT COUNT(*) AS n FROM user_files "
+                  "WHERE deleted_at IS NOT NULL AND COALESCE(deleted_by, user_id)=?",
+                  (user["id"],)).fetchone()["n"]
+    return {"threads": t, "files": f, "total": t + f}
+
+
+@router.get("/trash/threads")
+def trash_threads(page: int = 1, per_page: int = 20,
+                  c=Depends(get_conn), user=Depends(require_user)):
+    """我删的帖子。作者删的、我作为管理员删的都在这里，都归我恢复。"""
+    page = max(1, int(page or 1))
+    per_page = min(100, max(1, int(per_page or 20)))
+    where = "t.deleted_by=?"
+    total = c.execute("SELECT COUNT(*) FROM thread_trash t WHERE " + where,
+                      (user["id"],)).fetchone()[0]
+    rows = c.execute(
+        "SELECT " + _TRASH_THREAD_COLS + " FROM thread_trash t "
+        "JOIN users u ON u.id=t.user_id WHERE " + where +
+        " ORDER BY t.deleted_at DESC LIMIT ? OFFSET ?",
+        (user["id"], per_page, (page - 1) * per_page)).fetchall()
+    return {"items": [_thread_trash_item(r) for r in rows],
+            "page": page, "total": total}
+
+
+@router.post("/trash/threads/{tid}/restore")
+def trash_thread_restore(tid: int, c=Depends(get_conn), user=Depends(require_user)):
+    r = c.execute("SELECT * FROM thread_trash WHERE id=?", (tid,)).fetchone()
+    if not r:
+        raise HTTPException(404, "回收站里没有这条")
+    if r["deleted_by"] != user["id"] and not user["is_admin"]:
+        raise HTTPException(403, "不是你删的")
+    if c.execute("SELECT 1 FROM threads WHERE id=?", (tid,)).fetchone():
+        raise HTTPException(409, "这条已经回来了")
+    cols = ",".join(_thread_cols(c))
+    c.execute("INSERT INTO threads(%s) SELECT %s FROM thread_trash WHERE id=?" % (cols, cols),
+              (tid,))
+    c.execute("DELETE FROM thread_trash WHERE id=?", (tid,))
+    db.fts_upsert_thread(c, tid)
+    # 附件公开性跟着回来：删的时候被改成私人了，恢复要改回去，
+    # 不然帖子里说好的附件全变成「已失效」。
+    digests = {_digest_of_url(it.get("url")) for it in _load_files(r["files"])}
+    for row in c.execute("SELECT files FROM replies WHERE thread_id=?", (tid,)).fetchall():
+        digests |= {_digest_of_url(it.get("url")) for it in _load_files(row["files"])}
+    _sync_public(c, digests)
+    c.commit()
+    return {"ok": True}
+
+
+@router.delete("/trash/threads/{tid}")
+def trash_thread_purge(tid: int, c=Depends(get_conn), user=Depends(require_user)):
+    """彻底删。删的时候回复之类的早就清完了，这里扔一行就行。"""
+    r = c.execute("SELECT id, deleted_by FROM thread_trash WHERE id=?", (tid,)).fetchone()
+    if not r:
+        raise HTTPException(404, "回收站里没有这条")
+    if r["deleted_by"] != user["id"] and not user["is_admin"]:
+        raise HTTPException(403, "不是你删的")
+    c.execute("DELETE FROM thread_trash WHERE id=?", (tid,))
+    c.commit()
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- 管理员回收站
+# 管理员删别人的东西，东西进管理员的回收站。作者那边什么都看不到。
+# 右上角那个按钮进去的就是这批内容，多两个筛子：原主人、类型。
+
+@router.get("/admin/trash/threads")
+def admin_trash_threads(q: str = "", owner: int = 0, page: int = 1,
+                        per_page: int = 20,
+                        c=Depends(get_conn), user=Depends(optional_user)):
+    _need_admin(user)
+    page = max(1, int(page or 1))
+    per_page = min(100, max(1, int(per_page or 20)))
+    where = "t.deleted_by=? AND t.user_id<>?"
+    args = [user["id"], user["id"]]
+    kw = (q or "").strip()
+    if kw:
+        where += " AND t.title LIKE ?"
+        args.append("%" + kw + "%")
+    if owner:
+        where += " AND t.user_id=?"
+        args.append(int(owner))
+    total = c.execute("SELECT COUNT(*) FROM thread_trash t WHERE " + where,
+                      args).fetchone()[0]
+    rows = c.execute(
+        "SELECT " + _TRASH_THREAD_COLS + " FROM thread_trash t "
+        "JOIN users u ON u.id=t.user_id WHERE " + where +
+        " ORDER BY t.deleted_at DESC LIMIT ? OFFSET ?",
+        args + [per_page, (page - 1) * per_page]).fetchall()
+    return {"items": [_thread_trash_item(r) for r in rows],
+            "page": page, "total": total}
+
+
+class TrashPurgeIn(BaseModel):
+    # 一次清一堆：回收站里的多选
+    ids: List[int] = []
+
+
+@router.post("/admin/trash/threads/purge")
+def admin_trash_threads_purge(p: TrashPurgeIn, c=Depends(get_conn), user=Depends(optional_user)):
+    _need_admin(user)
+    n = 0
+    for i in p.ids:
+        n += c.execute("DELETE FROM thread_trash WHERE id=? AND deleted_by=?",
+                       (int(i), user["id"])).rowcount
+    c.commit()
+    return {"ok": True, "n": n}
+
+
+@router.get("/admin/trash/cloud")
+def admin_trash_cloud(q: str = "", owner: int = 0, page: int = 1,
+                      per_page: int = 20,
+                      c=Depends(get_conn), user=Depends(optional_user)):
+    _need_admin(user)
+    page = max(1, int(page or 1))
+    per_page = min(100, max(1, int(per_page or 20)))
+    where = ("f.deleted_at IS NOT NULL AND f.deleted_by=? AND f.user_id<>?")
+    args = [user["id"], user["id"]]
+    kw = (q or "").strip()
+    if kw:
+        where += " AND f.name LIKE ?"
+        args.append("%" + kw + "%")
+    if owner:
+        where += " AND f.user_id=?"
+        args.append(int(owner))
+    total = c.execute("SELECT COUNT(*) FROM user_files f WHERE " + where,
+                      args).fetchone()[0]
+    rows = c.execute(
+        "SELECT f.*, u.name AS owner_name, u.nickname AS owner_nick, "
+        "u.handle AS owner_handle FROM user_files f "
+        "JOIN users u ON u.id=f.user_id WHERE " + where +
+        " ORDER BY f.deleted_at DESC LIMIT ? OFFSET ?",
+        args + [per_page, (page - 1) * per_page]).fetchall()
+    items = []
+    for r in rows:
+        it = _cloud_item(c, r)
+        it.update({
+            "owner_id": r["user_id"],
+            "owner_name": r["owner_nick"] or r["owner_name"] or "",
+            "owner_handle": r["owner_handle"] or "",
+            "deleted_at": r["deleted_at"],
+            "deleted_by": r["deleted_by"],
+        })
+        items.append(it)
+    return {"items": items, "page": page, "total": total}
+
+
+@router.post("/admin/trash/cloud/{fid}/restore")
+def admin_trash_cloud_restore(fid: int, c=Depends(get_conn), user=Depends(optional_user)):
+    """恢复给原主人，额度也跟着回原主人。"""
+    r = c.execute("SELECT id, user_id, deleted_by FROM user_files WHERE id=?",
+                  (fid,)).fetchone()
+    if not r or r["deleted_by"] != user["id"]:
+        raise HTTPException(404, "回收站里没有这条")
+    c.execute("UPDATE user_files SET deleted_at=NULL, deleted_by=NULL WHERE id=?", (fid,))
+    c.commit()
+    return {"ok": True}
+
+
+@router.delete("/admin/trash/cloud/{fid}")
+def admin_trash_cloud_purge(fid: int, c=Depends(get_conn), user=Depends(optional_user)):
+    _need_admin(user)
+    r = c.execute("SELECT id FROM user_files WHERE id=? AND deleted_by=?",
+                  (fid, user["id"])).fetchone()
+    if not r:
+        raise HTTPException(404, "回收站里没有这条")
+    filesvc.purge_one(c, None, fid)
     return {"ok": True}
 
 
@@ -1564,8 +1946,18 @@ def dm_list(page: int = 1, c=Depends(get_conn), user=Depends(require_user)):
                            "WHERE thread_id=? AND to_id=? AND is_read=0",
                            (t["id"], me)).fetchone()["n"]
         text = (last["body"] if last else "") or ""
-        if not text and last is not None and last["images"] != "[]":
-            text = "[图片]"
+        if not text and last is not None:
+            if last["images"] != "[]":
+                text = "[图片]"
+            else:
+                # 只发了附件没写正文：会话列表也得看得出对方发了什么。
+                try:
+                    fl = json.loads(last["files"] or "[]")
+                except Exception:
+                    fl = []
+                if fl:
+                    name = str(fl[0].get("name") or "")
+                    text = ("[文件] " + name) if name else "[文件]"
         items.append({
             "thread_id": t["id"],
             "peer": user_json(peer),
@@ -1612,7 +2004,7 @@ def dm_set_state(tid: int, body: DmStateIn, c=Depends(get_conn), user=Depends(re
 
 
 @router.get("/dm/{uid}")
-def dm_history(uid: int, before_id: int = 0, limit: int = 30,
+def dm_history(uid: int, before_id: int = 0, after_id: int = 0, limit: int = 30,
                c=Depends(get_conn), user=Depends(require_user)):
     me = user["id"]
     if uid == me:
@@ -1622,18 +2014,32 @@ def dm_history(uid: int, before_id: int = 0, limit: int = 30,
         raise HTTPException(404, "这个人不在了")
     t = _dm_thread(c, me, uid)
     limit = max(1, min(limit, 50))
-    if before_id:
-        rows = c.execute("SELECT * FROM dm_messages WHERE thread_id=? AND id<? "
-                         "ORDER BY id DESC LIMIT ?", (t["id"], before_id, limit)).fetchall()
+    # after_id：只要比手上最后一条更新的。聊天页开着时一秒拉一次，
+    # 每次都把整段消息重发一遍既费流量又让界面重建，没必要。
+    if after_id:
+        rows = list(c.execute(
+            "SELECT * FROM dm_messages WHERE thread_id=? AND id>? AND id NOT IN "
+            "(SELECT msg_id FROM dm_msg_del WHERE uid=?) "
+            "ORDER BY id ASC LIMIT ?", (t["id"], after_id, me, limit)).fetchall())
+        more = bool(rows) and c.execute(
+            "SELECT 1 FROM dm_messages WHERE thread_id=? AND id>? LIMIT 1",
+            (t["id"], rows[-1]["id"])).fetchone() is not None
+    elif before_id:
+        rows = c.execute("SELECT * FROM dm_messages WHERE thread_id=? AND id<? AND id NOT IN "
+                         "(SELECT msg_id FROM dm_msg_del WHERE uid=?) "
+                         "ORDER BY id DESC LIMIT ?", (t["id"], before_id, me, limit)).fetchall()
         more = c.execute("SELECT 1 FROM dm_messages WHERE thread_id=? AND id<? LIMIT 1",
                          (t["id"], rows[-1]["id"] if rows else before_id)).fetchone() is not None
     else:
-        rows = c.execute("SELECT * FROM dm_messages WHERE thread_id=? "
-                         "ORDER BY id DESC LIMIT ?", (t["id"], limit)).fetchall()
+        rows = c.execute("SELECT * FROM dm_messages WHERE thread_id=? AND id NOT IN "
+                         "(SELECT msg_id FROM dm_msg_del WHERE uid=?) "
+                         "ORDER BY id DESC LIMIT ?", (t["id"], me, limit)).fetchall()
         more = len(rows) == limit and c.execute(
             "SELECT 1 FROM dm_messages WHERE thread_id=? AND id<? LIMIT 1",
             (t["id"], rows[-1]["id"])).fetchone() is not None
-    rows = list(reversed(rows))
+    # 除了 after_id，其它两种都按 id 倒着取，翻回来才是从旧到新
+    if not after_id:
+        rows = list(reversed(rows))
     # 顺手把对方发给我、还没读的标成已读
     c.execute("UPDATE dm_messages SET is_read=1 WHERE thread_id=? AND to_id=? AND is_read=0",
               (t["id"], me))
@@ -1653,16 +2059,23 @@ def dm_history(uid: int, before_id: int = 0, limit: int = 30,
                 "body": (rr["body"] or "")[:120],
                 "has_img": bool(_load_imgs(rr["images"])),
             }
-    items = [{
-        "id": r["id"], "from_id": r["from_id"], "to_id": r["to_id"],
-        "body": r["body"], "images": _load_imgs(r["images"]),
-        "img_sizes": [_img_size(u) for u in _load_imgs(r["images"])],
-        "files": _load_files(r["files"]),
-        "created_at": r["created_at"],
-        "reply_id": r["reply_id"] or 0,
-        "reply": refs.get(r["reply_id"] or 0),
-        "is_read": bool(r["is_read"]) or r["to_id"] == me,
-    } for r in rows]
+    items = []
+    for r in rows:
+        recalled = bool(r["recalled"])
+        # 撤回的只留壳子：原文一个字都不往外带，不然刷新一下就白撤了
+        imgs = [] if recalled else _load_imgs(r["images"])
+        items.append({
+            "id": r["id"], "from_id": r["from_id"], "to_id": r["to_id"],
+            "body": "" if recalled else r["body"],
+            "images": imgs,
+            "img_sizes": [_img_size(u) for u in imgs],
+            "files": [] if recalled else _load_files(r["files"]),
+            "created_at": r["created_at"],
+            "reply_id": r["reply_id"] or 0,
+            "reply": refs.get(r["reply_id"] or 0),
+            "is_read": bool(r["is_read"]) or r["to_id"] == me,
+            "recalled": recalled,
+        })
     return {"peer": user_json(peer), "items": items, "has_more": bool(more),
             "thread_id": t["id"],
             # 客户端拿这两个来决定输入框还能不能发：互关随便发，
@@ -1716,6 +2129,63 @@ def dm_send(uid: int, p: DmIn, c=Depends(get_conn), user=Depends(require_user)):
     # 私信不进通知表：会话本身就在 /dm 列表里，写进来只会让「站内消息」多一条空条目
     c.commit()
     return {"id": mid, "thread_id": t["id"], "created_at": now}
+
+
+# 撤回时限。微信是两分钟，跟着走。
+DM_RECALL_WINDOW = 120
+
+
+@router.post("/dm/msg/{mid}/recall")
+def dm_recall(mid: int, c=Depends(get_conn), user=Depends(require_user)):
+    me = user["id"]
+    m = c.execute("SELECT * FROM dm_messages WHERE id=?", (mid,)).fetchone()
+    if not m:
+        raise HTTPException(404, "这条消息不在了")
+    if m["from_id"] != me:
+        raise HTTPException(403, "只能撤回自己发的")
+    if m["recalled"]:
+        return {"ok": True, "already": True}
+    if int(time.time()) - m["created_at"] > DM_RECALL_WINDOW:
+        raise HTTPException(400, "超过两分钟了，撤不回来了")
+    # 正文清空但行留着：对方那边要变成「对方撤回了一条消息」，直接删行会对不上
+    c.execute("UPDATE dm_messages SET recalled=1, body='', images='[]', files='[]' WHERE id=?",
+              (mid,))
+    c.commit()
+    return {"ok": True}
+
+
+@router.post("/dm/msg/{mid}/del")
+def dm_delete_one(mid: int, c=Depends(get_conn), user=Depends(require_user)):
+    me = user["id"]
+    m = c.execute("SELECT * FROM dm_messages WHERE id=?", (mid,)).fetchone()
+    if not m:
+        return {"ok": True}
+    if m["from_id"] != me and m["to_id"] != me:
+        raise HTTPException(403, "这条跟你没关系")
+    # 只藏自己这一份，对方那边照旧
+    c.execute("INSERT OR IGNORE INTO dm_msg_del(msg_id, uid) VALUES(?,?)", (mid, me))
+    c.commit()
+    return {"ok": True}
+
+
+@router.get("/dm/{uid}/search")
+def dm_search(uid: int, q: str = "", limit: int = 30,
+              c=Depends(get_conn), user=Depends(require_user)):
+    me = user["id"]
+    kw = (q or "").strip()
+    if not kw:
+        return {"items": []}
+    t = _dm_thread(c, me, uid)
+    limit = max(1, min(limit, 50))
+    like = "%" + kw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+    rows = c.execute(
+        "SELECT * FROM dm_messages WHERE thread_id=? AND recalled=0 AND body LIKE ? ESCAPE '\\' "
+        "AND id NOT IN (SELECT msg_id FROM dm_msg_del WHERE uid=?) "
+        "ORDER BY id DESC LIMIT ?", (t["id"], like, me, limit)).fetchall()
+    return {"items": [{
+        "id": r["id"], "from_id": r["from_id"], "body": r["body"],
+        "created_at": r["created_at"],
+    } for r in rows]}
 
 
 @router.post("/dm/{uid}/read")
@@ -1894,14 +2364,22 @@ async def upload_file(f: UploadFile = File(...), c=Depends(get_conn),
     cap = left
 
     name = filesvc.clean_name(f.filename)
+    t0 = time.time()
+    _log.info("upload start user=%s size=%s name=%s", user["id"], f.size, name)
     try:
         digest, size, _ = await filesvc.ingest(f, cap)
+        _log.info("upload done user=%s bytes=%s %.1fs", user["id"], size, time.time() - t0)
     except filesvc.TooBig as e:
         got = int(e.args[0]) if e.args else 0
         raise HTTPException(413, filesvc.full_msg(got - (cap or 0)))
     except filesvc.Empty:
         raise HTTPException(400, "空文件")
 
+    return _register_upload(c, user, digest, size, name)
+
+
+def _register_upload(c, user, digest, size, name):
+    """文件和账本入库。整传和分片传收尾都走这一段。"""
     row = c.execute("SELECT name, size FROM files WHERE digest=?", (digest,)).fetchone()
     if not row:
         c.execute(
@@ -1922,10 +2400,113 @@ async def upload_file(f: UploadFile = File(...), c=Depends(get_conn),
             "VALUES(?,?,?,?, 'cloud', ?)",
             (user["id"], digest, name, size, int(time.time())))
     elif mine["deleted_at"]:
-        c.execute("UPDATE user_files SET deleted_at=NULL, name=?, created_at=? WHERE id=?",
+        # deleted_by 一起清掉，不然这条记录会拖着「上次是谁删的」。
+        c.execute("UPDATE user_files SET deleted_at=NULL, deleted_by=NULL, "
+                  "name=?, created_at=? WHERE id=?",
                   (name, int(time.time()), mine["id"]))
     c.commit()
     return {"url": "/f/" + digest, "name": row["name"], "size": row["size"]}
+
+
+# 单片上限。客户端按 4MB 切，留出富余；这条只是防止有人拿它当网盘刷。
+CHUNK_MAX = 64 * 1024 * 1024
+
+
+@router.post("/file/chunk")
+async def file_chunk(request: Request, c=Depends(get_conn),
+                     user=Depends(require_user)):
+    """分片续传的第 N 片。
+
+    不解析 multipart：客户端把裸字节扔过来，按 offset 追加到一个 .part 文件。
+    offset 必须等于已有长度，不然把已有的长度回给客户端，让它从那儿接着来
+    ——断网、切后台、App 被杀，都能从断点续上，不用整包重传。
+    """
+    upload_id = request.query_params.get("id") or ""
+    if not re.fullmatch(r"[0-9a-zA-Z]{6,64}", upload_id):
+        raise HTTPException(400, "bad id")
+    try:
+        offset = int(request.query_params.get("offset") or 0)
+    except ValueError:
+        raise HTTPException(400, "bad offset")
+    if offset < 0:
+        raise HTTPException(400, "bad offset")
+
+    uid = user["id"]
+    have = filesvc.part_size(uid, upload_id)
+    if offset != have:
+        return {"received": have, "reset": True}
+
+    left = filesvc.remaining(c, user)
+    if left is not None and have >= left:
+        filesvc.drop_part(uid, upload_id)
+        raise HTTPException(413, filesvc.full_msg(0))
+
+    part = filesvc.part_path(uid, upload_id)
+    got = have
+    try:
+        with open(part, "ab") as out:
+            async for chunk in request.stream():
+                if not chunk:
+                    continue
+                if got + len(chunk) - have > CHUNK_MAX:
+                    # 一片都超过 64MB 了，别惯着
+                    raise HTTPException(413, "chunk too large")
+                got += len(chunk)
+                if left is not None and got > left:
+                    raise HTTPException(413, filesvc.full_msg(got - left))
+                out.write(chunk)
+    except HTTPException:
+        raise
+    except Exception as e:
+        _log.warning("chunk write failed uid=%s id=%s: %s", uid, upload_id, e)
+        raise HTTPException(500, "写入失败")
+    return {"received": got}
+
+
+@router.post("/file/chunk/done")
+async def file_chunk_done(payload: dict = Body(...), c=Depends(get_conn),
+                          user=Depends(require_user)):
+    """分片收齐了：整份校验一遍，重算 sha256，落盘入库。"""
+    upload_id = str(payload.get("id") or "")
+    if not re.fullmatch(r"[0-9a-zA-Z]{6,64}", upload_id):
+        raise HTTPException(400, "bad id")
+    uid = user["id"]
+    part = filesvc.part_path(uid, upload_id)
+    if not os.path.exists(part):
+        raise HTTPException(404, "没有这个上传任务")
+    size = os.path.getsize(part)
+    want = payload.get("size")
+    if isinstance(want, int) and want > 0 and want != size:
+        filesvc.drop_part(uid, upload_id)
+        raise HTTPException(400, "大小对不上")
+    if size == 0:
+        filesvc.drop_part(uid, upload_id)
+        raise HTTPException(400, "空文件")
+
+    left = filesvc.remaining(c, user)
+    if left is not None and size > left:
+        filesvc.drop_part(uid, upload_id)
+        raise HTTPException(413, filesvc.full_msg(size - left))
+
+    name = filesvc.clean_name(payload.get("name"))
+    t0 = time.time()
+    digest = filesvc.digest_of(part)
+    dst = filesvc.path_of(digest)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    if os.path.exists(dst):
+        filesvc.drop_part(uid, upload_id)
+    else:
+        os.replace(part, dst)
+    _log.info("chunk upload done user=%s bytes=%s %.1fs", uid, size, time.time() - t0)
+    return _register_upload(c, user, digest, size, name)
+
+
+@router.delete("/file/chunk")
+def file_chunk_drop(id: str = "", user=Depends(require_user)):
+    """取消上传：把暂存的那半截删掉。"""
+    if re.fullmatch(r"[0-9a-zA-Z]{6,64}", id or ""):
+        filesvc.drop_part(user["id"], id)
+    return {"ok": True}
 
 
 def serve_file(digest: str, request: Request, c=Depends(get_conn)):
@@ -1944,7 +2525,7 @@ def serve_file(digest: str, request: Request, c=Depends(get_conn)):
     public = c.execute(
         "SELECT 1 FROM user_files WHERE digest=? AND public=1 LIMIT 1", (digest,)).fetchone()
     if not public:
-        uid = auth.read_token(_token(request))
+        uid = _auth_uid(request, c)
         mine = uid and c.execute(
             "SELECT 1 FROM user_files WHERE digest=? AND user_id=? AND deleted_at IS NULL "
             "LIMIT 1", (digest, uid)).fetchone()
@@ -1978,6 +2559,8 @@ def _brief(r, user=None):
         "excerpt": _excerpt(r["body"] if "body" in r.keys() else ""),
         "author": r["author_nick"] or r["author"],
         "handle": r["author_handle"] or "",
+        "avatar": (r["author_avatar"] or "") if "author_avatar" in r.keys() else "",
+        "hue": (r["author_hue"] if "author_hue" in r.keys() else None),
         "reply_count": r["reply_count"],
         "view_count": r["view_count"],
         "is_good": bool(r["is_good"]),
@@ -1993,7 +2576,7 @@ def _brief(r, user=None):
 _T_BRIEF_COLS = (
     "t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, "
     "t.view_count, t.is_good, t.is_top, t.images, t.files, t.user_id, "
-    "u.name AS author, u.nickname AS author_nick, u.handle AS author_handle")
+    "u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, u.avatar AS author_avatar, u.hue AS author_hue")
 
 
 def _like(q):
@@ -2060,7 +2643,7 @@ def search(q: str = "", page: int = 1, kind: str = "thread", sort: str = "recent
                 rows = c.execute(
                     "SELECT r.id AS reply_id, r.thread_id, r.body, r.created_at, "
                     "t.title AS thread_title, u.name AS author, u.nickname AS author_nick, "
-                    "u.handle AS author_handle "
+                    "u.handle AS author_handle, u.avatar AS author_avatar, u.hue AS author_hue "
                     "FROM replies_fts f JOIN replies r ON r.id=f.rowid "
                     "JOIN threads t ON t.id=r.thread_id JOIN users u ON u.id=r.user_id "
                     "WHERE f MATCH ? ORDER BY r.id DESC LIMIT ?",
@@ -2071,7 +2654,7 @@ def search(q: str = "", page: int = 1, kind: str = "thread", sort: str = "recent
             rows = c.execute(
                 "SELECT r.id AS reply_id, r.thread_id, r.body, r.created_at, "
                 "t.title AS thread_title, u.name AS author, u.nickname AS author_nick, "
-                "u.handle AS author_handle "
+                "u.handle AS author_handle, u.avatar AS author_avatar, u.hue AS author_hue "
                 "FROM replies r JOIN threads t ON t.id=r.thread_id "
                 "JOIN users u ON u.id=r.user_id "
                 "WHERE r.body LIKE ? ORDER BY r.id DESC LIMIT ?",
@@ -2085,7 +2668,7 @@ def search(q: str = "", page: int = 1, kind: str = "thread", sort: str = "recent
     # ---------- 用户（永远 LIKE，名字短，够用）
     if kind in ("user", "all"):
         rows = c.execute(
-            "SELECT id, name, nickname, handle, avatar, signature, level, uid "
+            "SELECT id, name, nickname, handle, avatar, signature, level, uid, hue "
             "FROM users WHERE name LIKE ? OR nickname LIKE ? OR handle LIKE ? "
             "ORDER BY (handle = ?) DESC, id ASC LIMIT 20",
             (like, like, like, q.lstrip("@").lower())).fetchall()
@@ -2093,7 +2676,7 @@ def search(q: str = "", page: int = 1, kind: str = "thread", sort: str = "recent
             "id": r["id"], "uid": r["uid"] or r["id"], "name": r["name"],
             "nickname": r["nickname"] or r["name"], "handle": r["handle"] or "",
             "avatar": r["avatar"] or "", "signature": r["signature"] or "",
-            "level": min(MAX_LEVEL, r["level"] or 1)} for r in rows]
+            "hue": r["hue"], "level": min(MAX_LEVEL, r["level"] or 1)} for r in rows]
 
     out["took_ms"] = int((time.time() - t0) * 1000)
     return out
@@ -2320,7 +2903,7 @@ def admin_feature_requests(page: int = 1, done: bool = False,
     page = max(1, page)
     where = "f.status<>0" if done else "f.status=0"
     rows = c.execute(
-        "SELECT f.*, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "SELECT f.*, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, u.avatar AS author_avatar, u.hue AS author_hue "
         "FROM feature_requests f JOIN users u ON u.id=f.user_id "
         "WHERE " + where + " ORDER BY f.id DESC LIMIT ? OFFSET ?",
         (PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
@@ -2474,7 +3057,7 @@ def favorites(page: int = 1, c=Depends(get_conn), user=Depends(require_user)):
     page = max(1, page)
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, u.avatar AS author_avatar, u.hue AS author_hue "
         "FROM favorites fa JOIN threads t ON t.id=fa.thread_id "
         "JOIN users u ON u.id=t.user_id "
         "WHERE fa.user_id=? ORDER BY fa.created_at DESC LIMIT ? OFFSET ?",
@@ -2487,7 +3070,7 @@ def history(page: int = 1, c=Depends(get_conn), user=Depends(require_user)):
     page = max(1, page)
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, u.avatar AS author_avatar, u.hue AS author_hue "
         "FROM history h JOIN threads t ON t.id=h.thread_id "
         "JOIN users u ON u.id=t.user_id "
         "WHERE h.user_id=? ORDER BY h.viewed_at DESC LIMIT ? OFFSET ?",
@@ -2511,11 +3094,16 @@ def user_page(name: str, page: int = 1, c=Depends(get_conn), user=Depends(option
         raise HTTPException(404, "用户不存在")
     page = max(1, page)
     info = user_json(u)
+    # 别人主页的邮箱对他自己可见就行，看的人拿不到。
+    if not user or user["id"] != u["id"]:
+        info.pop("email", None)
     info["created_at"] = u["created_at"]
     info["thread_count"] = c.execute(
         "SELECT COUNT(*) AS n FROM threads WHERE user_id=?", (u["id"],)).fetchone()["n"]
     info["reply_count"] = c.execute(
         "SELECT COUNT(*) AS n FROM replies WHERE user_id=?", (u["id"],)).fetchone()["n"]
+    # 关了「公开关注和粉丝」只是不让别人打开名单，数字照显示。
+    # 名单那边返回 locked，前端给一句「没有公开」。
     info["follow_count"] = c.execute(
         "SELECT COUNT(*) AS n FROM follows WHERE target_id=?", (u["id"],)).fetchone()["n"]
     info["following_count"] = c.execute(
@@ -2525,7 +3113,7 @@ def user_page(name: str, page: int = 1, c=Depends(get_conn), user=Depends(option
         (user["id"], u["id"])).fetchone())
     rows = c.execute(
         "SELECT t.id, t.title, t.body, t.created_at, t.updated_at, t.edited_at, t.reply_count, t.view_count, "
-        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle "
+        "t.is_good, t.images, t.user_id, u.name AS author, u.nickname AS author_nick, u.handle AS author_handle, u.avatar AS author_avatar, u.hue AS author_hue "
         "FROM threads t JOIN users u ON u.id=t.user_id "
         "WHERE t.user_id=? ORDER BY t.updated_at DESC LIMIT ? OFFSET ?",
         (u["id"], PER_PAGE, (page - 1) * PER_PAGE)).fetchall()
@@ -2546,6 +3134,54 @@ def my_followers(c=Depends(get_conn), user=Depends(require_user)):
         "SELECT u.* FROM follows fo JOIN users u ON u.id=fo.follower_id "
         "WHERE fo.target_id=? ORDER BY fo.created_at DESC", (user["id"],)).fetchall()
     return {"items": [user_json(r) for r in rows]}
+
+
+def _public_user(row):
+    """给外人看的资料：邮箱不带出去。"""
+    d = user_json(row)
+    d.pop("email", None)
+    return d
+
+
+def _follow_list(c, name: str, user, page: int, kind: str):
+    raw = name.strip().lstrip("@")
+    u = c.execute("SELECT * FROM users WHERE name=? OR handle=?", (raw, raw.lower())).fetchone()
+    if not u and raw.isdigit():
+        u = c.execute("SELECT * FROM users WHERE uid=? OR id=?", (int(raw), int(raw))).fetchone()
+    if not u:
+        rows = c.execute("SELECT * FROM users WHERE nickname=?", (raw,)).fetchall()
+        if len(rows) == 1:
+            u = rows[0]
+    if not u:
+        raise HTTPException(404, "用户不存在")
+    me = user["id"] if user else 0
+    visible = bool(u["show_follows"]) if "show_follows" in u.keys() else True
+    if not visible and me != u["id"]:
+        return {"items": [], "page": page, "has_more": False, "locked": True, "total": 0}
+    page = max(1, page)
+    per = 40
+    if kind == "following":
+        sql = ("SELECT u2.* FROM follows fo JOIN users u2 ON u2.id=fo.target_id "
+               "WHERE fo.follower_id=? ORDER BY fo.created_at DESC LIMIT ? OFFSET ?")
+        cnt = "SELECT COUNT(*) AS n FROM follows WHERE follower_id=?"
+    else:
+        sql = ("SELECT u2.* FROM follows fo JOIN users u2 ON u2.id=fo.follower_id "
+               "WHERE fo.target_id=? ORDER BY fo.created_at DESC LIMIT ? OFFSET ?")
+        cnt = "SELECT COUNT(*) AS n FROM follows WHERE target_id=?"
+    total = c.execute(cnt, (u["id"],)).fetchone()["n"]
+    rows = c.execute(sql, (u["id"], per, (page - 1) * per)).fetchall()
+    return {"items": [_public_user(r) for r in rows], "page": page,
+            "has_more": page * per < total, "locked": False, "total": total}
+
+
+@router.get("/u/{name}/following")
+def user_following(name: str, page: int = 1, c=Depends(get_conn), user=Depends(optional_user)):
+    return _follow_list(c, name, user, page, "following")
+
+
+@router.get("/u/{name}/followers")
+def user_followers(name: str, page: int = 1, c=Depends(get_conn), user=Depends(optional_user)):
+    return _follow_list(c, name, user, page, "followers")
 
 
 @router.post("/u/{name}/follow")
@@ -2582,6 +3218,9 @@ class ProfilePatch(BaseModel):
     signature: Optional[str] = None
     avatar: Optional[str] = None
     cover: Optional[str] = None
+    show_follows: Optional[bool] = None
+    # 主题色色相，0–350 是色带上的档位，-1 表示清掉、回默认
+    hue: Optional[int] = None
 
 
 @router.patch("/me")
@@ -2613,6 +3252,17 @@ def update_me(p: ProfilePatch, c=Depends(get_conn), user=Depends(require_user)):
     if p.avatar is not None:
         sets.append("avatar=?")
         vals.append(p.avatar.strip()[:300])
+    if p.show_follows is not None:
+        sets.append("show_follows=?")
+        vals.append(1 if p.show_follows else 0)
+    if p.hue is not None:
+        if p.hue == -1:
+            sets.append("hue=NULL")
+        elif 0 <= p.hue <= 350:
+            sets.append("hue=?")
+            vals.append(int(p.hue))
+        else:
+            raise HTTPException(400, "主题色只要 0–350")
     if p.cover is not None:
         cv = p.cover.strip()[:300]
         if cv and not cv.startswith("/img/"):
@@ -2950,7 +3600,8 @@ def cloud_usage(c=Depends(get_conn), user=Depends(require_user)):
     q = filesvc.quota_of(user)
     t = c.execute(
         "SELECT COALESCE(SUM(size),0) AS s, COUNT(*) AS n FROM user_files "
-        "WHERE user_id=? AND deleted_at IS NOT NULL", (user["id"],)).fetchone()
+        "WHERE user_id=? AND deleted_at IS NOT NULL "
+        "AND COALESCE(deleted_by, user_id)=?", (user["id"], user["id"])).fetchone()
     return {
         "quota": q,
         "used": filesvc.used(c, user["id"]),
@@ -2982,6 +3633,42 @@ def cloud_files(q: str = "", sort: str = "time", page: int = 1,
     return {"items": [_cloud_item(c, r) for r in rows], "page": page, "total": total}
 
 
+@router.post("/cloud/files/claim")
+def cloud_claim(body: dict, c=Depends(get_conn), user=Depends(require_user)):
+    """把服务器上已经有的文件挂进自己云盘，不重传。
+    聊天里收过的附件就是这样进云盘的：files 表里有，就只加一条账本。"""
+    digest = str(body.get("digest") or "").strip().lower()
+    # 也接受 /f/<digest> 这种地址，前端少写一步解析。
+    digest = digest.split("?")[0].split("/")[-1]
+    if not digest or len(digest) > 64 or any(ch not in "0123456789abcdef" for ch in digest):
+        raise HTTPException(400, "文件不在了")
+    row = c.execute("SELECT name, size FROM files WHERE digest=?", (digest,)).fetchone()
+    if not row:
+        raise HTTPException(404, "文件不在了")
+
+    mine = c.execute(
+        "SELECT id, deleted_at FROM user_files WHERE user_id=? AND digest=?",
+        (user["id"], digest)).fetchone()
+    if mine is not None and not mine["deleted_at"]:
+        return {"ok": True, "exists": True, "name": row["name"], "size": row["size"]}
+
+    if mine is None:
+        left = filesvc.remaining(c, user)
+        if left is not None and row["size"] > left:
+            raise HTTPException(413, filesvc.full_msg(row["size"] - left))
+        c.execute(
+            "INSERT INTO user_files(user_id, digest, name, size, source, created_at) "
+            "VALUES(?,?,?,?, 'cloud', ?)",
+            (user["id"], digest, row["name"], row["size"], int(time.time())))
+    else:
+        # 躺在回收站里的直接拉回来，不占新空间，名字保持人家原来取的。
+        c.execute("UPDATE user_files SET deleted_at=NULL, created_at=? WHERE id=?",
+                  (int(time.time()), mine["id"]))
+    c.commit()
+    return {"ok": True, "exists": False, "restored": mine is not None,
+            "name": row["name"], "size": row["size"]}
+
+
 @router.delete("/cloud/files/{fid}")
 def cloud_del(fid: int, c=Depends(get_conn), user=Depends(require_user)):
     """删进回收站，不删物理文件。空间还占着，彻底删除才还。"""
@@ -2989,16 +3676,19 @@ def cloud_del(fid: int, c=Depends(get_conn), user=Depends(require_user)):
                   (fid, user["id"])).fetchone()
     if not r or r["deleted_at"]:
         raise HTTPException(404, "文件不在了")
-    c.execute("UPDATE user_files SET deleted_at=? WHERE id=?", (int(time.time()), fid))
+    c.execute("UPDATE user_files SET deleted_at=?, deleted_by=? WHERE id=?",
+              (int(time.time()), user["id"], fid))
     c.commit()
     return {"ok": True, "freed": r["size"], "refs": _refs(c, r["digest"])}
 
 
 @router.get("/cloud/trash")
 def cloud_trash(c=Depends(get_conn), user=Depends(require_user)):
+    # 管理员删的那批不在我这里，在管理员回收站。
     rows = c.execute(
         "SELECT * FROM user_files WHERE user_id=? AND deleted_at IS NOT NULL "
-        "ORDER BY deleted_at DESC", (user["id"],)).fetchall()
+        "AND COALESCE(deleted_by, user_id)=? ORDER BY deleted_at DESC",
+        (user["id"], user["id"])).fetchall()
     return {"items": [_cloud_item(c, r) for r in rows]}
 
 
@@ -3008,8 +3698,10 @@ def cloud_restore(fid: int, c=Depends(get_conn), user=Depends(require_user)):
                   (fid, user["id"])).fetchone()
     if not r or not r["deleted_at"]:
         raise HTTPException(404, "文件不在了")
+    if r["deleted_by"] not in (None, user["id"]):
+        raise HTTPException(403, "这条是管理员删的")
     # 回收站里的文件一直占着额度，挪回来不新增占用，所以不再查剩余空间。
-    c.execute("UPDATE user_files SET deleted_at=NULL WHERE id=?", (fid,))
+    c.execute("UPDATE user_files SET deleted_at=NULL, deleted_by=NULL WHERE id=?", (fid,))
     c.commit()
     return {"ok": True}
 
@@ -3045,7 +3737,8 @@ def admin_cloud_usage(page: int = 1, per_page: int = 20,
     for r in rows:
         t = c.execute(
             "SELECT COALESCE(SUM(size),0) AS s, COUNT(*) AS n FROM user_files "
-            "WHERE user_id=? AND deleted_at IS NOT NULL", (r["id"],)).fetchone()
+            "WHERE user_id=? AND deleted_at IS NOT NULL "
+            "AND COALESCE(deleted_by, user_id)=?", (r["id"], r["id"])).fetchone()
         items.append({
             "user_id": r["id"],
             "name": r["nickname"] or r["name"],
@@ -3086,19 +3779,110 @@ def admin_cloud_quota(p: CloudQuota, user=Depends(optional_user), c=Depends(get_
 
 @router.delete("/admin/cloud/file/{fid}")
 def admin_cloud_del(fid: int, user=Depends(optional_user), c=Depends(get_conn)):
-    """管理员删某条记录。删完没人引用就连物理文件一起清。"""
+    """管理员删文件。进管理员的回收站，原主人那边看不到，也不占他的额度。
+
+    物理文件先留着——回收站要能恢复；过期由每小时那趟清理一起收。
+    """
     _need_admin(user)
-    r = c.execute("SELECT id, digest FROM user_files WHERE id=?", (fid,)).fetchone()
-    if not r:
+    r = c.execute("SELECT id, user_id, deleted_at FROM user_files WHERE id=?",
+                  (fid,)).fetchone()
+    if not r or r["deleted_at"]:
         raise HTTPException(404, "文件不在了")
-    c.execute("DELETE FROM user_files WHERE id=?", (fid,))
+    c.execute("UPDATE user_files SET deleted_at=?, deleted_by=? WHERE id=?",
+              (int(time.time()), user["id"], fid))
     c.commit()
-    if not c.execute("SELECT 1 FROM user_files WHERE digest=? LIMIT 1",
-                     (r["digest"],)).fetchone():
-        c.execute("DELETE FROM files WHERE digest=?", (r["digest"],))
-        c.commit()
-        try:
-            os.unlink(filesvc.path_of(r["digest"]))
-        except OSError:
-            pass
     return {"ok": True}
+
+
+# ---------------------------------------------------------------- 界面参数
+# 卡片的高度、边距、字号这类纯视觉数字，放到服务端来管。
+# 站长在管理页改一次，客户端下次拉取就换了，不用重新打安装包。
+#
+# 只有白名单里的键会被接受，类型和范围一起校验：手滑写成 "80px"、
+# 或者把高度填成 8000，都会被打回，别让一条脏数据把界面画崩。
+
+UI_FILE = os.path.join(config.path("data"), "ui_config.json")
+
+# 键 -> ("num", 最小, 最大) 或 ("enum", 允许值)
+UI_SPEC = {
+    "fileCard.height": ("num", 24, 240),
+    "fileCard.maxWidth": ("num", 120, 2000),
+    "fileCard.compactWidth": ("num", 120, 2000),
+    "fileCard.padV": ("num", 0, 60),
+    "fileCard.padH": ("num", 0, 80),
+    "fileCard.radius": ("num", 0, 48),
+    "fileCard.icon": ("num", 8, 96),
+    "fileCard.nameSize": ("num", 8, 32),
+    "fileCard.sizeSize": ("num", 6, 28),
+    "fileCard.gap": ("num", 0, 32),
+    "fileCard.arrowIcon": ("num", 8, 32),
+    "threadCard.avatarRadius": ("num", 8, 48),
+    "threadCard.gap": ("num", 2, 40),
+    # 角标放在时间的哪一边。belowTime 就是另起一行。
+    "threadCard.tagSide": ("enum", {"leftOfTime", "rightOfTime", "belowTime"}),
+}
+
+
+def _ui_load():
+    """读当前参数。文件坏了当没配过，界面用客户端自带的默认值。"""
+    try:
+        with open(UI_FILE, encoding="utf-8") as f:
+            d = json.load(f)
+        vals = d.get("values") if isinstance(d, dict) else None
+        if not isinstance(vals, dict):
+            vals = {}
+        return {
+            "rev": int(d.get("rev") or 0),
+            "values": {k: v for k, v in vals.items() if k in UI_SPEC},
+        }
+    except Exception:
+        return {"rev": 0, "values": {}}
+
+
+def _ui_save(values):
+    cur = _ui_load()
+    out = {"rev": cur["rev"] + 1, "values": values, "updated_at": int(time.time())}
+    os.makedirs(os.path.dirname(UI_FILE), exist_ok=True)
+    tmp = UI_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, UI_FILE)
+    return out
+
+
+class UiConfigIn(BaseModel):
+    values: dict
+
+
+@router.get("/ui/config")
+def ui_config():
+    # 公开：没登录也得能画对界面。
+    return _ui_load()
+
+
+@router.post("/admin/ui/config")
+def admin_ui_config(p: UiConfigIn, user=Depends(optional_user)):
+    _need_admin(user)
+    clean, rejected = {}, []
+    for k, v in (p.values or {}).items():
+        spec = UI_SPEC.get(k)
+        if not spec:
+            rejected.append({"key": k, "why": "不知道这个键"})
+            continue
+        if spec[0] == "num":
+            if isinstance(v, bool) or not isinstance(v, (int, float)):
+                rejected.append({"key": k, "why": "得是数字"})
+                continue
+            n = float(v)
+            if not (spec[1] <= n <= spec[2]):
+                rejected.append({"key": k, "why": f"超出范围 {spec[1]}~{spec[2]}"})
+                continue
+            clean[k] = int(n) if n == int(n) else round(n, 2)
+        else:
+            if v not in spec[1]:
+                rejected.append({"key": k, "why": "取值不在允许范围"})
+                continue
+            clean[k] = v
+    out = _ui_save(clean)
+    out["rejected"] = rejected
+    return out
