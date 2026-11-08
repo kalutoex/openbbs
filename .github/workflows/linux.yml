@@ -1,0 +1,111 @@
+name: linux
+
+# 一个 Linux 构建，三种包：通用 tar.gz、Debian/Ubuntu 的 deb、Arch 的 pkg.tar.zst。
+# 用 ubuntu-22.04 而不是 latest：glibc 2.35，Debian 12 / Ubuntu 22.04+ / Arch 都吃得下；
+# 用 24.04 编出来的（glibc 2.39）在 Debian 12 上就跑不动了。
+
+on:
+  push:
+    branches: [master, main]
+    paths-ignore: ['docs/**', '*.md']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev libsecret-1-dev libjsoncpp-dev liblzma-dev \
+            libarchive-tools zstd rpm
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.6
+          channel: stable
+          cache: true
+
+      - name: Pub get
+        env:
+          PUB_HOSTED_URL: https://pub.dev
+        run: flutter pub get
+
+      - name: Build
+        env:
+          PUB_HOSTED_URL: https://pub.dev
+        run: flutter build linux --release
+
+      - name: 组装
+        run: |
+          set -e
+          VER=1.1.1
+          BUNDLE=build/linux/x64/release/bundle
+          mkdir -p out
+          # 通用包：解压就能跑
+          (cd "$BUNDLE" && tar -czf "$OLDPWD/out/OpenBBS-$VER-linux-x64.tar.gz" .)
+
+          # Debian / Ubuntu
+          rm -rf pkg && mkdir -p pkg/DEBIAN pkg/usr/lib/openbbs pkg/usr/bin pkg/usr/share/applications
+          cp -r "$BUNDLE"/* pkg/usr/lib/openbbs/
+          cat > pkg/DEBIAN/control <<EOF
+          Package: openbbs
+          Version: $VER
+          Section: net
+          Priority: optional
+          Architecture: amd64
+          Maintainer: kalutoex
+          Depends: libgtk-3-0, libsecret-1-0, libjsoncpp25, liblzma5, libstdc++6, libblkid1
+          Description: OpenBBS 社区客户端
+           论坛、私聊、云盘一体的社区应用。
+          EOF
+          printf '#!/bin/sh\nexec /usr/lib/openbbs/openbbs "$@"\n' > pkg/usr/bin/openbbs
+          chmod +x pkg/usr/bin/openbbs
+          cat > pkg/usr/share/applications/openbbs.desktop <<EOF
+          [Desktop Entry]
+          Name=OpenBBS
+          Comment=论坛、私聊、云盘一体的社区应用
+          Exec=openbbs
+          Terminal=false
+          Type=Application
+          Categories=Network;Chat;
+          EOF
+          dpkg-deb --root-owner-group -Zxz --build pkg out/OpenBBS-$VER-amd64.deb
+
+          # Arch
+          rm -rf apkg && mkdir -p apkg/usr/lib/openbbs apkg/usr/bin apkg/usr/share/applications
+          cp -r "$BUNDLE"/* apkg/usr/lib/openbbs/
+          cp pkg/usr/bin/openbbs apkg/usr/bin/
+          cp pkg/usr/share/applications/openbbs.desktop apkg/usr/share/applications/
+          SIZE=$(du -sb apkg/usr | cut -f1)
+          cat > apkg/.PKGINFO <<EOF
+          pkgname = openbbs
+          pkgver = $VER-1
+          pkgdesc = 论坛、私聊、云盘一体的社区应用
+          url = https://github.com/kalutoex/openbbs
+          builddate = $(date +%s)
+          packager = kalutoex
+          size = $SIZE
+          arch = x86_64
+          license = GPL-3.0-only
+          depend = gtk3
+          depend = libsecret
+          depend = jsoncpp
+          depend = xz
+          depend = gcc-libs
+          depend = glibc
+          depend = blkid
+          EOF
+          (cd apkg && bsdtar -czf .MTREE --format=mtree \
+            --options='!all,use-set,type,uid,gid,mode,time,size,md5,sha256,link' .PKGINFO usr)
+          (cd apkg && tar --zstd -cf "$OLDPWD/out/OpenBBS-$VER-1-x86_64.pkg.tar.zst" .PKGINFO .MTREE usr)
+          ls -lh out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenBBS-linux
+          path: out/*
+          retention-days: 30
