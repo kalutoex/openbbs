@@ -188,13 +188,40 @@ class PostImages extends StatelessWidget {
   }
 
   void _open(BuildContext context, int index) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            ImageViewerPage(urls: urls, initial: index, heroPrefix: heroPrefix),
-      ),
+    openImageViewer(
+      context,
+      urls: urls,
+      initial: index,
+      heroPrefix: heroPrefix,
     );
   }
+}
+
+/// 打开全屏查看器。
+///
+/// 进来淡一下，退出去不要动画——按下返回的人已经决定走了，
+/// 等它缩回去是白等。Hero 在零时长的反向转场里也是一步到位。
+void openImageViewer(
+  BuildContext context, {
+  required List<String> urls,
+  int initial = 0,
+  String heroPrefix = '',
+}) {
+  if (urls.isEmpty) return;
+  Navigator.of(context).push(
+    PageRouteBuilder<void>(
+      // 半透明，好让淡入时底下那页还看得见，不闪一下黑。
+      opaque: false,
+      transitionDuration: const Duration(milliseconds: 180),
+      reverseTransitionDuration: Duration.zero,
+      pageBuilder: (_, _, _) =>
+          ImageViewerPage(urls: urls, initial: initial, heroPrefix: heroPrefix),
+      transitionsBuilder: (_, a, _, child) => FadeTransition(
+        opacity: a.drive(CurveTween(curve: Curves.easeOut)),
+        child: child,
+      ),
+    ),
+  );
 }
 
 /// 全屏看图：双指缩放、双击放大、左右翻页、右上角下载。

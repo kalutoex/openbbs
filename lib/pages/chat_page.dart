@@ -415,10 +415,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     if (_sending) return;
     setState(() => _compressing = true);
     try {
-      final got = await pickImages(
-        context,
-        room: kMaxImages - _pending.length,
-      );
+      final got = await pickImages(context, room: kMaxImages - _pending.length);
       if (mounted && got.isNotEmpty) setState(() => _pending.addAll(got));
     } finally {
       if (mounted) setState(() => _compressing = false);
@@ -1415,11 +1412,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   /// 跟帖子里点图走同一个查看器，缩放、翻页、存图都是那一套。
   void _viewImage(List<String> urls, int index) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ImageViewerPage(urls: urls, initial: index),
-      ),
-    );
+    openImageViewer(context, urls: urls, initial: index);
   }
 
   Widget _timePill(ColorScheme cs, int ts) {

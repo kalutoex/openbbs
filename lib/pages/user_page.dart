@@ -297,8 +297,7 @@ class _UserPageState extends State<UserPage> {
   /// 头像、封面点开看大图。用的是帖子里那个查看器：双指缩放、双击放大。
   void _viewLarge(String url) {
     if (url.isEmpty) return;
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => ImageViewerPage(urls: [url])));
+    openImageViewer(context, urls: [url]);
   }
 
   /// 封面。有图就铺图，没有就一层渐变。

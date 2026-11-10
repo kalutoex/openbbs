@@ -1,11 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart'
-    show ImageRenderMethodForWeb;
 import 'package:flutter/material.dart';
 
+import '../haptics.dart';
 import '../user_hue.dart';
 import '../api.dart';
-import '../img_cache.dart';
 import '../img_size_store.dart';
 import '../store.dart';
 import '../utils.dart';
@@ -13,6 +10,7 @@ import 'avatar.dart';
 import 'file_card.dart';
 import 'live_time.dart';
 import 'post_images.dart';
+import 'retry_image.dart';
 
 import 'user_link.dart';
 
@@ -246,50 +244,11 @@ class ThreadTile extends StatelessWidget {
                             : _coverMaxWidth;
                         return Align(
                           alignment: Alignment.centerLeft,
-                          child: SizedBox(
-                            // 占位和成品同一个框，图下来不会再从 4:3 跳成别的比例。
+                          child: _CoverCarousel(
+                            urls: imgs,
+                            sizes: coverSizes,
                             width: w,
-                            child: AspectRatio(
-                              aspectRatio: _coverRatio(cover, coverSizes),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                // 封面自己接点击：卡片整体是进帖子，图这一块
-                                // 直接开全屏查看器，多图进去还能左右翻。
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () => _openImages(context, imgs),
-                                  child: Hero(
-                                    tag: 't${item['id']}:$cover',
-                                    child: CachedNetworkImage(
-                                      cacheManager: ImgCache.manager,
-                                      imageRenderMethodForWeb:
-                                          ImageRenderMethodForWeb.HttpGet,
-                                      imageUrl: Api.thumb(cover, 320),
-                                      fit: BoxFit.cover,
-                                      alignment: Alignment.topCenter,
-                                      memCacheWidth:
-                                          (w *
-                                                  MediaQuery.devicePixelRatioOf(
-                                                    ctx,
-                                                  ))
-                                              .round()
-                                              .clamp(208, 720),
-                                      placeholder: (_, _) => Container(
-                                        color: cs.surfaceContainerHighest,
-                                      ),
-                                      errorWidget: (_, _, _) => Container(
-                                        color: cs.surfaceContainerHighest,
-                                        child: Icon(
-                                          Icons.broken_image_outlined,
-                                          size: 20,
-                                          color: cs.outline,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            onOpen: (i) => _openImages(context, imgs, i),
                           ),
                         );
                       },
@@ -385,28 +344,20 @@ class ThreadTile extends StatelessWidget {
     ),
   );
 
-  /// 封面比例：服务端给的优先，本地存过的次之，都没有才 4:3。
+  /// 封面上点一下：直接进全屏查看器。整张卡片还是进帖子。
+  void _openImages(BuildContext context, List<String> imgs, int index) {
+    openImageViewer(context, urls: imgs, initial: index);
+  }
+
+  /// 某张图的比例：服务端给的优先，本地存过的次之，都没有才 4:3。
   /// 重点是加载前后这个框不能变。
   ///
   /// 列表里的封面是缩略图，比正文更紧：超过 0.7（高不到宽的 1.4 倍）就裁，
   /// 只露上半截。点进去还是整张。
-  /// 封面上点一下：直接进全屏查看器，多图可以左右翻。整张卡片还是进帖子。
-  void _openImages(BuildContext context, List<String> imgs) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ImageViewerPage(
-          urls: imgs,
-          initial: 0,
-          heroPrefix: 't${item['id']}',
-        ),
-      ),
-    );
-  }
-
-  double _coverRatio(String cover, List<dynamic> sizes) {
+  static double _ratioAt(List<dynamic> sizes, int i, String url) {
     double? raw;
-    if (sizes.isNotEmpty && sizes.first is List) {
-      final v = sizes.first as List;
+    if (i < sizes.length && sizes[i] is List) {
+      final v = sizes[i] as List;
       if (v.length == 2) {
         final w = (v[0] as num).toDouble();
         final h = (v[1] as num).toDouble();
@@ -414,7 +365,7 @@ class ThreadTile extends StatelessWidget {
       }
     }
     raw ??= () {
-      final s = ImgSizeStore.get(Api.img(cover));
+      final s = ImgSizeStore.get(Api.img(url));
       if (s == null || s.height <= 0) return null;
       return (s.width / s.height).clamp(0.2, 5.0);
     }();
@@ -460,6 +411,104 @@ class ThreadTile extends StatelessWidget {
       maxLines: 4,
       overflow: TextOverflow.ellipsis,
       style: style,
+    );
+  }
+}
+
+/// 首页卡片上的封面。
+///
+/// 一张就老实显示一张；多图可以就地左右滑，卡片高度跟着当前这张的比例
+/// 平滑地变过去——图片和帖子一起长、一起缩，看着是一件事。
+/// 只能左右：纵向手势留给列表，免得在卡片上划不动时间线。
+class _CoverCarousel extends StatefulWidget {
+  final List<String> urls;
+  final List<dynamic> sizes;
+  final double width;
+  final void Function(int index) onOpen;
+
+  const _CoverCarousel({
+    required this.urls,
+    required this.sizes,
+    required this.width,
+    required this.onOpen,
+  });
+
+  @override
+  State<_CoverCarousel> createState() => _CoverCarouselState();
+}
+
+class _CoverCarouselState extends State<_CoverCarousel> {
+  final PageController _pc = PageController();
+  int _i = 0;
+
+  @override
+  void dispose() {
+    _pc.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final many = widget.urls.length > 1;
+    final ratio = ThreadTile._ratioAt(widget.sizes, _i, widget.urls[_i]);
+    final px = (widget.width * MediaQuery.devicePixelRatioOf(context))
+        .round()
+        .clamp(208, 720);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      width: widget.width,
+      height: widget.width / ratio,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _pc,
+            itemCount: widget.urls.length,
+            onPageChanged: (i) {
+              if (i == _i) return;
+              // 和底栏切页同一档，滑过去手上有个准信。
+              Haptics.tap();
+              setState(() => _i = i);
+            },
+            itemBuilder: (c, i) => GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              // 点图进全屏，从手上这张开始。
+              onTap: () => widget.onOpen(i),
+              child: RetryImage(
+                url: Api.thumb(widget.urls[i], 320),
+                fit: BoxFit.cover,
+                // 长图裁上面那截，内容从头开始才对。
+                alignment: Alignment.topCenter,
+                memCacheWidth: px,
+                probeSize: i >= widget.sizes.length || widget.sizes[i] is! List,
+              ),
+            ),
+          ),
+          if (many)
+            Positioned(
+              right: 6,
+              bottom: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${_i + 1}/${widget.urls.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
