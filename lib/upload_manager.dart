@@ -123,7 +123,8 @@ class UploadManager extends ChangeNotifier {
 
   bool get busy => current != null || _busy;
 
-  int get queuedAfter => jobs.where((j) => j.state == UploadState.queued).length;
+  int get queuedAfter =>
+      jobs.where((j) => j.state == UploadState.queued).length;
 
   /// 还在队列里（含正在传）的。
   List<UploadJob> get activeJobs => jobs.where((j) => j.active).toList();
@@ -371,9 +372,8 @@ class UploadManager extends ChangeNotifier {
     _batchFailed = 0;
   }
 
-  String _label(UploadJob job) => job.size > 0
-      ? '${job.name} · ${bytesShort(job.size)}'
-      : job.name;
+  String _label(UploadJob job) =>
+      job.size > 0 ? '${job.name} · ${bytesShort(job.size)}' : job.name;
 
   String _pct(UploadJob job) => '${(job.ratio * 100).round()}%';
 

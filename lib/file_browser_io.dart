@@ -473,8 +473,6 @@ class _FileBrowserPageState extends State<FileBrowserPage>
     );
   }
 
-
-
   Widget _crumbs(ColorScheme cs) {
     if (_path.isEmpty) return const SizedBox.shrink();
     // 根目录不拆开显示。真按路径拆，「存储」后面还会跟一行 storage > emulated > 0，
@@ -549,6 +547,8 @@ class _FileBrowserPageState extends State<FileBrowserPage>
       child: SizedBox(
         height: 36,
         child: TextField(
+          autocorrect: false,
+          enableSuggestions: false,
           controller: _search,
           onChanged: (v) => setState(() => _q = v),
           textAlignVertical: TextAlignVertical.center,

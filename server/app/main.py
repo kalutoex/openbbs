@@ -6,7 +6,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import api, auth, blacklist, config, db, files as filesvc, sites, thumbs, words
+from . import (aibridge, api, auth, blacklist, config, db, files as filesvc, sites,
+               thumbs, words)
 
 ROOT = config.ROOT
 PER_PAGE = config.get("limits", "per_page", 20)
@@ -508,6 +509,26 @@ async def _trash_loop():
         except Exception as e:  # noqa: BLE001 清理失败也要继续下一轮
             print("[cloud] 回收站清理出错：%r" % (e,), flush=True)
         await asyncio.sleep(3600)
+
+
+@app.on_event("startup")
+async def _start_ai_bridge():
+    """AI 接入的 OneBot 桥。
+
+    多进程部署时会调好几次 startup（每个 uvicorn 进程一次），真正跑桥的
+    只有抢到 ai_bridge.lock 的那个，其余直接返回。
+    """
+    async def _send(self_uid: int, peer_uid: int, text: str, images: list,
+                    source: str, ctx: dict) -> dict:
+        # 写库是同步的，别堵事件循环
+        return await asyncio.to_thread(
+            api.ai_send_as, self_uid, peer_uid, text, images, source, ctx or {})
+
+    aibridge.bridge.set_send_handler(_send)
+    try:
+        aibridge.bridge.start()
+    except Exception as e:  # noqa: BLE001
+        print("[ai] 桥启动失败：%r" % (e,), flush=True)
 
 
 @app.on_event("startup")

@@ -239,6 +239,8 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                   ),
                   const SizedBox(height: 12),
                   TextField(
+                    autocorrect: false,
+                    enableSuggestions: false,
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(labelText: Lc.current.email),
@@ -248,6 +250,8 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                     children: [
                       Expanded(
                         child: TextField(
+                          autocorrect: false,
+                          enableSuggestions: false,
                           controller: _code,
                           keyboardType: TextInputType.number,
                           maxLength: 6,

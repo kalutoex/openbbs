@@ -93,7 +93,10 @@ class TrashApi {
   static Future<TrashSummary> summary() async =>
       TrashSummary.fromJson(await Api.get('/trash/summary') as Map);
 
-  static Future<List<TrashThread>> threads({int page = 1, int perPage = 30}) async {
+  static Future<List<TrashThread>> threads({
+    int page = 1,
+    int perPage = 30,
+  }) async {
     final m = await Api.get(
       '/trash/threads',
       query: {'page': '$page', 'per_page': '$perPage'},

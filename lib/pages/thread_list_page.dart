@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../paged.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
 import '../widgets/thread_tile.dart';
@@ -27,15 +28,14 @@ class ThreadListPage extends StatefulWidget {
 }
 
 class _ThreadListPageState extends State<ThreadListPage> {
-  final List<Map<String, dynamic>> _items = [];
   final ScrollController _scroll = ScrollController();
 
-  int _page = 1;
-  bool _busy = false;
-  int _seq = 0;
-  bool _hasMore = true;
-  bool _first = true;
-  String? _err;
+  late final Pager<Map<String, dynamic>> _pager = Pager(
+    fetch: (page) async {
+      final d = await Api.get(widget.path, query: {'page': '$page'});
+      return PageSlice((d['items'] as List).cast<Map<String, dynamic>>());
+    },
+  );
 
   @override
   void initState() {
@@ -61,62 +61,14 @@ class _ThreadListPageState extends State<ThreadListPage> {
   }
 
   Future<void> _reload() async {
-    // 换号：之前滑出来的那几页还在飞的话，回来也不作数了。
-    final seq = ++_seq;
-    setState(() {
-      _items.clear();
-      _page = 1;
-      _hasMore = true;
-      _first = true;
-      _err = null;
-    });
-    _busy = true;
-    try {
-      final d = await Api.get(widget.path, query: {'page': '1'});
-      final items = (d['items'] as List).cast<Map<String, dynamic>>();
-      if (!mounted || seq != _seq) return;
-      setState(() {
-        _items.addAll(items);
-        _page = 2;
-        _hasMore = items.length >= 20;
-        _first = false;
-        _err = null;
-      });
-    } on ApiException catch (e) {
-      if (!mounted || seq != _seq) return;
-      setState(() {
-        _first = false;
-        _err = errorText(context, e);
-      });
-    } finally {
-      if (seq == _seq) _busy = false;
-    }
+    setState(() {});
+    await _pager.reset();
+    if (mounted) setState(() {});
   }
 
   Future<void> _load() async {
-    if (_busy || !_hasMore) return;
-    final seq = _seq;
-    _busy = true;
-    try {
-      final d = await Api.get(widget.path, query: {'page': '$_page'});
-      final items = (d['items'] as List).cast<Map<String, dynamic>>();
-      if (!mounted || seq != _seq) return;
-      setState(() {
-        _items.addAll(items);
-        _page++;
-        _hasMore = items.length >= 20;
-        _first = false;
-        _err = null;
-      });
-    } on ApiException catch (e) {
-      if (!mounted || seq != _seq) return;
-      setState(() {
-        _first = false;
-        _err = errorText(context, e);
-      });
-    } finally {
-      if (seq == _seq) _busy = false;
-    }
+    await _pager.more();
+    if (mounted) setState(() {});
   }
 
   void _open(Map<String, dynamic> it) {
@@ -152,15 +104,16 @@ class _ThreadListPageState extends State<ThreadListPage> {
   }
 
   Widget _body(BuildContext context, ColorScheme cs) {
-    if (_first) {
+    if (_pager.first) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_err != null && _items.isEmpty) {
+    final err = _pager.error;
+    if (err != null && _pager.isEmpty) {
       return EmptyView(
         icon: Icons.cloud_off_rounded,
         title: Lc.current.loadFailed,
-        hint: _err,
+        hint: errorText(context, err),
         error: true,
         action: FilledButton.tonal(
           onPressed: _reload,
@@ -169,7 +122,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
       ).scrollable();
     }
 
-    if (_items.isEmpty) {
+    if (_pager.isEmpty) {
       return EmptyView(
         icon: Icons.inbox_outlined,
         title: widget.emptyText,
@@ -178,23 +131,25 @@ class _ThreadListPageState extends State<ThreadListPage> {
 
     return ListView.separated(
       controller: _scroll,
-      itemCount: _items.length + 1,
+      itemCount: _pager.items.length + 1,
       separatorBuilder: (_, i) => const SizedBox.shrink(),
       itemBuilder: (context, i) {
-        if (i == _items.length) {
+        if (i == _pager.items.length) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 18),
             child: Center(
               child: Text(
-                _busy
+                _pager.busy
                     ? Lc.current.loading
-                    : (_hasMore ? Lc.current.moreToLoad : Lc.current.endOfList),
+                    : (_pager.hasMore
+                          ? Lc.current.moreToLoad
+                          : Lc.current.endOfList),
                 style: TextStyle(color: cs.outline, fontSize: 12),
               ),
             ),
           );
         }
-        final it = _items[i];
+        final it = _pager.items[i];
         return ThreadTile(item: it, onTap: () => _open(it), onDeleted: _reload);
       },
     );

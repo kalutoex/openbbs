@@ -4,6 +4,7 @@ import '../store.dart';
 import '../l10n/l10n.dart';
 import '../widgets/app_card.dart';
 import '../widgets/page_width.dart';
+import 'ai_access_page.dart';
 
 /// 彩蛋页：放在这里的东西都不上台面，但都是真做过的。
 ///
@@ -30,6 +31,19 @@ class EasterEggPage extends StatelessWidget {
                   value: v,
                   onChanged: st.setHueCards,
                 ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: ListTile(
+                leading: const Icon(Icons.smart_toy_outlined),
+                title: const Text('AI 接入'),
+                subtitle: const Text('把这个账号交给 AstrBot 之类的机器人'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const AiAccessPage())),
               ),
             ),
           ],

@@ -8,22 +8,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart'
     show ImageRenderMethodForWeb;
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart' hide PickedFile;
 
 import '../api.dart';
-import '../file_pick.dart';
+import '../attach.dart';
 import '../img_cache.dart';
-import '../plat.dart';
-import '../img_compress.dart';
 import '../widgets/file_card.dart';
-import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../widgets/toast.dart';
-import '../cloud.dart';
-import '../file_browser.dart';
-import 'cloud_pick_page.dart';
 
 /// 改自己的帖子：标题、正文、配图。
 ///
@@ -58,7 +51,6 @@ class _EditThreadPageState extends State<EditThreadPage> {
   final List<Uint8List> _added = [];
   late final List<PostFile> _files = [...widget.files];
 
-  final _picker = ImagePicker();
   bool _busy = false;
   String _status = '';
 
@@ -80,114 +72,32 @@ class _EditThreadPageState extends State<EditThreadPage> {
       _added.isNotEmpty ||
       _files.length != widget.files.length;
 
-  void _snack(String m) {
-    if (!mounted) return;
-    toast(context, m);
-  }
-
-  /// 附件从哪来：云盘里现成的，还是设备上挑一个新的。
-  /// 云盘的不用再传一遍，地址直接能用。
-  Future<String?> _fileSource() {
-    return showAppSheet<String>(
-      context: context,
-      builder: (c) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.cloud_outlined),
-              title: Text(Lc.current.pickFromCloud),
-              onTap: () => Navigator.of(c).pop('cloud'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.smartphone),
-              title: Text(Lc.current.pickFromDevice),
-              onTap: () => Navigator.of(c).pop('device'),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _addFromCloud(int left) async {
-    final picked = await Navigator.of(context).push<List<CloudFile>>(
-      MaterialPageRoute(builder: (_) => CloudPickPage(maxCount: left)),
-    );
-    if (picked == null || picked.isEmpty || !mounted) return;
-    setState(() {
-      for (final f in picked.take(left)) {
-        _files.add(PostFile(url: f.url, name: f.name, size: f.size));
-      }
-    });
-  }
-
-  /// 选一个附件直接传上去。传完列表里多一行，保存时才随 PATCH 提交。
+  /// 选附件：云盘里现成的，或设备上新的，选完就传。
+  /// 传完列表里多一行，保存时才随 PATCH 提交。
   Future<void> _addFile() async {
-    if (_files.length >= 5) {
-      _snack(Lc.current.attachMax('5'));
-      return;
-    }
-    final left = 5 - _files.length;
-    final src = await _fileSource();
-    if (!mounted || src == null) return;
-    if (src == 'cloud') {
-      await _addFromCloud(left);
-      return;
-    }
-    await _pickFromDevice(left);
-  }
-
-  /// 设备上的文件。手机用自己写的浏览器翻，桌面和网页退到系统选择器。
-  Future<void> _pickFromDevice(int left) async {
-    if (fileBrowserSupported) {
-      final picked = await Navigator.of(context).push<List<PickedFile>>(
-        MaterialPageRoute(
-          builder: (_) => const FileBrowserPage(pickOnly: true),
-        ),
-      );
-      if (!mounted || picked == null || picked.isEmpty) return;
-      await _uploadPicked(picked.take(left).toList());
-      return;
-    }
-    final f = await pickFile();
-    if (f == null || !mounted) return;
-    await _uploadPicked([f]);
-  }
-
-  Future<void> _uploadPicked(List<PickedFile> list) async {
-    for (final f in list) {
-      if (f.size > 500 * 1024 * 1024) {
-        _snack(Lc.current.attachTooBig('500MB'));
-        continue;
+    final room = kMaxFiles - _files.length;
+    if (room <= 0) {
+      if (mounted) {
+        toastOf(context, Lc.current.attachMax('$kMaxFiles'));
       }
-      setState(() {
-        _busy = true;
-        _status = Lc.current.attachUploading(f.name);
-      });
-      try {
-        final r = await Api.uploadFile(f);
-        if (!mounted) return;
-        setState(
-          () => _files.add(
-            PostFile(
-              url: '${r['url']}',
-              name: '${r['name']}',
-              size: r['size'] is int ? r['size'] as int : f.size,
-            ),
-          ),
-        );
-      } catch (e) {
-        _fail(errorText(context, e));
-        return;
-      } finally {
-        if (mounted) {
-          setState(() {
-            _busy = false;
-            _status = '';
-          });
-        }
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final got = await pickFiles(
+        context,
+        room: room,
+        onUpload: (n) {
+          if (mounted) setState(() => _status = Lc.current.attachUploading(n));
+        },
+      );
+      if (mounted && got.isNotEmpty) setState(() => _files.addAll(got));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _status = '';
+        });
       }
     }
   }
@@ -195,29 +105,15 @@ class _EditThreadPageState extends State<EditThreadPage> {
   Future<void> _addImages() async {
     final left = _maxImgs - _count;
     if (left <= 0) {
-      _snack(Lc.current.maxImages('$_maxImgs'));
+      if (mounted) {
+        toastOf(context, Lc.current.maxImages('$_maxImgs'));
+      }
       return;
     }
-    List<XFile> picked = const [];
-    if (!hasMediaStore) {
-      picked = await _picker.pickMultiImage();
-    } else {
-      picked = await pickOwnGallery(context, maxCount: left);
-    }
-    if (picked.isEmpty) return;
     setState(() => _busy = true);
     try {
-      for (final x in picked.take(left)) {
-        final b = await ImgCompress.run(await x.readAsBytes());
-        if (ImgCompress.tooBig(b)) {
-          _snack(Lc.current.imageStillTooBig);
-          continue;
-        }
-        _added.add(b);
-      }
-      if (mounted) setState(() {});
-    } catch (e) {
-      _snack(Lc.current.readImageFailed('$e'));
+      final got = await pickImages(context, room: left);
+      if (mounted && got.isNotEmpty) setState(() => _added.addAll(got));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -228,11 +124,15 @@ class _EditThreadPageState extends State<EditThreadPage> {
     final t = _title.text.trim();
     final b = _body.text.trim();
     if (t.isEmpty) {
-      _snack(Lc.current.titleEmpty);
+      if (mounted) {
+        toastOf(context, Lc.current.titleEmpty);
+      }
       return;
     }
     if (b.isEmpty && _count == 0 && _files.isEmpty) {
-      _snack(Lc.current.bodyOrImageRequired);
+      if (mounted) {
+        toastOf(context, Lc.current.bodyOrImageRequired);
+      }
       return;
     }
     setState(() {
@@ -276,7 +176,9 @@ class _EditThreadPageState extends State<EditThreadPage> {
       _busy = false;
       _status = '';
     });
-    _snack(m);
+    if (mounted) {
+      toastOf(context, m);
+    }
   }
 
   Future<void> _back() async {
@@ -346,6 +248,8 @@ class _EditThreadPageState extends State<EditThreadPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
+                      autocorrect: false,
+                      enableSuggestions: false,
                       controller: _title,
                       maxLength: 120,
                       style: const TextStyle(
@@ -360,6 +264,8 @@ class _EditThreadPageState extends State<EditThreadPage> {
                       color: cs.outlineVariant.withValues(alpha: 0.35),
                     ),
                     TextField(
+                      autocorrect: false,
+                      enableSuggestions: false,
                       controller: _body,
                       minLines: 7,
                       maxLines: null,

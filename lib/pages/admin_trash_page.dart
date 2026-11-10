@@ -23,8 +23,16 @@ class AdminTrashPage extends StatefulWidget {
   State<AdminTrashPage> createState() => _AdminTrashPageState();
 }
 
-typedef _Item = ({String kind, int id, String title, int ownerId,
-    String ownerName, String ownerHandle, int deletedAt, String sub});
+typedef _Item = ({
+  String kind,
+  int id,
+  String title,
+  int ownerId,
+  String ownerName,
+  String ownerHandle,
+  int deletedAt,
+  String sub,
+});
 
 class _AdminTrashPageState extends State<AdminTrashPage> {
   List<_Item>? _items;
@@ -122,7 +130,9 @@ class _AdminTrashPageState extends State<AdminTrashPage> {
         await TrashApi.adminRestoreCloud(it.id);
       }
       if (!mounted) return;
-      setState(() => _items?.removeWhere((x) => x.kind == it.kind && x.id == it.id));
+      setState(
+        () => _items?.removeWhere((x) => x.kind == it.kind && x.id == it.id),
+      );
       toast(context, Lc.current.restored);
     } catch (e) {
       if (mounted) toast(context, errorText(context, e));
@@ -155,7 +165,9 @@ class _AdminTrashPageState extends State<AdminTrashPage> {
         await TrashApi.adminPurgeCloud(it.id);
       }
       if (!mounted) return;
-      setState(() => _items?.removeWhere((x) => x.kind == it.kind && x.id == it.id));
+      setState(
+        () => _items?.removeWhere((x) => x.kind == it.kind && x.id == it.id),
+      );
       toast(context, Lc.current.deletedForever);
     } catch (e) {
       if (mounted) toast(context, errorText(context, e));
@@ -224,6 +236,8 @@ class _AdminTrashPageState extends State<AdminTrashPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TextField(
+                      autocorrect: false,
+                      enableSuggestions: false,
                       controller: _search,
                       decoration: InputDecoration(
                         isDense: true,

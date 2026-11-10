@@ -6,25 +6,20 @@ import 'package:image_picker/image_picker.dart' hide PickedFile;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
-import '../plat.dart';
+import '../attach.dart';
 import '../sites.dart';
 import '../store.dart';
 import '../draft_images.dart';
-import '../file_pick.dart';
 import '../img_compress.dart';
 import '../widgets/file_card.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/mention.dart';
-import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../widgets/app_card.dart';
 import '../widgets/page_width.dart';
 import '../widgets/toast.dart';
-import '../cloud.dart';
-import '../file_browser.dart';
-import 'cloud_pick_page.dart';
 
 /// 发主题帖。
 ///
@@ -159,29 +154,26 @@ class _ComposePageState extends State<ComposePage> {
       }
       _savedImgSig = _imgs.map((e) => e.id).join(',');
     });
-    _snack(
-      imgs.isEmpty
-          ? Lc.current.resumeDraft
-          : Lc.current.resumeDraftImages('${imgs.length}'),
-      action: SnackBarAction(
-        label: Lc.current.discardDraft,
-        onPressed: () {
-          _draftTimer?.cancel();
-          _savedImgSig = '';
-          Draft.clear(_draftKey);
-          setState(() {
-            _title.clear();
-            _body.clear();
-            _imgs.clear();
-          });
-        },
-      ),
-    );
-  }
-
-  void _snack(String m, {SnackBarAction? action}) {
-    if (!mounted) return;
-    toast(context, m, action: action);
+    if (mounted) {
+      toastOf(context, 
+            imgs.isEmpty
+                ? Lc.current.resumeDraft
+                : Lc.current.resumeDraftImages('${imgs.length}'),
+            action: SnackBarAction(
+              label: Lc.current.discardDraft,
+              onPressed: () {
+                _draftTimer?.cancel();
+                _savedImgSig = '';
+                Draft.clear(_draftKey);
+                setState(() {
+                  _title.clear();
+                  _body.clear();
+                  _imgs.clear();
+                });
+              },
+            ),
+          );
+    }
   }
 
   // ── 图片 ───────────────────────────────────────────────
@@ -189,7 +181,9 @@ class _ComposePageState extends State<ComposePage> {
   Future<void> _pickSheet() async {
     if (_busy || _compressing) return;
     if (_imgs.length >= _maxImgs) {
-      _snack(Lc.current.maxImages('$_maxImgs'));
+      if (mounted) {
+        toastOf(context, Lc.current.maxImages('$_maxImgs'));
+      }
       return;
     }
     final left = _maxImgs - _imgs.length;
@@ -223,174 +217,33 @@ class _ComposePageState extends State<ComposePage> {
     }
   }
 
-  /// 自己的相册页。网页版没有 MediaStore，退回系统的文件选择。
+  /// 相册页或系统选择器，压完进预览条。
   Future<void> _pickOwn(int left) async {
-    if (!hasMediaStore) {
-      await _pickSystem();
-      return;
-    }
-    final chosen = await pickOwnGallery(context, maxCount: left);
-    if (chosen.isEmpty) return;
-    await _ingest(chosen);
-  }
-
-  /// 挑一个附件，选中就传。传完只留服务端给的地址/名字/大小。
-  Future<void> _pickFile() async {
-    if (_files.length >= 5) {
-      _snack(Lc.current.attachMax('5'));
-      return;
-    }
-    final left = 5 - _files.length;
-    final src = await _fileSource();
-    if (!mounted || src == null) return;
-    if (src == 'cloud') {
-      await _addFromCloud(left);
-      return;
-    }
-    await _pickFromDevice(left);
-  }
-
-  /// 设备上的文件。手机用自己写的浏览器翻，桌面和网页退到系统选择器
-  /// ——那边没有「应用能随便读盘」这回事。
-  Future<void> _pickFromDevice(int left) async {
-    if (fileBrowserSupported) {
-      final picked = await Navigator.of(context).push<List<PickedFile>>(
-        MaterialPageRoute(
-          builder: (_) => const FileBrowserPage(pickOnly: true),
-        ),
-      );
-      if (!mounted || picked == null || picked.isEmpty) return;
-      await _uploadPicked(picked.take(left).toList());
-      return;
-    }
-    final f = await pickFile();
-    if (f == null || !mounted) return;
-    await _uploadPicked([f]);
-  }
-
-  Future<void> _uploadPicked(List<PickedFile> list) async {
-    for (final f in list) {
-      if (f.size > 500 * 1024 * 1024) {
-        _snack(Lc.current.attachTooBig('500MB'));
-        continue;
-      }
-      setState(() {
-        _busy = true;
-        _status = Lc.current.attachUploading(f.name);
-        _progress = 0;
-      });
-      try {
-        final r = await Api.uploadFile(f);
-        if (!mounted) return;
-        setState(
-          () => _files.add(
-            PostFile(
-              url: '${r['url']}',
-              name: '${r['name']}',
-              size: r['size'] is int ? r['size'] as int : f.size,
-            ),
-          ),
-        );
-      } catch (e) {
-        _fail(e);
-        return;
-      } finally {
-        if (mounted) {
-          setState(() {
-            _busy = false;
-            _status = '';
-            _progress = 0;
-          });
-        }
-      }
-    }
-  }
-
-  /// 附件从哪来：云盘里现成的，还是设备上挑一个新的。
-  /// 云盘的不用再传一遍，地址直接能用。
-  Future<String?> _fileSource() {
-    return showAppSheet<String>(
-      context: context,
-      builder: (c) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.cloud_outlined),
-              title: Text(Lc.current.pickFromCloud),
-              onTap: () => Navigator.of(c).pop('cloud'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.smartphone),
-              title: Text(Lc.current.pickFromDevice),
-              onTap: () => Navigator.of(c).pop('device'),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _addFromCloud(int left) async {
-    final picked = await Navigator.of(context).push<List<CloudFile>>(
-      MaterialPageRoute(builder: (_) => CloudPickPage(maxCount: left)),
-    );
-    if (picked == null || picked.isEmpty || !mounted) return;
-    setState(() {
-      for (final f in picked.take(left)) {
-        _files.add(PostFile(url: f.url, name: f.name, size: f.size));
-      }
-    });
-  }
-
-  Future<void> _pickSystem() async {
-    try {
-      final picked = await _picker.pickMultiImage();
-      if (picked.isEmpty) return;
-      await _ingest(picked);
-    } catch (e) {
-      _snack(Lc.current.albumFailed('$e'));
-    }
-  }
-
-  Future<void> _pickCamera() async {
-    try {
-      final one = await _picker.pickImage(source: ImageSource.camera);
-      if (one == null) return;
-      await _ingest([one]);
-    } catch (e) {
-      _snack(Lc.current.cameraFailed('$e'));
-    }
-  }
-
-  /// 收下选中的图：按剩余名额截断，逐张压缩后进预览条。
-  Future<void> _ingest(List<XFile> picked) async {
-    final room = _maxImgs - _imgs.length;
-    if (room <= 0) {
-      _snack(Lc.current.maxImages('$_maxImgs'));
-      return;
-    }
-    final take = picked.take(room).toList();
     setState(() {
       _compressing = true;
       _compressDone = 0;
-      _compressTotal = take.length;
+      _compressTotal = left;
     });
     try {
-      for (final x in take) {
-        final raw = await x.readAsBytes();
-        final b = await ImgCompress.run(raw);
-        if (ImgCompress.tooBig(b)) {
-          _snack(Lc.current.imageStillTooBig);
-        } else {
-          _imgs.add(_PendingImg.next(b));
-        }
-        if (mounted) setState(() => _compressDone++);
+      final got = await pickImages(
+        context,
+        room: left,
+        onCompress: (done, total) {
+          if (mounted) {
+            setState(() {
+              _compressDone = done;
+              _compressTotal = total;
+            });
+          }
+        },
+      );
+      if (mounted && got.isNotEmpty) {
+        setState(() {
+          for (final b in got) {
+            _imgs.add(_PendingImg.next(b));
+          }
+        });
       }
-      if (picked.length > room) _snack(Lc.current.tooManyImages('$_maxImgs'));
-    } catch (e) {
-      _snack(Lc.current.readImageFailed('$e'));
     } finally {
       if (mounted) {
         setState(() {
@@ -398,6 +251,64 @@ class _ComposePageState extends State<ComposePage> {
           _compressDone = 0;
           _compressTotal = 0;
         });
+      }
+    }
+  }
+
+  /// 挑附件：云盘里现成的，或设备上新的，选完就传。
+  Future<void> _pickFile() async {
+    final room = kMaxFiles - _files.length;
+    if (room <= 0) {
+      if (mounted) {
+        toastOf(context, Lc.current.attachMax('$kMaxFiles'));
+      }
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final got = await pickFiles(
+        context,
+        room: room,
+        onUpload: (n) {
+          if (mounted) {
+            setState(() {
+              _status = Lc.current.attachUploading(n);
+              _progress = 0;
+            });
+          }
+        },
+        onProgress: (v) {
+          if (mounted) setState(() => _progress = v);
+        },
+      );
+      if (mounted && got.isNotEmpty) setState(() => _files.addAll(got));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _status = '';
+          _progress = 0;
+        });
+      }
+    }
+  }
+
+  Future<void> _pickCamera() async {
+    try {
+      final one = await _picker.pickImage(source: ImageSource.camera);
+      if (one == null) return;
+      final b = await compressOne(await one.readAsBytes());
+      if (b == null) {
+        if (mounted) {
+          toastOf(context, Lc.current.imageStillTooBig);
+        }
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _imgs.add(_PendingImg.next(b)));
+    } catch (e) {
+      if (mounted) {
+        toastOf(context, Lc.current.cameraFailed('$e'));
       }
     }
   }
@@ -578,7 +489,9 @@ class _ComposePageState extends State<ComposePage> {
       _progress = 0;
       _status = '';
     });
-    _snack(text);
+    if (mounted) {
+      toastOf(context, text);
+    }
   }
 
   /// PopScope 拦住之后，要先把 canPop 放开、等一帧再 pop，不然又被拦回来。
@@ -777,6 +690,8 @@ class _ComposePageState extends State<ComposePage> {
   Widget _titleBox(ColorScheme cs) {
     final n = _title.text.length;
     return TextField(
+      autocorrect: false,
+      enableSuggestions: false,
       controller: _title,
       maxLength: _titleMax,
       textInputAction: TextInputAction.next,
@@ -801,6 +716,8 @@ class _ComposePageState extends State<ComposePage> {
       children: [
         MentionStrip(watcher: _mention, controller: _body),
         TextField(
+          autocorrect: false,
+          enableSuggestions: false,
           controller: _body,
           focusNode: _bodyFocus,
           minLines: 7,
@@ -996,7 +913,9 @@ class _ComposePageState extends State<ComposePage> {
                             : Lc.current.imageCountPrefix(
                                 '${_imgs.length}',
                                 '$_maxImgs',
-                                ImgCompress.kb(_imgs.fold(0, (a, b) => a + b.bytes.length)),
+                                ImgCompress.kb(
+                                  _imgs.fold(0, (a, b) => a + b.bytes.length),
+                                ),
                               ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

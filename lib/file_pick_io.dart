@@ -63,10 +63,12 @@ Future<Map<String, dynamic>> postFile(
   final client = http.Client();
   try {
     // 大包在慢网下要很久，给足半小时；这中间界面上有进度条。
-    final res = await client.send(req).timeout(
-      const Duration(minutes: 30),
-      onTimeout: () => throw TimeoutException('upload timed out'),
-    );
+    final res = await client
+        .send(req)
+        .timeout(
+          const Duration(minutes: 30),
+          onTimeout: () => throw TimeoutException('upload timed out'),
+        );
     final text = await res.stream.bytesToString();
     if (res.statusCode != 200) {
       String msg = 'HTTP ${res.statusCode}';
@@ -143,10 +145,12 @@ Future<Map<String, dynamic>> postChunkRange(
   }();
 
   try {
-    final res = await client.send(req).timeout(
-      const Duration(minutes: 10),
-      onTimeout: () => throw TimeoutException('chunk timed out'),
-    );
+    final res = await client
+        .send(req)
+        .timeout(
+          const Duration(minutes: 10),
+          onTimeout: () => throw TimeoutException('chunk timed out'),
+        );
     final text = await res.stream.bytesToString();
     await pump;
     if (res.statusCode != 200) {

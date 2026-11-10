@@ -90,6 +90,8 @@ class _FeatureRequestsAdminPageState extends State<FeatureRequestsAdminPage> {
             ),
             const SizedBox(height: 12),
             TextField(
+              autocorrect: false,
+              enableSuggestions: false,
               controller: ctrl,
               maxLength: 200,
               maxLines: 3,

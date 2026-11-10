@@ -2,31 +2,26 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart' hide PickedFile;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
+import '../utils.dart';
+import '../attach.dart';
 import '../haptics.dart';
 import '../poller.dart';
+import '../widgets/reply_bar.dart';
 import '../cloud.dart';
-import '../file_browser.dart';
-import '../file_pick.dart';
-import '../img_compress.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
-import '../plat.dart';
 import '../user_hue.dart';
 import '../store.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/page_width.dart';
-import '../widgets/retry_image.dart';
 import '../widgets/avatar.dart';
 import '../widgets/file_card.dart';
 import '../widgets/post_images.dart';
 import '../widgets/toast.dart';
-import 'cloud_pick_page.dart';
-import 'gallery_picker_page.dart';
 import 'user_page.dart';
 
 /// 一对一私信。
@@ -60,7 +55,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   /// 待发的附件。和图分开存，发的时候一起送上去。
   final List<PostFile> _pendingFiles = [];
-  final ImagePicker _picker = ImagePicker();
 
   Timer? _poll;
   Timer? _draftTimer;
@@ -79,6 +73,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   List<PostFile> _failedFiles = const [];
   Map<String, dynamic>? _failedReply;
   String _failedWhy = '';
+
   /// 失败重发时，前面已经发出去几条（多图拆成多条，别把发过的再发一遍）。
   int _failedSent = 0;
   bool _compressing = false;
@@ -407,197 +402,42 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   // ── 附件 ─────────────────────────────────────────────
 
   /// 加号：微信那种小面板，图片和文件分开走。
-  Future<void> _attachMenu() async {
-    await showAppSheet<void>(
+  Future<void> _attachMenu() {
+    return showAttachSheet(
       context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          child: Row(
-            children: [
-              _attachTile(
-                ctx,
-                Icons.photo_library_outlined,
-                Lc.current.dmPickImage,
-                () {
-                  Navigator.pop(ctx);
-                  _pickImages();
-                },
-              ),
-              const SizedBox(width: 24),
-              _attachTile(ctx, Icons.attach_file, Lc.current.dmPickFile, () {
-                Navigator.pop(ctx);
-                _pickFile();
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _attachTile(
-    BuildContext ctx,
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-  ) {
-    final cs = Theme.of(ctx).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, size: 26, color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 6),
-            Text(label, style: const TextStyle(fontSize: 12)),
-          ],
-        ),
-      ),
+      onImage: _pickImages,
+      onFile: _pickFile,
     );
   }
 
   Future<void> _pickImages() async {
-    if (_pending.length >= 9 || _compressing) return;
+    if (_pending.length >= kMaxImages || _compressing) return;
+    if (_sending) return;
     setState(() => _compressing = true);
     try {
-      // 手机上有自己的相册页就用它，网页版没有 MediaStore，退回系统选择
-      List<XFile> picked;
-      if (!hasMediaStore) {
-        picked = await _picker.pickMultiImage();
-      } else {
-        final r = await Navigator.of(context).push<List<XFile>>(
-          MaterialPageRoute(
-            builder: (_) => GalleryPickerPage(maxCount: 9 - _pending.length),
-          ),
-        );
-        picked = r ?? const <XFile>[];
-      }
-      final room = 9 - _pending.length;
-      for (final x in picked.take(room)) {
-        final raw = await x.readAsBytes();
-        final b = await ImgCompress.run(raw);
-        if (!ImgCompress.tooBig(b)) _pending.add(b);
-      }
-    } catch (e) {
-      if (mounted) toast(context, Lc.current.readImageFailed('$e'));
+      final got = await pickImages(
+        context,
+        room: kMaxImages - _pending.length,
+      );
+      if (mounted && got.isNotEmpty) setState(() => _pending.addAll(got));
     } finally {
       if (mounted) setState(() => _compressing = false);
     }
   }
 
-  /// 文件从哪来：云盘里现成的，还是设备上挑新的。
-  Future<String?> _fileSource() {
-    return showAppSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (c) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.cloud_outlined),
-              title: Text(Lc.current.pickFromCloud),
-              onTap: () => Navigator.of(c).pop('cloud'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.smartphone),
-              title: Text(Lc.current.pickFromDevice),
-              onTap: () => Navigator.of(c).pop('device'),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  int get _fileRoom => 5 - _pendingFiles.length;
-
   Future<void> _pickFile() async {
     if (_sending || _compressing) return;
-    final src = await _fileSource();
-    if (!mounted || src == null) return;
-    if (src == 'cloud') {
-      await _addFromCloud();
+    final room = kMaxFiles - _pendingFiles.length;
+    if (room <= 0) {
+      toast(context, Lc.current.attachMax('$kMaxFiles'));
       return;
     }
-    await _pickFromDevice();
-  }
-
-  Future<void> _addFromCloud() async {
-    final left = _fileRoom;
-    if (left <= 0) {
-      toast(context, Lc.current.attachMax('5'));
-      return;
-    }
-    final picked = await Navigator.of(context).push<List<CloudFile>>(
-      MaterialPageRoute(builder: (_) => CloudPickPage(maxCount: left)),
-    );
-    if (!mounted || picked == null || picked.isEmpty) return;
-    setState(() {
-      for (final f in picked.take(left)) {
-        _pendingFiles.add(PostFile(url: f.url, name: f.name, size: f.size));
-      }
-    });
-  }
-
-  /// 设备上的文件：手机上用自己的浏览器翻，网页版没这能力，退回系统选择器。
-  Future<void> _pickFromDevice() async {
-    final left = _fileRoom;
-    if (left <= 0) {
-      toast(context, Lc.current.attachMax('5'));
-      return;
-    }
-    List<PickedFile> list = const [];
-    if (fileBrowserSupported) {
-      final r = await Navigator.of(context).push<List<PickedFile>>(
-        MaterialPageRoute(
-          builder: (_) => const FileBrowserPage(pickOnly: true),
-        ),
-      );
-      list = r ?? const <PickedFile>[];
-    } else {
-      final f = await pickFile();
-      if (f != null) list = [f];
-    }
-    if (!mounted || list.isEmpty) return;
-    await _uploadFiles(list.take(left).toList());
-  }
-
-  Future<void> _uploadFiles(List<PickedFile> list) async {
-    if (list.isEmpty) return;
     setState(() => _compressing = true);
     try {
-      for (final f in list) {
-        final d = await Api.uploadFile(f);
-        if (!mounted) return;
-        setState(() {
-          _pendingFiles.add(
-            PostFile(
-              url: '${d['url']}',
-              name: '${d['name']}',
-              size: d['size'] is int ? d['size'] as int : f.size,
-            ),
-          );
-        });
+      final got = await pickFiles(context, room: room);
+      if (mounted && got.isNotEmpty) {
+        setState(() => _pendingFiles.addAll(got));
       }
-    } on ApiException catch (e) {
-      if (mounted) toast(context, errorText(context, e));
-    } catch (e) {
-      if (mounted) toast(context, '$e');
     } finally {
       if (mounted) setState(() => _compressing = false);
     }
@@ -1556,61 +1396,20 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   /// 缩略图按 3 倍像素密度要就够清楚了。
   /// 聊天气泡里的方图。走磁盘缓存，失败能点一下重来——
   /// 原来用 Image.network，网络一抖就是一张破图，点它也没反应。
-  Widget _netImg(
-    String url,
-    double side, {
-    double radius = 9,
-    BoxFit fit = BoxFit.cover,
-  }) {
-    final dpr = MediaQuery.of(context).devicePixelRatio;
-    final px = (side * dpr).round();
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: SizedBox(
-        width: side,
-        height: side,
-        child: RetryImage(
-          url: Api.img(url),
-          fit: fit,
-          memCacheWidth: px,
-          probeSize: false,
-        ),
-      ),
-    );
-  }
-
   /// 图片排版：一张放大，四张以上走三列九宫格。
   Widget _images(List<String> imgs, int id) {
-    final one = imgs.length == 1;
-    // 多图是三列。手机上气泡最宽也就 0.72 屏，三张 104 塞不进去，
-    // Wrap 就折成 2+1，看着像少了一张。按可用宽度反算边长，够三列为止。
-    final usable =
-        MediaQuery.of(context).size.width * _bubbleRatio - 8; // 减掉气泡内边距
-    final side = one ? 200.0 : ((usable - 8) / 3 - 0.5).clamp(64.0, 104.0);
-    void tap(int i) {
-      if (_multi) {
-        _toggleSel(id);
-      } else {
-        _viewImage(imgs, i);
-      }
-    }
-
-    if (one) {
-      return GestureDetector(
-        onTap: () => tap(0),
-        child: _netImg(imgs[0], side, radius: 13),
-      );
-    }
-    return SizedBox(
-      width: side * 3 + 8 + 0.5,
-      child: Wrap(
-        spacing: 4,
-        runSpacing: 4,
-        children: [
-          for (var i = 0; i < imgs.length; i++)
-            GestureDetector(onTap: () => tap(i), child: _netImg(imgs[i], side)),
-        ],
-      ),
+    // 排版跟帖子里的九宫格是同一份，气泡模式：方格、圆角 13/9、不挂 Hero。
+    return PostImages(
+      urls: imgs,
+      bubble: true,
+      maxWidth: MediaQuery.of(context).size.width * _bubbleRatio - 8,
+      onTap: (i) {
+        if (_multi) {
+          _toggleSel(id);
+        } else {
+          _viewImage(imgs, i);
+        }
+      },
     );
   }
 
@@ -1628,7 +1427,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       child: Padding(
         padding: const EdgeInsets.only(top: 12),
         child: Text(
-          _fmtTime(ts),
+          clockHm(ts),
           style: TextStyle(
             fontSize: 11,
             color: cs.onSurfaceVariant.withValues(alpha: 0.85),
@@ -1637,13 +1436,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         ),
       ),
     );
-  }
-
-  /// 同一天只给时分。日期由分隔条负责，这里不再重复。
-  String _fmtTime(int ts) {
-    if (ts <= 0) return '';
-    final d = DateTime.fromMillisecondsSinceEpoch(ts * 1000);
-    return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
   }
 
   // ── 输入区 ────────────────────────────────────────────
@@ -1905,74 +1697,45 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   }
 
   Widget _inputRow(ColorScheme cs, bool canSend) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        IconButton(
-          onPressed: () {
-            // 开表情面板就收键盘；从面板切回键盘得把焦点要回来，
-            // 光把面板藏掉系统不会自己弹键盘，看着就是点不出键盘。
-            setState(() => _showEmoji = !_showEmoji);
-            if (_showEmoji) {
-              FocusScope.of(context).unfocus();
-            } else {
-              _focus.requestFocus();
-            }
-          },
-          tooltip: Lc.current.dmEmoji,
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            _showEmoji
-                ? Icons.keyboard_outlined
-                : Icons.emoji_emotions_outlined,
-            size: 25,
-            color: cs.onSurfaceVariant,
-          ),
+    return ReplyBar(
+      controller: _input,
+      focusNode: _focus,
+      maxLines: 5,
+      fontSize: 15,
+      onChanged: (_) {
+        setState(() {});
+        _saveDraftSoon();
+      },
+      leading: ReplyBarIcon(
+        size: 24,
+        tooltip: Lc.current.dmEmoji,
+        color: cs.onSurfaceVariant,
+        onPressed: () {
+          // 开表情面板就收键盘；从面板切回键盘得把焦点要回来，
+          // 光把面板藏掉系统不会自己弹键盘，看着就是点不出键盘。
+          setState(() => _showEmoji = !_showEmoji);
+          if (_showEmoji) {
+            FocusScope.of(context).unfocus();
+          } else {
+            _focus.requestFocus();
+          }
+        },
+        icon: Icon(
+          _showEmoji ? Icons.keyboard_outlined : Icons.emoji_emotions_outlined,
         ),
-        Expanded(
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 42),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(21),
-            ),
-            child: TextField(
-              controller: _input,
-              focusNode: _focus,
-              minLines: 1,
-              maxLines: 5,
-              keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.newline,
-              onChanged: (_) {
-                setState(() {});
-                _saveDraftSoon();
-              },
-              style: const TextStyle(fontSize: 15, height: 1.3),
-              decoration: const InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ),
-        IconButton(
+      ),
+      actions: [
+        ReplyBarIcon(
           onPressed: _sending ? null : _attachMenu,
           tooltip: Lc.current.addImage,
-          visualDensity: VisualDensity.compact,
+          size: 24,
           icon: _compressing
               ? const SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.add_circle_outline, size: 25),
+              : const Icon(Icons.add_circle_outline),
         ),
         SizedBox(
           height: 40,
@@ -2199,6 +1962,8 @@ class _ChatSearchSheetState extends State<_ChatSearchSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: TextField(
+              autocorrect: false,
+              enableSuggestions: false,
               controller: _q,
               autofocus: true,
               onChanged: _onChanged,

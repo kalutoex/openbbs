@@ -4,7 +4,7 @@ import '../accounts.dart';
 import '../widgets/page_width.dart';
 import '../store.dart';
 import '../widgets/app_card.dart';
-import '../widgets/avatar.dart';
+import '../widgets/user_tile.dart';
 import 'login_page.dart';
 
 import '../l10n/l10n.dart';
@@ -99,20 +99,15 @@ class AccountsPage extends StatelessWidget {
                   child: Column(
                     children: [
                       for (final a in list)
-                        ListTile(
-                          leading: CircleAvatarImg(
-                            url: a.avatar,
-                            name: a.nickname,
-                            radius: 22,
-                            hue: a.hue?.toDouble(),
-                          ),
-                          title: Text(a.nickname),
-                          subtitle: Text(
-                            [
-                              if (a.uid.isNotEmpty) 'UID ${a.uid}',
-                              if (a.handle.isNotEmpty) '@${a.handle}',
-                            ].join(' · '),
-                          ),
+                        UserTile(
+                          name: a.nickname,
+                          avatar: a.avatar,
+                          radius: 22,
+                          hue: a.hue?.toDouble(),
+                          subtitle: [
+                            if (a.uid.isNotEmpty) 'UID ${a.uid}',
+                            if (a.handle.isNotEmpty) '@${a.handle}',
+                          ].join(' · '),
                           trailing: a.token == active?.token
                               ? Icon(Icons.check_circle, color: cs.primary)
                               : IconButton(

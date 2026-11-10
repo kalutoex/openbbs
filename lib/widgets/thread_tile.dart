@@ -12,6 +12,7 @@ import '../utils.dart';
 import 'avatar.dart';
 import 'file_card.dart';
 import 'live_time.dart';
+import 'post_images.dart';
 
 import 'user_link.dart';
 
@@ -252,26 +253,38 @@ class ThreadTile extends StatelessWidget {
                               aspectRatio: _coverRatio(cover, coverSizes),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: CachedNetworkImage(
-                                  cacheManager: ImgCache.manager,
-                                  imageRenderMethodForWeb:
-                                      ImageRenderMethodForWeb.HttpGet,
-                                  imageUrl: Api.thumb(cover, 320),
-                                  fit: BoxFit.cover,
-                                  alignment: Alignment.topCenter,
-                                  memCacheWidth:
-                                      (w * MediaQuery.devicePixelRatioOf(ctx))
-                                          .round()
-                                          .clamp(208, 720),
-                                  placeholder: (_, _) => Container(
-                                    color: cs.surfaceContainerHighest,
-                                  ),
-                                  errorWidget: (_, _, _) => Container(
-                                    color: cs.surfaceContainerHighest,
-                                    child: Icon(
-                                      Icons.broken_image_outlined,
-                                      size: 20,
-                                      color: cs.outline,
+                                // 封面自己接点击：卡片整体是进帖子，图这一块
+                                // 直接开全屏查看器，多图进去还能左右翻。
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () => _openImages(context, imgs),
+                                  child: Hero(
+                                    tag: 't${item['id']}:$cover',
+                                    child: CachedNetworkImage(
+                                      cacheManager: ImgCache.manager,
+                                      imageRenderMethodForWeb:
+                                          ImageRenderMethodForWeb.HttpGet,
+                                      imageUrl: Api.thumb(cover, 320),
+                                      fit: BoxFit.cover,
+                                      alignment: Alignment.topCenter,
+                                      memCacheWidth:
+                                          (w *
+                                                  MediaQuery.devicePixelRatioOf(
+                                                    ctx,
+                                                  ))
+                                              .round()
+                                              .clamp(208, 720),
+                                      placeholder: (_, _) => Container(
+                                        color: cs.surfaceContainerHighest,
+                                      ),
+                                      errorWidget: (_, _, _) => Container(
+                                        color: cs.surfaceContainerHighest,
+                                        child: Icon(
+                                          Icons.broken_image_outlined,
+                                          size: 20,
+                                          color: cs.outline,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -377,6 +390,19 @@ class ThreadTile extends StatelessWidget {
   ///
   /// 列表里的封面是缩略图，比正文更紧：超过 0.7（高不到宽的 1.4 倍）就裁，
   /// 只露上半截。点进去还是整张。
+  /// 封面上点一下：直接进全屏查看器，多图可以左右翻。整张卡片还是进帖子。
+  void _openImages(BuildContext context, List<String> imgs) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ImageViewerPage(
+          urls: imgs,
+          initial: 0,
+          heroPrefix: 't${item['id']}',
+        ),
+      ),
+    );
+  }
+
   double _coverRatio(String cover, List<dynamic> sizes) {
     double? raw;
     if (sizes.isNotEmpty && sizes.first is List) {

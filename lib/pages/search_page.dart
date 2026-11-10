@@ -5,7 +5,7 @@ import '../user_hue.dart';
 import '../api.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
-import '../widgets/avatar.dart';
+import '../widgets/user_tile.dart';
 import '../widgets/thread_tile.dart';
 import 'thread_page.dart';
 import 'user_page.dart';
@@ -258,6 +258,8 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         titleSpacing: 0,
         title: TextField(
+          autocorrect: false,
+          enableSuggestions: false,
           controller: _ctl,
           focusNode: _focus,
           textInputAction: TextInputAction.search,
@@ -528,21 +530,13 @@ class _SearchPageState extends State<SearchPage> {
         final name = (u['nickname'] ?? u['name'] ?? '') as String;
         final handle = (u['handle'] ?? '') as String;
         final sign = (u['signature'] ?? '') as String;
-        return ListTile(
-          leading: CircleAvatarImg(
-            url: (u['avatar'] ?? '') as String,
-            name: name,
-            radius: 20,
-            hue: hueOfUser(u),
-          ),
-          title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(
-            sign.isEmpty
-                ? (handle.isEmpty ? '' : '@$handle')
-                : '@$handle · $sign',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+        return UserTile(
+          name: name,
+          avatar: (u['avatar'] ?? '') as String,
+          hue: hueOfUser(u),
+          subtitle: sign.isEmpty
+              ? (handle.isEmpty ? '' : '@$handle')
+              : '@$handle · $sign',
           onTap: () => _openUser(u),
         );
       },

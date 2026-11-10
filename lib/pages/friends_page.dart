@@ -6,7 +6,7 @@ import '../widgets/page_width.dart';
 import '../widgets/app_card.dart';
 import '../widgets/empty_view.dart';
 import '../store.dart';
-import '../widgets/avatar.dart';
+import '../widgets/user_tile.dart';
 import 'user_page.dart';
 
 import '../l10n/error_text.dart';
@@ -64,6 +64,8 @@ class _FriendsPageState extends State<FriendsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
+                autocorrect: false,
+                enableSuggestions: false,
                 controller: ctl,
                 autofocus: true,
                 decoration: InputDecoration(
@@ -221,34 +223,22 @@ class _FriendsPageState extends State<FriendsPage> {
                 return AppCard(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: ListTile(
+                  child: UserTile(
+                    name: nick,
+                    avatar: (u['avatar'] ?? '') as String,
+                    hue: hueOfUser(u),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    leading: CircleAvatarImg(
-                      url: (u['avatar'] ?? '') as String,
-                      name: nick,
-                      radius: 20,
-                      hue: hueOfUser(u),
+                    nameStyle: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                     ),
-                    title: Text(
-                      nick,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    subtitle: sub,
+                    subtitleStyle: TextStyle(
+                      fontSize: 12.5,
+                      color: cs.onSurfaceVariant,
                     ),
-                    subtitle: sub.isEmpty
-                        ? null
-                        : Text(
-                            sub,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
                     trailing: _isAdmin
                         ? IconButton(
                             tooltip: Lc.current.takeDown,

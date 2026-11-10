@@ -167,6 +167,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               ),
             const SizedBox(height: 10),
             TextField(
+              autocorrect: false,
+              enableSuggestions: false,
               controller: ed,
               keyboardType: TextInputType.number,
               autofocus: true,
@@ -226,6 +228,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: TextField(
+              autocorrect: false,
+              enableSuggestions: false,
               controller: _q,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _load(),

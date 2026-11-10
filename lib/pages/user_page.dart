@@ -122,11 +122,6 @@ class _UserPageState extends State<UserPage> {
         (me['name'] == widget.name || me['handle'] == widget.name);
   }
 
-  void _snack(String msg) {
-    if (!mounted) return;
-    toast(context, msg, floating: true);
-  }
-
   Future<void> _edit() async {
     final ok = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => EditProfilePage(info: _info ?? {})),
@@ -137,7 +132,9 @@ class _UserPageState extends State<UserPage> {
   Future<void> _share() async {
     final h = '${(_info ?? const {})['handle'] ?? widget.name}';
     await Clipboard.setData(ClipboardData(text: '@$h'));
-    _snack(Lc.current.accountCopied);
+    if (mounted) {
+      toastOf(context, Lc.current.accountCopied, floating: true);
+    }
   }
 
   /// 关注 / 取关。
@@ -157,7 +154,9 @@ class _UserPageState extends State<UserPage> {
         };
       });
     } on ApiException catch (e) {
-      _snack(errorText(context, e));
+      if (mounted) {
+        toastOf(context, errorText(context, e), floating: true);
+      }
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -191,11 +190,17 @@ class _UserPageState extends State<UserPage> {
       await Api.patch('/me', {'cover': url});
       if (!mounted) return;
       setState(() => _info = {...?_info, 'cover': url});
-      _snack(Lc.current.coverUpdated);
+      if (mounted) {
+        toastOf(context, Lc.current.coverUpdated, floating: true);
+      }
     } on ApiException catch (e) {
-      _snack(errorText(context, e));
+      if (mounted) {
+        toastOf(context, errorText(context, e), floating: true);
+      }
     } catch (e) {
-      _snack(Lc.current.coverFailed('$e'));
+      if (mounted) {
+        toastOf(context, Lc.current.coverFailed('$e'), floating: true);
+      }
     } finally {
       if (mounted) setState(() => _acting = false);
     }
@@ -227,9 +232,13 @@ class _UserPageState extends State<UserPage> {
       final r = await http.get(Uri.parse(Api.img(cover)));
       if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
       final where = await saveImageBytes(r.bodyBytes, 'openbbs-cover.jpg');
-      _snack(Lc.current.savedTo(where));
+      if (mounted) {
+        toastOf(context, Lc.current.savedTo(where), floating: true);
+      }
     } catch (e) {
-      _snack(Lc.current.saveFailed('$e'));
+      if (mounted) {
+        toastOf(context, Lc.current.saveFailed('$e'), floating: true);
+      }
     }
   }
 

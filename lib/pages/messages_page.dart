@@ -308,6 +308,8 @@ class _MessagesPageState extends State<MessagesPage> {
         titleSpacing: 0,
         title: _searching
             ? TextField(
+                autocorrect: false,
+                enableSuggestions: false,
                 controller: _sc,
                 autofocus: true,
                 textInputAction: TextInputAction.search,

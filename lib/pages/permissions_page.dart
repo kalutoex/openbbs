@@ -61,14 +61,14 @@ class _PermissionsPageState extends State<PermissionsPage> {
     ];
     if (!mounted) return;
     final text = <String>[
-      if (err == null) Lc.current.notifyTestSent else '${Lc.current.notifyTestFail}: $err',
+      if (err == null)
+        Lc.current.notifyTestSent
+      else
+        '${Lc.current.notifyTestFail}: $err',
       ...lines,
     ].join('\n');
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-        duration: const Duration(seconds: 8),
-      ),
+      SnackBar(content: Text(text), duration: const Duration(seconds: 8)),
     );
   }
 

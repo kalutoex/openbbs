@@ -64,3 +64,19 @@ String postTime(int ts) {
     t.hour < 12 ? l.am : l.pm,
   );
 }
+
+/// 只给时分，00:00。日期由分隔条负责。
+String clockHm(int ts) {
+  if (ts <= 0) return '';
+  final d = DateTime.fromMillisecondsSinceEpoch(ts * 1000);
+  return '${d.hour.toString().padLeft(2, '0')}:'
+      '${d.minute.toString().padLeft(2, '0')}';
+}
+
+/// MM-DD HH:mm，站点时间线用。缺了或不对就空着，别编。
+String monthDayHm(Object? v) {
+  if (v is! num || v <= 0) return '';
+  final d = DateTime.fromMillisecondsSinceEpoch(v.toInt() * 1000);
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${two(d.month)}-${two(d.day)} ${two(d.hour)}:${two(d.minute)}';
+}

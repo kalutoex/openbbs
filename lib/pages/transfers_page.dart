@@ -34,11 +34,6 @@ class _TransfersPageState extends State<TransfersPage> {
   /// 0 = 下载，1 = 上传。下边那个大按钮跟着换。
   int _tab = 0;
 
-  void _toast(String text) {
-    if (!mounted) return;
-    toast(context, text);
-  }
-
   /// 下载的起点。以前是在云盘里点一下文件就开始下，
   /// 现在云盘只剩看和管理，要取文件就来这儿挑。
   Future<void> _pickToDownload() async {
@@ -61,7 +56,9 @@ class _TransfersPageState extends State<TransfersPage> {
         );
       } catch (e) {
         if (!mounted) return;
-        _toast(errorText(context, e));
+        if (mounted) {
+          toastOf(context, errorText(context, e));
+        }
         return;
       }
     }
@@ -119,7 +116,9 @@ class _TransfersPageState extends State<TransfersPage> {
           if (j.size > j.offset) pending += j.size - j.offset;
         }
         if (f.size + pending > u.left) {
-          _toast(Lc.current.cloudNoRoom(bytesText(u.left)));
+          if (mounted) {
+            toastOf(context, Lc.current.cloudNoRoom(bytesText(u.left)));
+          }
           return;
         }
       }

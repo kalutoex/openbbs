@@ -80,10 +80,7 @@ Future<List<LocalDownload>> loadLocalDownloads() async {
   try {
     final list = jsonDecode(raw);
     if (list is! List) return const [];
-    return [
-      for (final e in list)
-        ?LocalDownload.fromJson(e),
-    ];
+    return [for (final e in list) ?LocalDownload.fromJson(e)];
   } catch (_) {
     return const [];
   }

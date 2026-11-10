@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../api.dart';
+import '../haptics.dart';
 import '../img_cache.dart';
 import '../img_size_store.dart';
 import '../save_cover.dart';
@@ -25,11 +26,25 @@ class PostImages extends StatelessWidget {
   /// Hero 撞了就抛断言，所以带上楼层号把它们分开。
   final String heroPrefix;
 
+  /// 气泡里用：方形格子、圆角大一点、不挂 Hero。
+  /// 私信那边以前自己写了一套 Wrap，跟这里算边长的方式一样，
+  /// 所以并过来，两处只留一份排版。
+  final bool bubble;
+
+  /// 气泡模式下可用宽度，减掉内边距之后的。空着就按 0.72 屏算。
+  final double? maxWidth;
+
+  /// 点图的处理。空着就是打开全屏查看器。
+  final void Function(int index)? onTap;
+
   const PostImages({
     super.key,
     required this.urls,
     this.sizes = const [],
     this.heroPrefix = '',
+    this.bubble = false,
+    this.maxWidth,
+    this.onTap,
   });
 
   String _tag(int i) => '$heroPrefix:${urls[i]}';
@@ -58,6 +73,7 @@ class PostImages extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (urls.isEmpty) return const SizedBox.shrink();
+    if (bubble) return _bubble(context);
 
     // 图片一律按显示尺寸解码，别把原图整张塞进 image cache。
     final dpr = MediaQuery.devicePixelRatioOf(context);
@@ -136,6 +152,41 @@ class PostImages extends StatelessWidget {
     );
   }
 
+  /// 气泡排版：一张是 200 的方图，多张按可用宽度反算边长，够三列为止。
+  Widget _bubble(BuildContext context) {
+    final one = urls.length == 1;
+    final usable = maxWidth ?? MediaQuery.sizeOf(context).width * 0.72;
+    final side = one ? 200.0 : ((usable - 8) / 3 - 0.5).clamp(64.0, 104.0);
+    final px = (side * MediaQuery.devicePixelRatioOf(context)).round();
+
+    Widget cell(int i, {double radius = 9}) => GestureDetector(
+      onTap: () => onTap != null ? onTap!(i) : _open(context, i),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: SizedBox(
+          width: side,
+          height: side,
+          child: RetryImage(
+            url: Api.img(urls[i]),
+            fit: BoxFit.cover,
+            memCacheWidth: px,
+            probeSize: false,
+          ),
+        ),
+      ),
+    );
+
+    if (one) return cell(0, radius: 13);
+    return SizedBox(
+      width: side * 3 + 8,
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: [for (var i = 0; i < urls.length; i++) cell(i)],
+      ),
+    );
+  }
+
   void _open(BuildContext context, int index) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -169,6 +220,29 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
   late final PageController _pc = PageController(initialPage: widget.initial);
   late int _i = widget.initial;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 邻页先拉一遍：翻过去的时候图已经在手上，不会先黑一下再跳出来。
+    WidgetsBinding.instance.addPostFrameCallback((_) => _warmAround(_i));
+  }
+
+  void _warmAround(int i) {
+    if (!mounted) return;
+    for (final n in [i - 1, i + 1]) {
+      if (n < 0 || n >= widget.urls.length) continue;
+      unawaited(
+        precacheImage(
+          CachedNetworkImageProvider(
+            Api.img(widget.urls[n]),
+            cacheManager: ImgCache.manager,
+          ),
+          context,
+        ).catchError((_) {}),
+      );
+    }
+  }
 
   /// 存当前这一张。按钮触发，不再走长按。
   Future<void> _save() async {
@@ -214,18 +288,25 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
           PageView.builder(
             controller: _pc,
             itemCount: widget.urls.length,
-            onPageChanged: (i) => setState(() => _i = i),
+            // 邻页提前建好，手指拖到一半时图已经在屏幕上，接得上。
+            allowImplicitScrolling: true,
+            onPageChanged: (i) {
+              // 和底栏切页同一档反馈，翻一张震一下。
+              if (i != _i) Haptics.tap();
+              setState(() => _i = i);
+              _warmAround(i);
+            },
             itemBuilder: (c, i) {
               final img = _ZoomableImage(
                 url: Api.img(widget.urls[i]),
                 cacheWidth: _viewerPx,
                 onTap: () => Navigator.of(context).pop(),
               );
-              // 只给正在看的那一页挂 Hero。
+              // 只给进来时那张挂 Hero。
               //
-              // 每页都挂的话，PageView 留在树里的邻页也带着 Hero，退出时
-              // 两个 Hero 各找一个格子往回飞——看着就是两张图一起退出。
-              if (i != _i) return img;
+              // 挂在「当前页」上的话，每翻一页都重建一次整页，翻快了掉帧；
+              // 每页都挂又会退出一堆图一起往回飞。钉在初始页最稳。
+              if (i != widget.initial) return img;
               return Hero(
                 tag: '${widget.heroPrefix}:${widget.urls[i]}',
                 child: img,

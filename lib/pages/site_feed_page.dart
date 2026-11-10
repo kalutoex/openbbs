@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../utils.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../widgets/page_width.dart';
@@ -181,7 +182,7 @@ class _SiteThreadPageState extends State<SiteThreadPage> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${t?['author'] ?? ''} · ${_time(t?['created_at'])}',
+                  '${t?['author'] ?? ''} · ${monthDayHm(t?['created_at'])}',
                   style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 14),
@@ -194,7 +195,7 @@ class _SiteThreadPageState extends State<SiteThreadPage> {
                 for (final r in _replies) ...[
                   const SizedBox(height: 14),
                   Text(
-                    '${r['author'] ?? ''} · ${_time(r['created_at'])}',
+                    '${r['author'] ?? ''} · ${monthDayHm(r['created_at'])}',
                     style: TextStyle(
                       fontSize: 12.5,
                       color: cs.onSurfaceVariant,
@@ -211,11 +212,4 @@ class _SiteThreadPageState extends State<SiteThreadPage> {
     );
   }
 
-  /// created_at 是秒级时间戳；缺了就空着，别编。
-  String _time(Object? v) {
-    if (v is! num || v <= 0) return '';
-    final d = DateTime.fromMillisecondsSinceEpoch(v.toInt() * 1000);
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(d.month)}-${two(d.day)} ${two(d.hour)}:${two(d.minute)}';
-  }
 }

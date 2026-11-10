@@ -131,16 +131,16 @@ class _AboutPageState extends State<AboutPage> {
 
   void _tap() {
     final now = DateTime.now();
-    if (_lastTap != null && now.difference(_lastTap!) > const Duration(seconds: 3)) {
+    if (_lastTap != null &&
+        now.difference(_lastTap!) > const Duration(seconds: 3)) {
       _taps = 0;
     }
     _lastTap = now;
     _taps++;
     if (_taps < 5) return;
     _taps = 0;
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const EasterEggPage()),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const EasterEggPage()));
   }
 
   static Widget _label(BuildContext context, String s) => Padding(

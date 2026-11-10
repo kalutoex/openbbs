@@ -19,8 +19,12 @@ Future<SavedFile> openRemoteFile(
   String? cloudId,
   CancelToken? cancel,
 }) async {
-  final saved = await downloadToDevice(url, name,
-      onProgress: onProgress, cancel: cancel);
+  final saved = await downloadToDevice(
+    url,
+    name,
+    onProgress: onProgress,
+    cancel: cancel,
+  );
   var size = 0;
   final p = saved.path;
   if (p != null && p.isNotEmpty) {

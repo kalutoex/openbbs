@@ -48,18 +48,15 @@ class _SitesPageState extends State<SitesPage> {
 
   AppState get _st => AppState.instance;
 
-  void _toast(String msg) {
-    if (!mounted) return;
-    toast(context, msg);
-  }
-
   /// 测速：长按某座站就跑一遍，回每条入口的毫秒数。
   ///
   /// 结果顺手写回 epStatus，测完这一行的 v6 / v4 通不通也一起刷新了。
   Future<void> _speedTest(SiteEntry s) async {
     if (_testing.contains(s.key)) return;
     _testing.add(s.key);
-    _toast(Lc.current.siteSpeedRunning);
+    if (mounted) {
+      toastOf(context, Lc.current.siteSpeedRunning);
+    }
     if (mounted) setState(() {});
     try {
       final ms = await Api.speedTest(s.orderedUrls);
@@ -80,11 +77,13 @@ class _SitesPageState extends State<SitesPage> {
         for (final e in ms.entries)
           '${looksV6(e.key) ? 'IPv6' : 'IPv4'} ${e.value}ms',
       ];
-      _toast(
-        Lc.current.siteSpeedResult(
-          parts.isEmpty ? Lc.current.siteSpeedNone : parts.join(' · '),
-        ),
-      );
+      if (mounted) {
+        toastOf(context, 
+                Lc.current.siteSpeedResult(
+                  parts.isEmpty ? Lc.current.siteSpeedNone : parts.join(' · '),
+                ),
+              );
+      }
     } finally {
       _testing.remove(s.key);
       if (mounted) setState(() {});
@@ -130,23 +129,29 @@ class _SitesPageState extends State<SitesPage> {
     await _probeOne(s);
     if (!mounted) return;
     setState(() => _busy = false);
-    _toast(
-      ok
-          ? Lc.current.switchedTo(s.display)
-          : Lc.current.connectFailedBody(s.display),
-    );
+    if (mounted) {
+      toastOf(context, 
+            ok
+                ? Lc.current.switchedTo(s.display)
+                : Lc.current.connectFailedBody(s.display),
+          );
+    }
     if (ok) widget.onSwitched?.call();
   }
 
   Future<void> _setLogin(SiteEntry s) async {
     await _st.setLoginSite(s);
-    _toast(Lc.current.siteLoginSet(s.display));
+    if (mounted) {
+      toastOf(context, Lc.current.siteLoginSet(s.display));
+    }
   }
 
   Future<void> _remove(SiteEntry s) async {
     // 主站不给删：删完就只剩小站，发帖的兜底没了。
     if (s.isHome) {
-      _toast(Lc.current.siteMasterFixed);
+      if (mounted) {
+        toastOf(context, Lc.current.siteMasterFixed);
+      }
       return;
     }
     final yes = await showDialog<bool>(
@@ -242,11 +247,13 @@ class _SitesPageState extends State<SitesPage> {
     final dropped = <Map<String, String>>[];
     final list = SiteMeta.parseManifest(raw, dropped: dropped);
     if (list.isEmpty) {
-      _toast(
-        dropped.isEmpty
-            ? Lc.current.siteImportEmpty
-            : Lc.current.siteImportNone(_skipText(dropped)),
-      );
+      if (mounted) {
+        toastOf(context, 
+                dropped.isEmpty
+                    ? Lc.current.siteImportEmpty
+                    : Lc.current.siteImportNone(_skipText(dropped)),
+              );
+      }
       return;
     }
     final added = await _st.addSites(
@@ -254,15 +261,19 @@ class _SitesPageState extends State<SitesPage> {
     );
     if (!mounted) return;
     if (dropped.isEmpty) {
-      _toast(Lc.current.siteImported('$added'));
+      if (mounted) {
+        toastOf(context, Lc.current.siteImported('$added'));
+      }
     } else {
-      _toast(
-        Lc.current.siteImportedSkipped(
-          '$added',
-          '${dropped.length}',
-          _skipText(dropped),
-        ),
-      );
+      if (mounted) {
+        toastOf(context, 
+                Lc.current.siteImportedSkipped(
+                  '$added',
+                  '${dropped.length}',
+                  _skipText(dropped),
+                ),
+              );
+      }
     }
     // 导入完顺手把新来的站标灰/标通，界面上能立刻看出哪座活着。
     unawaited(_probeAll());
@@ -296,6 +307,8 @@ class _SitesPageState extends State<SitesPage> {
         content: SizedBox(
           width: 520,
           child: TextField(
+            autocorrect: false,
+            enableSuggestions: false,
             controller: ctrl,
             autofocus: true,
             maxLines: 10,
@@ -325,7 +338,9 @@ class _SitesPageState extends State<SitesPage> {
     try {
       raw = jsonDecode(t);
     } catch (e) {
-      _toast(Lc.current.siteImportFailed('$e'));
+      if (mounted) {
+        toastOf(context, Lc.current.siteImportFailed('$e'));
+      }
       return;
     }
     await _import(raw);
@@ -335,7 +350,9 @@ class _SitesPageState extends State<SitesPage> {
   Future<void> _importFromMaster() async {
     final urls = _st.loginUrls;
     if (urls.isEmpty) {
-      _toast(Lc.current.errNotConfigured);
+      if (mounted) {
+        toastOf(context, Lc.current.errNotConfigured);
+      }
       return;
     }
     setState(() => _busy = true);
@@ -343,7 +360,9 @@ class _SitesPageState extends State<SitesPage> {
       final raw = await Api.getAt(urls, '/sites');
       await _import(raw);
     } on ApiException catch (e) {
-      if (mounted) _toast(errorText(context, e));
+      if (mounted) {
+        toastOf(context, errorText(context, e));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -502,9 +521,11 @@ class _SitesPageState extends State<SitesPage> {
   Future<void> _toggleBlock(SiteEntry s) async {
     await AppState.instance.toggleBlocked(s);
     if (!mounted) return;
-    _toast(
-      s.blocked ? Lc.current.siteBlockedDone : Lc.current.siteUnblockedDone,
-    );
+    if (mounted) {
+      toastOf(context, 
+            s.blocked ? Lc.current.siteBlockedDone : Lc.current.siteUnblockedDone,
+          );
+    }
   }
 
   Widget _tile(SiteEntry s, ColorScheme cs) {

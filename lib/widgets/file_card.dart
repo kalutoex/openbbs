@@ -183,8 +183,7 @@ class _FileCardState extends State<_FileCard> {
     final t = Theme.of(context);
     final scheme = t.colorScheme;
     final compact = widget.compact;
-    final radius =
-        BorderRadius.circular(UiConfig.px('fileCard.radius'));
+    final radius = BorderRadius.circular(UiConfig.px('fileCard.radius'));
     final iconSize = UiConfig.px('fileCard.icon');
     final padV = UiConfig.px('fileCard.padV');
     final padH = UiConfig.px('fileCard.padH');
@@ -209,10 +208,7 @@ class _FileCardState extends State<_FileCard> {
             borderRadius: radius,
             onTap: widget.onRemove == null ? _open : null,
             child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: padH,
-                vertical: padV,
-              ),
+              padding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
               child: Row(
                 children: [
                   _busy
@@ -238,13 +234,14 @@ class _FileCardState extends State<_FileCard> {
                           widget.file.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: (compact
-                                  ? t.textTheme.bodyMedium
-                                  : t.textTheme.bodyMedium)
-                              ?.copyWith(
-                                height: 1.2,
-                                fontSize: UiConfig.px('fileCard.nameSize'),
-                              ),
+                          style:
+                              (compact
+                                      ? t.textTheme.bodyMedium
+                                      : t.textTheme.bodyMedium)
+                                  ?.copyWith(
+                                    height: 1.2,
+                                    fontSize: UiConfig.px('fileCard.nameSize'),
+                                  ),
                         ),
                         const SizedBox(height: 2),
                         Row(

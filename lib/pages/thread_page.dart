@@ -2,24 +2,21 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../api.dart';
-import '../file_pick.dart';
-import '../plat.dart';
+import '../attach.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/page_width.dart';
 import '../widgets/mention.dart';
+import '../widgets/reply_bar.dart';
 import '../widgets/live_time.dart';
 
 import '../haptics.dart';
 import '../read_pos.dart';
 import '../store.dart';
 import '../user_hue.dart';
-import '../img_compress.dart';
-import 'gallery_picker_page.dart';
 import 'edit_thread_page.dart';
 import '../utils.dart';
 import '../widgets/avatar.dart';
@@ -100,7 +97,6 @@ class _ThreadPageState extends State<ThreadPage> {
   /// 正在回复的楼层；null 表示回复楼主
   Map<String, dynamic>? _replyTo;
 
-  final ImagePicker _picker = ImagePicker();
   final List<Uint8List> _imgs = [];
   final List<PostFile> _files = [];
   bool _compressing = false;
@@ -218,6 +214,8 @@ class _ThreadPageState extends State<ThreadPage> {
       builder: (ctx) => AlertDialog(
         title: Text(Lc.current.jumpToFloor),
         content: TextField(
+          autocorrect: false,
+          enableSuggestions: false,
           controller: ctl,
           autofocus: true,
           keyboardType: TextInputType.number,
@@ -278,11 +276,13 @@ class _ThreadPageState extends State<ThreadPage> {
     final list = _shownList();
     final idx = list.indexWhere((p) => (p['floor'] ?? 0) == n);
     if (idx < 0) {
-      _toast(
-        _page <= _pages
-            ? Lc.current.notReachedFloor('$n')
-            : Lc.current.noSuchFloor('$n'),
-      );
+      if (mounted) {
+        toastOf(context, 
+                _page <= _pages
+                    ? Lc.current.notReachedFloor('$n')
+                    : Lc.current.noSuchFloor('$n'),
+              );
+      }
       return;
     }
     if (!_itemScroll.isAttached) return;
@@ -478,10 +478,14 @@ class _ThreadPageState extends State<ThreadPage> {
         _moreErr = null;
       });
       final added = headLast - before;
-      if (added > 0) _toast(Lc.current.newRepliesN('$added'));
+      if (added > 0 && mounted) {
+        toastOf(context, Lc.current.newRepliesN('$added'));
+      }
     } on ApiException catch (e) {
       if (!mounted) return;
-      _toast(errorText(context, e));
+      if (mounted) {
+        toastOf(context, errorText(context, e));
+      }
     }
   }
 
@@ -520,7 +524,9 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _send() async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final body = _input.text.trim();
@@ -550,18 +556,14 @@ class _ThreadPageState extends State<ThreadPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
   /// 传 String 直接显示，传异常就按当前语言翻译。
   /// context 留在方法里用，别让调用点在 await 之后碰它。
-  void _toast(Object s) {
-    if (!mounted) return;
-    final t = s is String ? s : errorText(context, s);
-    toast(context, t);
-  }
-
   /// 嵌入模式下没有路由可退，交给外面关掉；整页模式照旧 pop。
   void _close([bool? result]) {
     if (widget.embedded) {
@@ -573,7 +575,9 @@ class _ThreadPageState extends State<ThreadPage> {
 
   void _beginReply(Map<String, dynamic> post) {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     setState(() => _replyTo = post);
@@ -590,13 +594,17 @@ class _ThreadPageState extends State<ThreadPage> {
       setState(() {
         _thread = {...t, if (kind == 'top') 'is_top': on else 'is_good': on};
       });
-      _toast(
-        kind == 'top'
-            ? (on ? Lc.current.pinnedToast : Lc.current.unpinnedToast)
-            : (on ? Lc.current.featuredToast : Lc.current.unfeaturedToast),
-      );
+      if (mounted) {
+        toastOf(context, 
+                kind == 'top'
+                    ? (on ? Lc.current.pinnedToast : Lc.current.unpinnedToast)
+                    : (on ? Lc.current.featuredToast : Lc.current.unfeaturedToast),
+              );
+      }
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
@@ -635,13 +643,17 @@ class _ThreadPageState extends State<ThreadPage> {
   Future<void> _sendReport(Map<String, dynamic> body) async {
     try {
       final r = await Api.post('/report', body);
-      _toast(
-        r['duplicate'] == true
-            ? Lc.current.reportDuplicate
-            : Lc.current.reportThanks,
-      );
+      if (mounted) {
+        toastOf(context, 
+                r['duplicate'] == true
+                    ? Lc.current.reportDuplicate
+                    : Lc.current.reportThanks,
+              );
+      }
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
@@ -664,14 +676,18 @@ class _ThreadPageState extends State<ThreadPage> {
     if (ok) return;
     // 分享面板拉不起来（桌面没装、浏览器不支持），退回复制。
     await Clipboard.setData(ClipboardData(text: text));
-    if (mounted) _toast(Lc.current.copied);
+    if (mounted) {
+      toastOf(context, Lc.current.copied);
+    }
   }
 
   Future<void> _reportThread() async {
     final t = _thread;
     if (t == null) return;
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final reason = await _pickReason();
@@ -682,7 +698,9 @@ class _ThreadPageState extends State<ThreadPage> {
   /// 举报某一层。
   Future<void> _reportReply(Map<String, dynamic> post) async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final reason = await _pickReason();
@@ -718,7 +736,9 @@ class _ThreadPageState extends State<ThreadPage> {
   /// 改自己的帖子。图片在编辑页里增删，这里只负责把结果拿回来。
   Future<void> _editThread() async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final t = _thread;
@@ -744,7 +764,9 @@ class _ThreadPageState extends State<ThreadPage> {
       ),
     );
     if (changed == true && mounted) {
-      _toast(Lc.current.changed);
+      if (mounted) {
+        toastOf(context, Lc.current.changed);
+      }
       await _reload();
     }
   }
@@ -752,7 +774,9 @@ class _ThreadPageState extends State<ThreadPage> {
   /// 改回复：只动正文，配图原样留着。
   Future<void> _editReply(Map<String, dynamic> post) async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final id = (post['id'] ?? 0) as int;
@@ -762,6 +786,8 @@ class _ThreadPageState extends State<ThreadPage> {
       builder: (ctx) => AlertDialog(
         title: Text(Lc.current.editFloor),
         content: TextField(
+          autocorrect: false,
+          enableSuggestions: false,
           controller: ctrl,
           autofocus: true,
           minLines: 3,
@@ -790,10 +816,14 @@ class _ThreadPageState extends State<ThreadPage> {
     try {
       await Api.patch('/c/$id', {'body': body});
       if (!mounted) return;
-      _toast(Lc.current.changed);
+      if (mounted) {
+        toastOf(context, Lc.current.changed);
+      }
       await _reload();
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
@@ -807,16 +837,22 @@ class _ThreadPageState extends State<ThreadPage> {
     try {
       final d = await Api.post('/t/${widget.threadId}/replace-images', {});
       if (!mounted) return;
-      _toast(Lc.current.replacedImages('${d['changed'] ?? 0}'));
+      if (mounted) {
+        toastOf(context, Lc.current.replacedImages('${d['changed'] ?? 0}'));
+      }
       _reload();
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
   Future<void> _deleteThread() async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final ok = await _confirmDelete(
@@ -829,16 +865,22 @@ class _ThreadPageState extends State<ThreadPage> {
       if (!mounted) return;
       await ReadPos.clear(widget.threadId);
       if (!mounted) return;
-      _toast(Lc.current.postDeleted);
+      if (mounted) {
+        toastOf(context, Lc.current.postDeleted);
+      }
       _close(true);
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
   Future<void> _deletePost(Map<String, dynamic> post) async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final id = (post['id'] ?? 0) as int;
@@ -852,20 +894,26 @@ class _ThreadPageState extends State<ThreadPage> {
       if (isThread) {
         await Api.delete('/t/${widget.threadId}');
         if (!mounted) return;
-        _toast(Lc.current.postDeleted);
+        if (mounted) {
+          toastOf(context, Lc.current.postDeleted);
+        }
         _close(true);
       } else {
         await Api.delete('/c/$id');
         await _reload();
       }
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
   Future<void> _recallReply(Map<String, dynamic> post) async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final id = (post['id'] ?? 0) as int;
@@ -873,31 +921,43 @@ class _ThreadPageState extends State<ThreadPage> {
     try {
       await Api.post('/c/$id/recall', const {});
       if (!mounted) return;
-      _toast(Lc.current.dmRecalledMine);
+      if (mounted) {
+        toastOf(context, Lc.current.dmRecalledMine);
+      }
       await _reload();
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
   Future<void> _recallSub(Map<String, dynamic> sub) async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     try {
       await Api.post('/c/${sub['id']}/recall', const {});
       if (!mounted) return;
-      _toast(Lc.current.dmRecalledMine);
+      if (mounted) {
+        toastOf(context, Lc.current.dmRecalledMine);
+      }
       await _reload();
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
   Future<void> _deleteSub(Map<String, dynamic> sub) async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final ok = await _confirmDelete(
@@ -909,13 +969,17 @@ class _ThreadPageState extends State<ThreadPage> {
       await Api.delete('/c/${sub['id']}');
       await _reload();
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
   Future<void> _agree(Map<String, dynamic> post) async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final id = post['id'] as int;
@@ -930,7 +994,9 @@ class _ThreadPageState extends State<ThreadPage> {
         post['agreed'] = d['agreed'];
       });
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
@@ -1425,7 +1491,9 @@ class _ThreadPageState extends State<ThreadPage> {
 
   Future<void> _toggleFav() async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final t = _thread;
@@ -1434,15 +1502,21 @@ class _ThreadPageState extends State<ThreadPage> {
       final d = await Api.post('/fav/${t['id']}', {});
       if (!mounted) return;
       setState(() => t['faved'] = d['faved'] == true);
-      _toast(d['faved'] == true ? Lc.current.favorited : Lc.current.unfavorite);
+      if (mounted) {
+        toastOf(context, d['faved'] == true ? Lc.current.favorited : Lc.current.unfavorite);
+      }
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
   Future<void> _agreeThread() async {
     if (!AppState.instance.loggedIn) {
-      _toast(Lc.current.needLogin);
+      if (mounted) {
+        toastOf(context, Lc.current.needLogin);
+      }
       return;
     }
     final t = _thread;
@@ -1455,7 +1529,9 @@ class _ThreadPageState extends State<ThreadPage> {
         t['agreed'] = d['agreed'];
       });
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     }
   }
 
@@ -1510,69 +1586,42 @@ class _ThreadPageState extends State<ThreadPage> {
                 ),
               ),
             MentionStrip(watcher: _mention, controller: _input),
-            Row(
-              children: [
-                CircleAvatarImg(
+            ReplyBar(
+              controller: _input,
+              focusNode: _inputFocus,
+              hint: Lc.current.replyHint,
+              maxLines: 4,
+              leading: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: CircleAvatarImg(
                   url: meAvatar,
                   name: meName,
                   radius: 16,
                   hue: AppState.instance.accentHue.value,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _input,
-                    focusNode: _inputFocus,
-                    minLines: 1,
-                    maxLines: 4,
-                    textInputAction: TextInputAction.newline,
-                    style: const TextStyle(fontSize: 14),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      filled: true,
-                      fillColor: cs.surfaceContainerHighest,
-                      hintText: Lc.current.replyHint,
-                      hintStyle: TextStyle(fontSize: 14, color: cs.outline),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _sending ? null : _pickFile,
-                  icon: const Icon(Icons.attach_file, size: 20),
-                  tooltip: Lc.current.attachFile,
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: (_sending || _compressing) ? null : _pickImages,
+              ),
+              actions: [
+                ReplyBarIcon(
+                  onPressed: (_sending || _compressing) ? null : _attachMenu,
+                  size: 24,
                   icon: _compressing
                       ? const SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.image_outlined, size: 22),
-                  tooltip: Lc.current.addImageShort,
+                      : const Icon(Icons.add_circle_outline),
                 ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
+                ReplyBarIcon(
                   onPressed: _sending ? null : _send,
+                  color: cs.primary,
                   icon: _sending
                       ? const SizedBox(
                           height: 18,
                           width: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.send_rounded, size: 20),
-                  color: cs.primary,
+                      : const Icon(Icons.send_rounded),
                 ),
               ],
             ),
@@ -1622,61 +1671,45 @@ class _ThreadPageState extends State<ThreadPage> {
   }
 
   /// 传附件。大包传得慢，这中间发送按钮是锁着的，传完解锁。
+  /// 附件入口：图片和文件合成一个「+」，点了再选。
+  Future<void> _attachMenu() {
+    return showAttachSheet(
+      context: context,
+      onImage: _pickImages,
+      onFile: _pickFile,
+    );
+  }
+
   Future<void> _pickFile() async {
-    if (_files.length >= 5) {
-      _toast(Lc.current.attachMax('5'));
-      return;
-    }
-    final f = await pickFile();
-    if (f == null) return;
-    if (f.size > 500 * 1024 * 1024) {
-      _toast(Lc.current.attachTooBig('500MB'));
+    final room = kMaxFiles - _files.length;
+    if (room <= 0) {
+      if (mounted) {
+        toastOf(context, Lc.current.attachMax('$kMaxFiles'));
+      }
       return;
     }
     setState(() => _sending = true);
     try {
-      final r = await Api.uploadFile(f);
-      if (!mounted) return;
-      setState(
-        () => _files.add(
-          PostFile(
-            url: '${r['url']}',
-            name: '${r['name']}',
-            size: r['size'] is int ? r['size'] as int : f.size,
-          ),
-        ),
-      );
-    } catch (e) {
-      _toast(e);
+      final got = await pickFiles(context, room: room);
+      if (mounted && got.isNotEmpty) setState(() => _files.addAll(got));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
   }
 
   Future<void> _pickImages() async {
-    if (_imgs.length >= 9) {
-      _toast(Lc.current.maxNineImages);
+    if (_compressing) return;
+    final room = kMaxImages - _imgs.length;
+    if (room <= 0) {
+      if (mounted) {
+        toastOf(context, Lc.current.maxNineImages);
+      }
       return;
     }
-    if (_compressing) return;
+    setState(() => _compressing = true);
     try {
-      final picked = !hasMediaStore
-          ? await _picker.pickMultiImage()
-          : await pickOwnGallery(context, maxCount: 9 - _imgs.length);
-      if (picked.isEmpty) return;
-      setState(() => _compressing = true);
-      for (final x in picked.take(9 - _imgs.length)) {
-        final raw = await x.readAsBytes();
-        final b = await ImgCompress.run(raw);
-        if (ImgCompress.tooBig(b)) {
-          _toast(Lc.current.imageStillTooBig);
-          continue;
-        }
-        _imgs.add(b);
-      }
-      if (mounted) setState(() {});
-    } catch (e) {
-      _toast(Lc.current.albumFailed('$e'));
+      final got = await pickImages(context, room: room);
+      if (mounted && got.isNotEmpty) setState(() => _imgs.addAll(got));
     } finally {
       if (mounted) setState(() => _compressing = false);
     }

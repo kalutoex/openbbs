@@ -89,13 +89,8 @@ class _UiConfigPageState extends State<UiConfigPage> {
       if (!mounted) return;
       final rej = (d is Map ? d['rejected'] : null);
       if (rej is List && rej.isNotEmpty) {
-        final lines = rej
-            .map((e) => '${e['key']}: ${e['why']}')
-            .join('\n');
-        toast(
-          context,
-          Lc.current.uiConfigRejected(rej.length, lines),
-        );
+        final lines = rej.map((e) => '${e['key']}: ${e['why']}').join('\n');
+        toast(context, Lc.current.uiConfigRejected(rej.length, lines));
       } else {
         toast(context, Lc.current.uiConfigSaved);
       }
@@ -108,9 +103,8 @@ class _UiConfigPageState extends State<UiConfigPage> {
 
   void _fillDefaults() {
     setState(() {
-      _text.text = const JsonEncoder.withIndent('  ').convert(
-        Map<String, dynamic>.from(UiConfig.defaults),
-      );
+      _text.text = const JsonEncoder.withIndent('  ')
+          .convert(Map<String, dynamic>.from(UiConfig.defaults));
     });
   }
 
@@ -179,6 +173,8 @@ class _UiConfigPageState extends State<UiConfigPage> {
                   ],
                   const SizedBox(height: 12),
                   TextField(
+                    autocorrect: false,
+                    enableSuggestions: false,
                     controller: _text,
                     maxLines: null,
                     minLines: 18,

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../utils.dart';
 
-import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../widgets/toast.dart';
 
@@ -40,12 +39,6 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
     super.dispose();
   }
 
-  void _toast(Object msg) {
-    if (!mounted) return;
-    final t = msg is String ? msg : errorText(context, msg);
-    toast(context, t);
-  }
-
   Future<void> _loadMine() async {
     try {
       final d = await Api.get('/feature-requests/mine');
@@ -64,7 +57,9 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
   Future<void> _submit() async {
     final title = _title.text.trim();
     if (title.length < 4) {
-      _toast(Lc.current.titleClearer);
+      if (mounted) {
+        toastOf(context, Lc.current.titleClearer);
+      }
       return;
     }
     setState(() => _busy = true);
@@ -77,14 +72,18 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
       _title.clear();
       _body.clear();
       FocusScope.of(context).unfocus();
-      _toast(
-        r['duplicate'] == true
-            ? Lc.current.requestDuplicate
-            : Lc.current.requestSubmitted,
-      );
+      if (mounted) {
+        toastOf(context, 
+                r['duplicate'] == true
+                    ? Lc.current.requestDuplicate
+                    : Lc.current.requestSubmitted,
+              );
+      }
       await _loadMine();
     } on ApiException catch (e) {
-      _toast(e);
+      if (mounted) {
+        toastOf(context, e);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -113,6 +112,8 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   TextField(
+                    autocorrect: false,
+                    enableSuggestions: false,
                     controller: _title,
                     maxLength: 60,
                     textInputAction: TextInputAction.next,
@@ -123,6 +124,8 @@ class _FeatureRequestPageState extends State<FeatureRequestPage> {
                   ),
                   const SizedBox(height: 4),
                   TextField(
+                    autocorrect: false,
+                    enableSuggestions: false,
                     controller: _body,
                     maxLength: 2000,
                     maxLines: 6,

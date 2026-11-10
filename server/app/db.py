@@ -271,6 +271,17 @@ CREATE INDEX IF NOT EXISTS idx_replies_parent ON replies(parent_id);
 CREATE INDEX IF NOT EXISTS idx_dm_msg_thread ON dm_messages(thread_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_dm_unread ON dm_messages(to_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_dm_last ON dm_threads(last_id DESC);
+-- AI 接入的待发事件。任何进程都能写，只有抢到 ai_bridge.lock 的那个进程推。
+-- sent_at NULL = 还没推出去；推送成功后打时间戳，超过七天的一律清掉。
+CREATE TABLE IF NOT EXISTS ai_outbox (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  uid        INTEGER NOT NULL,
+  kind       TEXT NOT NULL,
+  payload    TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  sent_at    INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_ai_outbox_pending ON ai_outbox(sent_at, id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;
 -- 写请求的幂等回执：客户端带 X-Request-Id，60 秒内同一个 id 只执行一次，
 -- 重试（超时换入口重发）拿回的是第一次的结果，不会发两条帖。
@@ -337,6 +348,18 @@ EXTRA_COLUMNS = [
     ("dm_messages", "files", "TEXT NOT NULL DEFAULT '[]'"),
     # 云盘文件是谁删的。NULL = 老记录（当时只有主人能删），按主人算。
     ("user_files", "deleted_by", "INTEGER"),
+    # ── AI 接入：把账号交给一个 OneBot 实现来驱动 ──
+    # 1 = 这个号背后是 AI。对别人来说它还是个普通用户，昵称、发帖、私信都不变。
+    ("users", "ai_enabled", "INTEGER NOT NULL DEFAULT 0"),
+    # OneBot v11 反向 WS 地址，服务端主动连过去。
+    # 例：ws://127.0.0.1:6199/onebot/v11/ws
+    ("users", "ai_ws", "TEXT"),
+    # 对上 AstrBot 适配器里配的 access_token，空字符串表示不带。
+    ("users", "ai_token", "TEXT"),
+    # 最近一次连上的时间（秒）。0 = 从没连上过。
+    ("users", "ai_seen_at", "INTEGER NOT NULL DEFAULT 0"),
+    # 连不上时最近一条错误，给设置页显示，别让人对着「未连接」猜。
+    ("users", "ai_error", "TEXT"),
 ]
 
 # 用户名太长不好看，handle 统一小写、字母数字下划线。

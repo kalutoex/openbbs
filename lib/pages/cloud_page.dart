@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../download_manager.dart';
 import '../cloud.dart';
+import '../paged.dart';
 import '../download_index.dart';
 import '../local_files.dart';
 import '../pages/transfers_page.dart';
@@ -31,19 +32,31 @@ class CloudPage extends StatefulWidget {
 
 class _CloudPageState extends State<CloudPage> {
   CloudUsage? _usage;
-  final List<CloudFile> _items = [];
   final TextEditingController _search = TextEditingController();
   final ScrollController _scroll = ScrollController();
 
-  bool _loading = true;
-  bool _more = false;
-  bool _failed = false;
   String _q = '';
   String _sort = 'time';
-  int _page = 1;
-  int _total = 0;
 
   static const _perPage = 20;
+
+  late final Pager<CloudFile> _pager = Pager(
+    size: _perPage,
+    fetch: (page) async {
+      final p = await CloudApi.list(
+        q: _q,
+        sort: _sort,
+        page: page,
+        perPage: _perPage,
+      );
+      return PageSlice(p.items, hasMore: page * _perPage < p.total);
+    },
+  );
+
+  List<CloudFile> get _items => _pager.items;
+  bool get _loading => _pager.busy && _pager.isEmpty;
+  bool get _more => _pager.loadingMore;
+  bool get _failed => _pager.error != null;
 
   /// 上传统一在 UploadManager 里跑，退出这页也不会停。
   int _seenDone = 0;
@@ -113,73 +126,28 @@ class _CloudPageState extends State<CloudPage> {
   void _onScroll() {
     if (!_scroll.hasClients) return;
     final p = _scroll.position;
-    if (p.pixels >= p.maxScrollExtent - 300) _loadMore();
+    if (p.pixels >= p.maxScrollExtent - 300) _load(reset: false);
   }
 
   Future<void> _load({bool reset = true}) async {
+    setState(() {});
     if (reset) {
-      setState(() {
-        _loading = true;
-        _failed = false;
-        _page = 1;
-      });
+      await _pager.reset();
+    } else {
+      await _pager.more();
     }
+    // 额度跟着列表一起刷，失败不挡列表。
     try {
       final u = await CloudApi.usage();
-      final p = await CloudApi.list(
-        q: _q,
-        sort: _sort,
-        page: 1,
-        perPage: _perPage,
-      );
-      if (!mounted) return;
-      setState(() {
-        _usage = u;
-        _items
-          ..clear()
-          ..addAll(p.items);
-        _total = p.total;
-        _page = 1;
-        _loading = false;
-        _failed = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _failed = true;
-      });
-      if (!reset) return;
-      _toast(errorText(context, e));
-    }
-  }
-
-  Future<void> _loadMore() async {
-    if (_more || _loading) return;
-    if (_items.length >= _total) return;
-    setState(() => _more = true);
-    try {
-      final p = await CloudApi.list(
-        q: _q,
-        sort: _sort,
-        page: _page + 1,
-        perPage: _perPage,
-      );
-      if (!mounted) return;
-      setState(() {
-        _items.addAll(p.items);
-        _page += 1;
-        _total = p.total;
-        _more = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _more = false);
-    }
-  }
-
-  void _toast(String text) {
+      if (mounted) setState(() => _usage = u);
+    } catch (_) {}
     if (!mounted) return;
-    toast(context, text);
+    setState(() {});
+    final e = _pager.error;
+    if (e != null && reset) {
+      _pager.clearError();
+      toastOf(context, e);
+    }
   }
 
   /// 这页只管看和管理。真要落到手机上，交给「传输」，那儿能看见进度。
@@ -208,7 +176,9 @@ class _CloudPageState extends State<CloudPage> {
       await _toTransfers();
     } catch (e) {
       if (!mounted) return;
-      _toast(errorText(context, e));
+      if (mounted) {
+        toastOf(context, errorText(context, e));
+      }
     }
   }
 
@@ -298,7 +268,9 @@ class _CloudPageState extends State<CloudPage> {
         ),
       );
     } catch (e) {
-      if (mounted) _toast(errorText(context, e));
+      if (mounted) {
+        toastOf(context, errorText(context, e));
+      }
     }
   }
 
@@ -374,7 +346,7 @@ class _CloudPageState extends State<CloudPage> {
         title: _q.isEmpty ? Lc.current.nothingUploadedYet : Lc.current.notFound,
       );
     }
-    final ended = _items.length >= _total;
+    final ended = !_pager.hasMore;
     final tail = _more || (_items.length > _perPage && ended) ? 1 : 0;
     return ListView.builder(
       controller: _scroll,
@@ -492,6 +464,8 @@ class _SearchBar extends StatelessWidget {
             child: SizedBox(
               height: 38,
               child: TextField(
+                autocorrect: false,
+                enableSuggestions: false,
                 controller: controller,
                 onChanged: onChanged,
                 textAlignVertical: TextAlignVertical.center,

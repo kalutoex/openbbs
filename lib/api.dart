@@ -709,7 +709,11 @@ class Api {
     try {
       final r = await _withFailover(
         () => http
-            .post(_uri(path), headers: _writeHeaders(rid), body: jsonEncode(body))
+            .post(
+              _uri(path),
+              headers: _writeHeaders(rid),
+              body: jsonEncode(body),
+            )
             .timeout(const Duration(seconds: 15)),
       );
       final d = _decode(r);
@@ -751,13 +755,45 @@ class Api {
     }
   }
 
+  static Future<dynamic> put(String path, Map<String, dynamic> body) async {
+    if (!configured) throw ApiException(Lc.current.errNotConfigured);
+    final rid = newRequestId();
+    try {
+      final r = await _withFailover(
+        () => http
+            .put(
+              _uri(path),
+              headers: _writeHeaders(rid),
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 15)),
+      );
+      final d = _decode(r);
+      _netOk();
+      return d;
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      _netBad();
+      throw ApiException(
+        Lc.current.connectFailed('$e'),
+        code: 'connectFailed',
+        detail: '$e',
+      );
+    }
+  }
+
   static Future<dynamic> patch(String path, Map<String, dynamic> body) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
     final rid = newRequestId();
     try {
       final r = await _withFailover(
         () => http
-            .patch(_uri(path), headers: _writeHeaders(rid), body: jsonEncode(body))
+            .patch(
+              _uri(path),
+              headers: _writeHeaders(rid),
+              body: jsonEncode(body),
+            )
             .timeout(const Duration(seconds: 15)),
       );
       final d = _decode(r);

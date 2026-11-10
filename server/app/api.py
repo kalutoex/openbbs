@@ -15,7 +15,7 @@ from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, Uplo
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from . import auth, blacklist, config, db, files as filesvc, mailer, sites, words
+from . import aibridge, auth, blacklist, config, db, files as filesvc, mailer, sites, words
 
 # 上传这种一次几分钟的请求，access log 要等结束才有一行，
 # 中途卡住就完全看不见。收的时候自己打一行，卡在哪一头一眼能分。
@@ -1058,6 +1058,113 @@ def me(user=Depends(optional_user)):
     return {"user": user_json(user)}
 
 
+# ---------------------------------------------------------------- AI 接入
+# 把账号交给一个 OneBot v11 实现（AstrBot 等）。对别人来说它还是个普通用户，
+# 只是回话的不是人。开关、地址、令牌都挂在 users 表上，桥自己轮询，改完不用重启。
+
+_AI_WS_RE = re.compile(
+    r"^(wss?)://(\[[0-9a-fA-F:]+\]|[A-Za-z0-9._-]+)(?::(\d{1,5}))?(/[^\s?#]*)?")
+
+_PRIVATE_HOST_RE = re.compile(r"^(10\.|192\.168\.|127\.|172\.(1[6-9]|2\d|3[01])\.)")
+
+
+def _ws_ok(url: str) -> bool:
+    """地址合法性 + 防 SSRF。
+
+    默认只放本机和私网——不设这道口子，站里任何人都能让我们去连内网的
+    HTTP 服务，拿返回码当探测。真要把 AstrBot 放到外网，去 config.json
+    里开 ai.allow_external。
+    """
+    m = _AI_WS_RE.fullmatch(url or "")
+    if not m:
+        return False
+    if int(m.group(3) or 0) > 65535:
+        return False
+    if config.get("ai", "allow_external", False):
+        return True
+    host = m.group(2).strip("[]")
+    if host in ("localhost", "::1"):
+        return True
+    return bool(_PRIVATE_HOST_RE.match(host))
+
+
+class AiCfg(BaseModel):
+    enabled: bool = False
+    ws: str = ""
+    token: str = ""
+    # 开启或改地址时验一次密码——令牌等于账号的另一个身份，
+    # 光有登录态就能改，等于密码泄露的人也能把号接走。
+    pw: str = ""
+
+
+def _ai_snapshot(c, uid: int) -> dict:
+    r = c.execute("SELECT ai_enabled, ai_ws, ai_token, ai_seen_at, ai_error "
+                  "FROM users WHERE id=?", (uid,)).fetchone()
+    seen = int(r["ai_seen_at"] or 0)
+    return {
+        "enabled": bool(r["ai_enabled"]),
+        "ws": r["ai_ws"] or "",
+        # 令牌只回一个「有没有」，不回明文：设置页重填就是了。
+        "has_token": bool(r["ai_token"]),
+        "seen_at": seen,
+        "online": bool(seen) and int(time.time()) - seen < 60,
+        "error": r["ai_error"] or "",
+    }
+
+
+@router.get("/me/ai")
+def get_ai(c=Depends(get_conn), user=Depends(require_user)):
+    return _ai_snapshot(c, user["id"])
+
+
+@router.put("/me/ai")
+def set_ai(p: AiCfg, c=Depends(get_conn), user=Depends(require_user)):
+    row = c.execute("SELECT ai_enabled, ai_ws, ai_token, pw FROM users WHERE id=?",
+                    (user["id"],)).fetchone()
+    ws = (p.ws or "").strip()
+    token = (p.token or "").strip()
+    old_enabled = bool(row["ai_enabled"])
+    changed = ws != (row["ai_ws"] or "") or token != (row["ai_token"] or "")
+
+    if p.enabled:
+        if not ws:
+            raise HTTPException(400, "要填 AstrBot 那边的 WS 地址")
+        if not _ws_ok(ws):
+            raise HTTPException(400, "地址要是 ws:// 或 wss://，默认只允许本机和内网")
+
+    # 关掉不用验，开启或改地址要验。免得有人捡到别人没锁屏的手机就能接管账号。
+    if p.enabled and (not old_enabled or changed):
+        if not p.pw or not auth.check_pw(p.pw, row["pw"]):
+            raise HTTPException(403, "改接入配置要验一次密码")
+
+    c.execute("UPDATE users SET ai_enabled=?, ai_ws=?, ai_token=?, ai_error=NULL WHERE id=?",
+              (1 if p.enabled else 0, ws, token, user["id"]))
+    c.commit()
+    return _ai_snapshot(c, user["id"])
+
+
+def _ai_on(c, uid: int) -> bool:
+    r = c.execute("SELECT ai_enabled FROM users WHERE id=?", (uid,)).fetchone()
+    return bool(r and r["ai_enabled"])
+
+
+def _mutual(c, a: int, b: int) -> bool:
+    return (c.execute("SELECT 1 FROM follows WHERE follower_id=? AND target_id=?",
+                      (a, b)).fetchone() is not None and
+            c.execute("SELECT 1 FROM follows WHERE follower_id=? AND target_id=?",
+                      (b, a)).fetchone() is not None)
+
+
+def _maybe_wake_ai_by_comment(c, ai_uid: int, actor_uid: int, body: str, t, rid: int):
+    """作者是 AI、评论者跟他互关，才把评论推过去。"""
+    if not _ai_on(c, ai_uid) or not _mutual(c, ai_uid, actor_uid):
+        return
+    actor = c.execute("SELECT COALESCE(nickname,name) AS n FROM users WHERE id=?",
+                      (actor_uid,)).fetchone()
+    aibridge.enqueue_comment(ai_uid, actor_uid, (actor["n"] if actor else ""),
+                             body, t["id"], t["title"], rid)
+
+
 # ---------------------------------------------------------------- 发帖
 
 
@@ -1463,6 +1570,10 @@ def reply(tid: int, p: NewReply, c=Depends(get_conn), user=Depends(require_user)
     _notify_mentions(c, body, user["id"], tid, rid, now, skip={target or 0})
     _refresh_level(c, user["id"])
     c.commit()
+    # 作者是 AI 账号，且评论的人跟他互关，才把这条评论推过去。
+    # 不互关就当他是个路过的人，别去打扰。
+    if target and target != user["id"]:
+        _maybe_wake_ai_by_comment(c, target, user["id"], body, t, rid)
     return {"reply_id": rid, "floor": 0 if parent else floor_no}
 
 
@@ -2128,7 +2239,59 @@ def dm_send(uid: int, p: DmIn, c=Depends(get_conn), user=Depends(require_user)):
     c.execute("UPDATE dm_threads SET last_id=? WHERE id=?", (mid, t["id"]))
     # 私信不进通知表：会话本身就在 /dm 列表里，写进来只会让「站内消息」多一条空条目
     c.commit()
+    # 收信人要是 AI 账号，把这条投到桥的待发队列里。
+    # 只写库不推——推是 leader 进程的事，路由到哪个进程都无所谓。
+    if _ai_on(c, uid):
+        aibridge.enqueue_dm(uid, me, user.get("nickname") or user["name"],
+                            body, _load_imgs(images), mid)
     return {"id": mid, "thread_id": t["id"], "created_at": now}
+
+
+def ai_send_as(self_uid: int, peer_uid: int, text: str, images: list,
+               source: str, ctx: dict) -> dict:
+    """桥替 AI 账号发一条。source=comment 写成楼层，否则写私信。
+
+    这条路径不查陌生人限流：能走到这儿的一定是互关，或者对方先开的口。
+    图片只收站内 /img/，外面来的 http 地址一律丢掉——别把一个会过期的
+    外部链接塞进聊天记录里。
+    """
+    c = db.conn()
+    try:
+        if not c.execute("SELECT 1 FROM users WHERE id=?", (peer_uid,)).fetchone():
+            raise ValueError("对方不在了")
+        now = int(time.time())
+        if source == "comment" and ctx.get("thread_id"):
+            tid = int(ctx["thread_id"])
+            t = c.execute("SELECT * FROM threads WHERE id=?", (tid,)).fetchone()
+            if t:
+                mx = c.execute(
+                    "SELECT MAX(floor_no) AS m FROM replies WHERE thread_id=? "
+                    "AND COALESCE(parent_id,0)=0", (tid,)).fetchone()["m"] or 1
+                floor_no = int(mx) + 1
+                cur = c.execute(
+                    "INSERT INTO replies(thread_id, body, user_id, created_at, parent_id, "
+                    "images, floor_no, files) VALUES(?,?,?,?,?,?,?,?)",
+                    (tid, (text or "")[:BODY_MAX], self_uid, now, 0,
+                     _save_imgs(images or []), floor_no, "[]"))
+                rid = cur.lastrowid
+                db.fts_upsert_reply(c, rid)
+                c.execute("UPDATE threads SET reply_count=reply_count+1, updated_at=? "
+                          "WHERE id=?", (now, tid))
+                c.commit()
+                return {"message_id": rid}
+
+        t = _dm_thread(c, self_uid, peer_uid)
+        cur = c.execute(
+            "INSERT INTO dm_messages(thread_id, from_id, to_id, body, images, files, "
+            "reply_id, is_read, created_at) VALUES(?,?,?,?,?,?,?,0,?)",
+            (t["id"], self_uid, peer_uid, (text or "")[:2000],
+             _save_imgs(images or []), "[]", 0, now))
+        mid = cur.lastrowid
+        c.execute("UPDATE dm_threads SET last_id=? WHERE id=?", (mid, t["id"]))
+        c.commit()
+        return {"message_id": mid}
+    finally:
+        c.close()
 
 
 # 撤回时限。微信是两分钟，跟着走。

@@ -423,10 +423,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
     return Scaffold(
       appBar: AppBar(
         leading: _selecting
-            ? IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _endSelect,
-              )
+            ? IconButton(icon: const Icon(Icons.close), onPressed: _endSelect)
             : null,
         title: Text(
           _selecting
@@ -437,9 +434,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
           if (_selecting) ...[
             IconButton(
               tooltip: allOn ? Lc.current.selectNone : Lc.current.selectAll,
-              icon: Icon(
-                allOn ? Icons.deselect : Icons.select_all,
-              ),
+              icon: Icon(allOn ? Icons.deselect : Icons.select_all),
               onPressed: canSelect ? _toggleAll : null,
             ),
             IconButton(
@@ -533,10 +528,7 @@ class _DownloadsPageState extends State<DownloadsPage> {
     ];
     return ListTile(
       leading: _selecting
-          ? Checkbox(
-              value: picked,
-              onChanged: (_) => _toggle(e.rec.display),
-            )
+          ? Checkbox(value: picked, onChanged: (_) => _toggle(e.rec.display))
           : Icon(
               fileIconFor(e.rec.name),
               size: 24,

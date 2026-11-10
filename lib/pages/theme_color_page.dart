@@ -165,7 +165,6 @@ class ThemeColorPage extends StatelessWidget {
   }
 }
 
-
 /// 桌面图标。系统层换图标只能靠清单里预置的别名，这里只是挑启用哪一个，
 /// 所以下面这些是固定的 8 套，不是随便挑图。
 class _IconPicker extends StatefulWidget {

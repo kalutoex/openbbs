@@ -437,7 +437,9 @@ class AppState extends ChangeNotifier {
   Future<void> probeSites() async {
     // 并发探，不逐站排队。三座站 × 两条入口串起来最坏要 39 秒，首屏的
     // feed 全程在跟它抢连接，弱网下就是「首页一直转，站点页倒是早亮了」。
-    await Future.wait([for (final s in List<SiteEntry>.of(sites)) _probeOne(s)]);
+    await Future.wait([
+      for (final s in List<SiteEntry>.of(sites)) _probeOne(s),
+    ]);
   }
 
   Future<void> _probeOne(SiteEntry s) async {

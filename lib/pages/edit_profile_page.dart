@@ -59,11 +59,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
               true)
           as bool;
 
-  void _snack(String msg) {
-    if (!mounted) return;
-    toast(context, msg, floating: true);
-  }
-
   /// 选图 -> 压到 100KB 左右 -> 传到 /upload -> 填进 _avatar。
   Future<void> _pickAvatar() async {
     if (_picking || _busy) return;
@@ -103,11 +98,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (u is Map<String, dynamic>) AppState.instance.applyUser(u);
       if (!mounted) return;
       setState(() => _avatar.text = url);
-      _snack(Lc.current.avatarUpdated(ImgCompress.kb(out.length)));
+      if (mounted) {
+        toastOf(context, Lc.current.avatarUpdated(ImgCompress.kb(out.length)), floating: true);
+      }
     } on ApiException catch (e) {
-      _snack(errorText(context, e));
+      if (mounted) {
+        toastOf(context, errorText(context, e), floating: true);
+      }
     } catch (e) {
-      _snack(Lc.current.uploadFailedWith('$e'));
+      if (mounted) {
+        toastOf(context, Lc.current.uploadFailedWith('$e'), floating: true);
+      }
     } finally {
       if (mounted) setState(() => _picking = false);
     }
@@ -279,6 +280,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   TextField(
+                    autocorrect: false,
+                    enableSuggestions: false,
                     controller: _nick,
                     maxLength: 20,
                     decoration: InputDecoration(
@@ -288,6 +291,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   const SizedBox(height: 14),
                   TextField(
+                    autocorrect: false,
+                    enableSuggestions: false,
                     controller: _tag,
                     maxLength: 16,
                     inputFormatters: [
@@ -302,6 +307,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   const SizedBox(height: 14),
                   TextField(
+                    autocorrect: false,
+                    enableSuggestions: false,
                     controller: _sig,
                     maxLength: 80,
                     maxLines: 3,

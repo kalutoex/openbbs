@@ -46,10 +46,7 @@ class NameTag extends StatelessWidget {
                 style: base,
               ),
             ),
-            if (trailing != null) ...[
-              const SizedBox(width: 6),
-              trailing!,
-            ],
+            if (trailing != null) ...[const SizedBox(width: 6), trailing!],
           ],
         ),
         if (h.isNotEmpty)

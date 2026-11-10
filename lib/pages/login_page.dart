@@ -283,6 +283,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 12),
                         TextField(
+                          autocorrect: false,
+                          enableSuggestions: false,
                           controller: _code,
                           keyboardType: TextInputType.number,
                           autofillHints: const [AutofillHints.oneTimeCode],
@@ -305,6 +307,8 @@ class _LoginPageState extends State<LoginPage> {
                         if (_register && _chQ.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           TextField(
+                            autocorrect: false,
+                            enableSuggestions: false,
                             controller: _chAns,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(labelText: _chQ),

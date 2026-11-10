@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/error_text.dart';
+
 /// 轻提示，默认 1.5 秒。
 ///
 /// 新提示直接顶掉旧的，不排队——连着点两下不会各自等满一轮。
@@ -25,4 +27,22 @@ void toast(
         action: action,
       ),
     );
+}
+
+/// 页面还在就弹一句。是异常就按 errorText 翻成人话。
+///
+/// 各处以前各写一个 _toast/_snack 包这个判断，现在统一走这儿。
+void toastOf(
+  BuildContext context,
+  Object msg, {
+  SnackBarAction? action,
+  bool floating = false,
+}) {
+  if (!context.mounted) return;
+  toast(
+    context,
+    msg is String ? msg : errorText(context, msg),
+    action: action,
+    floating: floating,
+  );
 }

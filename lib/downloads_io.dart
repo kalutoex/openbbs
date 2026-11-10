@@ -237,7 +237,12 @@ Future<SavedFile> downloadToDevice(
   void Function(double)? onProgress,
   CancelToken? cancel,
 }) async {
-  final tmp = await fetchToTemp(url, name, onProgress: onProgress, cancel: cancel);
+  final tmp = await fetchToTemp(
+    url,
+    name,
+    onProgress: onProgress,
+    cancel: cancel,
+  );
   final saved = await saveDownloaded(tmp.path, name);
   try {
     await tmp.delete();

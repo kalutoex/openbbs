@@ -4,7 +4,7 @@ import '../widgets/page_width.dart';
 import 'package:flutter/material.dart';
 
 import '../cloud.dart';
-import '../l10n/error_text.dart';
+import '../paged.dart';
 import '../l10n/l10n.dart';
 import '../widgets/toast.dart';
 
@@ -22,20 +22,31 @@ class CloudPickPage extends StatefulWidget {
 }
 
 class _CloudPickPageState extends State<CloudPickPage> {
-  final List<CloudFile> _items = [];
   final List<CloudFile> _picked = [];
   final TextEditingController _search = TextEditingController();
   final ScrollController _scroll = ScrollController();
 
-  bool _loading = true;
-  bool _more = false;
-  bool _failed = false;
   String _q = '';
   final String _sort = 'time';
-  int _page = 1;
-  int _total = 0;
 
   static const _perPage = 30;
+
+  late final Pager<CloudFile> _pager = Pager(
+    size: _perPage,
+    fetch: (page) async {
+      final p = await CloudApi.list(
+        q: _q,
+        sort: _sort,
+        page: page,
+        perPage: _perPage,
+      );
+      return PageSlice(p.items, hasMore: page * _perPage < p.total);
+    },
+  );
+
+  List<CloudFile> get _items => _pager.items;
+  bool get _loading => _pager.busy && _pager.isEmpty;
+  bool get _failed => _pager.error != null;
 
   @override
   void initState() {
@@ -60,57 +71,21 @@ class _CloudPickPageState extends State<CloudPickPage> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _failed = false;
-    });
-    try {
-      final p = await CloudApi.list(
-        q: _q,
-        sort: _sort,
-        page: 1,
-        perPage: _perPage,
-      );
-      if (!mounted) return;
-      setState(() {
-        _items
-          ..clear()
-          ..addAll(p.items);
-        _total = p.total;
-        _page = 1;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _failed = true;
-      });
-      toast(context, errorText(context, e));
+    setState(() {});
+    await _pager.reset();
+    if (!mounted) return;
+    setState(() {});
+    final e = _pager.error;
+    if (e != null) {
+      _pager.clearError();
+      toastOf(context, e);
     }
   }
 
   Future<void> _loadMore() async {
-    if (_more || _loading || _failed) return;
-    if (_items.length >= _total) return;
-    setState(() => _more = true);
-    try {
-      final p = await CloudApi.list(
-        q: _q,
-        sort: _sort,
-        page: _page + 1,
-        perPage: _perPage,
-      );
-      if (!mounted) return;
-      setState(() {
-        _items.addAll(p.items);
-        _page += 1;
-        _total = p.total;
-        _more = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _more = false);
-    }
+    if (_pager.error != null) return;
+    await _pager.more();
+    if (mounted) setState(() {});
   }
 
   void _toggle(CloudFile f) {
@@ -150,6 +125,8 @@ class _CloudPickPageState extends State<CloudPickPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
               child: TextField(
+                autocorrect: false,
+                enableSuggestions: false,
                 controller: _search,
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
@@ -204,7 +181,7 @@ class _CloudPickPageState extends State<CloudPickPage> {
         parent: BouncingScrollPhysics(),
       ),
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-      itemCount: _items.length + (_items.length < _total ? 1 : 0),
+      itemCount: _items.length + (_pager.hasMore ? 1 : 0),
       itemBuilder: (_, i) {
         if (i >= _items.length) {
           return const Padding(

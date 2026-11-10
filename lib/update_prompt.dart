@@ -19,7 +19,7 @@ const _kPromptBuild = 'update_prompt_build'; // 上次弹出提示的 build
 const _kPromptAt = 'update_prompt_at'; // 上次弹出的时间（毫秒）
 
 String _localVersion(PackageInfo? p) =>
-    p == null ? '' : p.version;  // 构建号是内部的东西，界面上不露
+    p == null ? '' : p.version; // 构建号是内部的东西，界面上不露
 
 /// 距上次检查够不够久。[hours] 是服务端上次给的间隔，0 表示每次启动都查。
 bool dueForCheck({required int now, required int last, required int hours}) =>
