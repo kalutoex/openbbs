@@ -1195,5 +1195,7 @@
   "clearFinished": "Clear finished",
   "uploading": "Queued",
   "uploadFailed": "Upload failed",
-  "uploadedOk": "Uploaded"
+  "uploadedOk": "Uploaded",
+  "showMangaTab": "Manga tab",
+  "showMangaTabHint": "Hides the manga tab from the bottom bar"
 }

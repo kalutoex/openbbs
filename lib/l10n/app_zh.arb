@@ -1547,6 +1547,13 @@
   "dmAttach": "发送",
   "notifyNewDm": "新私信",
   "notifyNewCount": "{n} 条新消息",
+  "@notifyNewCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "sysNotify": "消息通知",
   "sysNotifyHint": "有新消息时弹一条系统通知",
   "sysNotifyOff": "系统通知权限没开，去手机设置里打开",
@@ -1614,8 +1621,29 @@
   "selectNone": "全不选",
   "deleteSelected": "删除所选",
   "selectedCount": "已选 {n} 个",
+  "@selectedCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "deleteSelectedAsk": "这 {n} 个文件会从手机里删掉，云盘里的还在。",
+  "@deleteSelectedAsk": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "deletedSelected": "已删 {n} 个",
+  "@deletedSelected": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "deleteTaskAsk": "删除这个下载任务吗？",
   "deleteTasksAskN": "删除这 {n} 个下载任务吗？",
   "@deleteTasksAskN": {
@@ -1786,53 +1814,6 @@
   "uploading": "排队中",
   "uploadFailed": "没传上去",
   "uploadedOk": "已传完",
-  "@notifyNewCount": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "@selectedCount": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "@deleteSelectedAsk": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "@deletedSelected": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "@uploadsRunningN": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      }
-    }
-  },
-  "@uploadsFailedN": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      }
-    }
-  },
-  "@uploadsDoneN": {
-    "placeholders": {
-      "v1": {
-        "type": "String"
-      }
-    }
-  }
+  "showMangaTab": "显示漫画栏",
+  "showMangaTabHint": "关掉以后底栏只剩首页、消息、我的"
 }

@@ -4914,19 +4914,19 @@ abstract class L {
   ///
   /// In zh, this message translates to:
   /// **'正在传 v1 个'**
-  String uploadsRunningN(String v1);
+  String uploadsRunningN(Object v1);
 
   /// No description provided for @uploadsFailedN.
   ///
   /// In zh, this message translates to:
   /// **'v1 个没传上去'**
-  String uploadsFailedN(String v1);
+  String uploadsFailedN(Object v1);
 
   /// No description provided for @uploadsDoneN.
   ///
   /// In zh, this message translates to:
   /// **'已传完 v1 个'**
-  String uploadsDoneN(String v1);
+  String uploadsDoneN(Object v1);
 
   /// No description provided for @clearFinished.
   ///
@@ -4951,6 +4951,18 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'已传完'**
   String get uploadedOk;
+
+  /// No description provided for @showMangaTab.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示漫画栏'**
+  String get showMangaTab;
+
+  /// No description provided for @showMangaTabHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'关掉以后底栏只剩首页、消息、我的'**
+  String get showMangaTabHint;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

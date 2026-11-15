@@ -13,6 +13,7 @@ import '../widgets/page_width.dart';
 import 'compose_page.dart';
 import '../haptics.dart';
 import 'feed_tab.dart';
+import 'manga_tab.dart';
 import 'login_page.dart';
 import 'me_tab.dart';
 import 'messages_page.dart';
@@ -31,16 +32,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _sk = GlobalKey<ScaffoldState>();
 
-  /// 0 = 时间线，1 = 站点，2 = 消息，3 = 我的
+  /// 0 = 时间线，1 = 站点（不入口），2 = 消息，3 = 我的，4 = 漫画
   late int _index = _tabOf(AppState.instance.startTab.value);
 
   /// 底栏只露这几页。站点（1）暂时没那么大用处，先不放进底栏，
   /// 页面和索引都留着，想放回来把 1 加回这个列表就行。
-  static const _barTabs = <int>[0, 2, 3];
+  ///
+  /// 漫画（4）在设置里可以藏掉，藏了底栏就是首页/消息/我的。
+  List<int> get _barTabs => AppState.instance.showManga.value
+      ? const [0, 4, 2, 3]
+      : const [0, 2, 3];
 
   /// 历史版本存过 0..3（1 是站点），语义和现在这张表一致，越界就回首页。
   /// 站点没入口了，存着 1 的老设置直接给首页。
-  static int _tabOf(int v) => v >= 0 && v <= 3 && v != 1 ? v : 0;
+  static int _tabOf(int v) => v >= 0 && v <= 4 && v != 1 ? v : 0;
 
   void _go(int i) {
     if (!_barTabs.contains(i)) return;
@@ -60,10 +65,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// PageView 的页码 -> 页面索引。站点（1）不在这条线上。
-  static const _pages = <int>[0, 2, 3];
+  List<int> get _pages => _barTabs;
 
   late final PageController _pc = PageController(
-    initialPage: _pages.indexOf(_index),
+    initialPage: _pages.contains(_index) ? _pages.indexOf(_index) : 0,
   );
 
   /// 手指划过一半就认这一页，底栏跟着亮。
@@ -90,10 +95,27 @@ class _HomePageState extends State<HomePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(checkOnStart(context));
     });
+    // 上次停在漫画页，但这回设置里已经把漫画藏了，回首页。
+    if (!_pages.contains(_index)) _index = 0;
+    AppState.instance.showManga.addListener(_onShowManga);
     AppState.instance.refreshUnread();
     AppState.instance.autoUnread.addListener(_syncTick);
     _beat = Timer.periodic(const Duration(seconds: 30), (_) => beatClock());
     _syncTick();
+  }
+
+  /// 漫画那一格藏起来/放出来以后，页码表长度变了，当前页得跟着归位。
+  void _onShowManga() {
+    if (!mounted) return;
+    final pages = _pages;
+    setState(() {
+      if (!pages.contains(_index)) _index = 0;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pc.hasClients) return;
+      final p = _pages.indexOf(_index);
+      if (p >= 0 && _pc.page?.round() != p) _pc.jumpToPage(p);
+    });
   }
 
   /// 设置里关掉「自动检查通知」就停掉这个每分钟的轮询。
@@ -110,6 +132,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _pc.dispose();
+    AppState.instance.showManga.removeListener(_onShowManga);
     AppState.instance.autoUnread.removeListener(_syncTick);
     _tick?.cancel();
     _beat?.cancel();
@@ -276,10 +299,22 @@ class _HomePageState extends State<HomePage> {
                 onPageChanged: _onPage,
                 children: [
                   _KeepAlive(
+                    key: const ValueKey('feed'),
                     child: FeedTab(onMenu: _menu, onCompose: _compose),
                   ),
-                  _KeepAlive(child: MessagesPage(onMenu: _menu)),
-                  _KeepAlive(child: MeTab(onMenu: _menu)),
+                  if (_barTabs.contains(4))
+                    _KeepAlive(
+                      key: const ValueKey('manga'),
+                      child: MangaTab(onMenu: _menu),
+                    ),
+                  _KeepAlive(
+                    key: const ValueKey('messages'),
+                    child: MessagesPage(onMenu: _menu),
+                  ),
+                  _KeepAlive(
+                    key: const ValueKey('me'),
+                    child: MeTab(onMenu: _menu),
+                  ),
                 ],
               ),
             ),
@@ -356,6 +391,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _tabIcon(int tab, int unread, bool selected) {
+    if (tab == 4) {
+      return Icon(
+        selected ? Icons.menu_book_rounded : Icons.menu_book_outlined,
+      );
+    }
     if (tab == 2) {
       return Badge(
         isLabelVisible: unread > 0,
@@ -376,6 +416,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _tabLabel(int tab) {
+    if (tab == 4) return '漫画';
     if (tab == 2) return Lc.current.messagesTab;
     if (tab == 3) return Lc.current.me;
     return Lc.current.home;
@@ -385,7 +426,7 @@ class _HomePageState extends State<HomePage> {
 /// 滑走的那页别把状态扔了。首页的滚动位置、消息的未读、
 /// 我的那一堆开关，回来还得在原处。
 class _KeepAlive extends StatefulWidget {
-  const _KeepAlive({required this.child});
+  const _KeepAlive({super.key, required this.child});
 
   final Widget child;
 

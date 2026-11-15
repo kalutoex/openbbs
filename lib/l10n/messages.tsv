@@ -607,3 +607,5 @@ v1 个没传上去	uploadsFailedN	{v1} failed
 发一条测试通知	notifyTest	Send a test notification
 测试通知	notifyTestTitle	Test notification
 能看到这条，说明通知是通的	notifyTestBody	If you see this, notifications work
+显示漫画栏	showMangaTab	Manga tab
+关掉以后底栏只剩首页、消息、我的	showMangaTabHint	Hides the manga tab from the bottom bar

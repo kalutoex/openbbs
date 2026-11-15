@@ -2754,17 +2754,17 @@ class LEn extends L {
       'Pick a file to upload and the progress shows up here.';
 
   @override
-  String uploadsRunningN(String v1) {
+  String uploadsRunningN(Object v1) {
     return '$v1 uploading';
   }
 
   @override
-  String uploadsFailedN(String v1) {
+  String uploadsFailedN(Object v1) {
     return '$v1 failed';
   }
 
   @override
-  String uploadsDoneN(String v1) {
+  String uploadsDoneN(Object v1) {
     return '$v1 finished';
   }
 
@@ -2779,4 +2779,10 @@ class LEn extends L {
 
   @override
   String get uploadedOk => 'Uploaded';
+
+  @override
+  String get showMangaTab => 'Manga tab';
+
+  @override
+  String get showMangaTabHint => 'Hides the manga tab from the bottom bar';
 }

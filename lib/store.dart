@@ -34,6 +34,9 @@ class AppState extends ChangeNotifier {
   static const _kStartTab = 'start_tab';
   static const _kHueCards = 'hue_cards';
 
+  /// 底栏要不要露漫画那一格。关掉只是藏入口，书架数据不动。
+  static const _kShowManga = 'show_manga';
+
   /// 底部 tab 表变过（板块改成站点），老键里存的值按旧表解释，新值单开一个键。
   static const _kStartTabV2 = 'start_tab_v2';
   static const _kLocale = 'locale';
@@ -187,6 +190,9 @@ class AppState extends ChangeNotifier {
 
   /// 时间线里的小图开关。
   final ValueNotifier<bool> thumbs = ValueNotifier(true);
+
+  /// 底栏露不露「漫画」。关掉以后底栏是首页/消息/我的。
+  final ValueNotifier<bool> showManga = ValueNotifier(true);
 
   /// 时间线排序：updated 按最新回复，created 按最新发布。
   final ValueNotifier<String> feedSort = ValueNotifier('created');
@@ -342,6 +348,14 @@ class AppState extends ChangeNotifier {
     await p.setBool(_kThumbs, v);
   }
 
+  Future<void> setShowManga(bool v) async {
+    showManga.value = v;
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kShowManga, v);
+    // 底栏是照着这个值现算的，得叫它还一遍。
+    notifyListeners();
+  }
+
   Future<void> setFeedSort(String v) async {
     feedSort.value = v == 'created' ? 'created' : 'updated';
     final p = await SharedPreferences.getInstance();
@@ -475,6 +489,7 @@ class AppState extends ChangeNotifier {
     hueCards.value = p.getBool(_kHueCards) ?? false;
     density.value = (p.getInt(_kDensity) ?? 1).clamp(0, 2);
     thumbs.value = p.getBool(_kThumbs) ?? true;
+    showManga.value = p.getBool(_kShowManga) ?? true;
     final fs = p.getString(_kFeedSort);
     if (fs == 'updated' || fs == 'created') feedSort.value = fs!;
     autoUnread.value = p.getBool(_kAutoUnread) ?? true;

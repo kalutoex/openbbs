@@ -106,6 +106,16 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
                 ValueListenableBuilder<bool>(
+                  valueListenable: st.showManga,
+                  builder: (_, v, _) => SwitchListTile(
+                    secondary: const Icon(Icons.menu_book_outlined),
+                    title: Text(Lc.current.showMangaTab),
+                    subtitle: Text(Lc.current.showMangaTabHint),
+                    value: v,
+                    onChanged: (x) => st.setShowManga(x),
+                  ),
+                ),
+                ValueListenableBuilder<bool>(
                   valueListenable: st.autoUnread,
                   builder: (_, v, _) => SwitchListTile(
                     secondary: const Icon(Icons.notifications_active_outlined),

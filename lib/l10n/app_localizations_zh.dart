@@ -2691,17 +2691,17 @@ class LZh extends L {
   String get uploadsEmptyHint => '选好文件点上传，进度都在这儿看。';
 
   @override
-  String uploadsRunningN(String v1) {
+  String uploadsRunningN(Object v1) {
     return '正在传 v1 个';
   }
 
   @override
-  String uploadsFailedN(String v1) {
+  String uploadsFailedN(Object v1) {
     return 'v1 个没传上去';
   }
 
   @override
-  String uploadsDoneN(String v1) {
+  String uploadsDoneN(Object v1) {
     return '已传完 v1 个';
   }
 
@@ -2716,4 +2716,10 @@ class LZh extends L {
 
   @override
   String get uploadedOk => '已传完';
+
+  @override
+  String get showMangaTab => '显示漫画栏';
+
+  @override
+  String get showMangaTabHint => '关掉以后底栏只剩首页、消息、我的';
 }
