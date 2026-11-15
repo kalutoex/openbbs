@@ -1815,5 +1815,25 @@
   "uploadFailed": "没传上去",
   "uploadedOk": "已传完",
   "showMangaTab": "显示漫画栏",
-  "showMangaTabHint": "关掉以后底栏只剩首页、消息、我的"
+  "showMangaTabHint": "关掉以后底栏只剩首页、消息、我的",
+  "bookSources": "外部书源",
+  "bookSourcesImport": "导入",
+  "bookSourcesEmpty": "还没导入书源。找一份「阅读」格式的书源 JSON，点导入。",
+  "bookSourcesBadFile": "这个文件里没读出书源",
+  "bookSourcesRemove": "删掉这个书源？",
+  "bookSourcesRemoved": "删了",
+  "bookSourcesImported": "新增 {added}，更新 {updated}，跳过 {skipped}",
+  "@bookSourcesImported": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "updated": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -13,6 +13,7 @@ import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/app_card.dart';
+import '../widgets/book_sources_section.dart';
 import '../widgets/toast.dart';
 
 /// 站点管理：本机站点表。加、删、切、设登录站，以及清单导入。
@@ -449,16 +450,21 @@ class _SitesPageState extends State<SitesPage> {
             ],
           ),
           body: PageWidth(
-            child: sites.isEmpty
-                ? _empty()
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 96),
-                    itemCount: sites.length,
-                    itemBuilder: (_, i) => AppCard(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 96),
+              children: [
+                if (sites.isEmpty)
+                  _empty()
+                else
+                  for (final s in sites)
+                    AppCard(
                       margin: const EdgeInsets.only(bottom: 8),
-                      child: _tile(sites[i], cs),
+                      child: _tile(s, cs),
                     ),
-                  ),
+                // 书源和站点是一回事：都是「从哪儿取内容」，所以摆在一页里。
+                const BookSourcesSection(),
+              ],
+            ),
           ),
           floatingActionButton: sites.isEmpty
               ? null

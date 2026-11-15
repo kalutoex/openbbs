@@ -2785,4 +2785,28 @@ class LEn extends L {
 
   @override
   String get showMangaTabHint => 'Hides the manga tab from the bottom bar';
+
+  @override
+  String get bookSources => 'Comic sources';
+
+  @override
+  String get bookSourcesImport => 'Import';
+
+  @override
+  String get bookSourcesEmpty =>
+      'No sources yet. Pick a Legado-format bookSource JSON and import it.';
+
+  @override
+  String get bookSourcesBadFile => 'No sources found in that file';
+
+  @override
+  String get bookSourcesRemove => 'Delete this source?';
+
+  @override
+  String get bookSourcesRemoved => 'Deleted';
+
+  @override
+  String bookSourcesImported(int added, int updated, int skipped) {
+    return '$added added, $updated updated, $skipped skipped';
+  }
 }

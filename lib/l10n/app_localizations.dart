@@ -4963,6 +4963,48 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'关掉以后底栏只剩首页、消息、我的'**
   String get showMangaTabHint;
+
+  /// No description provided for @bookSources.
+  ///
+  /// In zh, this message translates to:
+  /// **'外部书源'**
+  String get bookSources;
+
+  /// No description provided for @bookSourcesImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入'**
+  String get bookSourcesImport;
+
+  /// No description provided for @bookSourcesEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没导入书源。找一份「阅读」格式的书源 JSON，点导入。'**
+  String get bookSourcesEmpty;
+
+  /// No description provided for @bookSourcesBadFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个文件里没读出书源'**
+  String get bookSourcesBadFile;
+
+  /// No description provided for @bookSourcesRemove.
+  ///
+  /// In zh, this message translates to:
+  /// **'删掉这个书源？'**
+  String get bookSourcesRemove;
+
+  /// No description provided for @bookSourcesRemoved.
+  ///
+  /// In zh, this message translates to:
+  /// **'删了'**
+  String get bookSourcesRemoved;
+
+  /// No description provided for @bookSourcesImported.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增 {added}，更新 {updated}，跳过 {skipped}'**
+  String bookSourcesImported(int added, int updated, int skipped);
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

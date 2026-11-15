@@ -2722,4 +2722,27 @@ class LZh extends L {
 
   @override
   String get showMangaTabHint => '关掉以后底栏只剩首页、消息、我的';
+
+  @override
+  String get bookSources => '外部书源';
+
+  @override
+  String get bookSourcesImport => '导入';
+
+  @override
+  String get bookSourcesEmpty => '还没导入书源。找一份「阅读」格式的书源 JSON，点导入。';
+
+  @override
+  String get bookSourcesBadFile => '这个文件里没读出书源';
+
+  @override
+  String get bookSourcesRemove => '删掉这个书源？';
+
+  @override
+  String get bookSourcesRemoved => '删了';
+
+  @override
+  String bookSourcesImported(int added, int updated, int skipped) {
+    return '新增 $added，更新 $updated，跳过 $skipped';
+  }
 }
