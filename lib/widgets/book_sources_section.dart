@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
@@ -29,11 +30,46 @@ class _BookSourcesSectionState extends State<BookSourcesSection> {
   bool _loading = true;
   bool _busy = false;
 
+  /// 源 id → 探测结果 {ok, via, ms, msg}。
+  ///
+  /// 只探地址，不跑规则：问一句有没有人应答，几秒就能给全表标上颜色。
+  /// 规则对不上是另一回事，那个只能点进去才知道。
+  Map<int, Map<String, dynamic>> _probe = {};
+  bool _probing = false;
+
   @override
   void initState() {
     super.initState();
     _load();
   }
+
+  /// 探一遍所有开着的源。进页面自动跑，也能手动重测。
+  Future<void> _probeAll() async {
+    if (_probing) return;
+    setState(() => _probing = true);
+    try {
+      final r = await Api.post(
+        '/sources/probe',
+        {'type': widget.type, 'enabled': true},
+        timeout: const Duration(seconds: 60),
+      );
+      final list = (r['list'] as List?) ?? const [];
+      final m = <int, Map<String, dynamic>>{};
+      for (final e in list.whereType<Map>()) {
+        final id = (e['id'] as num?)?.toInt();
+        if (id != null) m[id] = Map<String, dynamic>.from(e);
+      }
+      if (!mounted) return;
+      setState(() {
+        _probe = m;
+        _probing = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _probing = false);
+    }
+  }
+
+  int get _alive => _probe.values.where((p) => p['ok'] == true).length;
 
   Future<void> _load() async {
     try {
@@ -47,6 +83,7 @@ class _BookSourcesSectionState extends State<BookSourcesSection> {
             .toList();
         _loading = false;
       });
+      unawaited(_probeAll());
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -161,6 +198,27 @@ class _BookSourcesSectionState extends State<BookSourcesSection> {
                 Lc.current.bookSources,
                 style: Theme.of(context).textTheme.titleSmall,
               ),
+              if (!_loading && _list.isNotEmpty)
+                Text(
+                  _probing
+                      ? '探测中'
+                      : '${_probe.isEmpty ? 0 : _alive}/${_list.length} 通',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                ),
+              IconButton(
+                tooltip: '重测连通',
+                visualDensity: VisualDensity.compact,
+                onPressed: _probing ? null : _probeAll,
+                icon: _probing
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.wifi_tethering, size: 19),
+              ),
               const Spacer(),
               if (_busy)
                 const SizedBox(
@@ -202,17 +260,28 @@ class _BookSourcesSectionState extends State<BookSourcesSection> {
               child: ListTile(
                 dense: true,
                 contentPadding: const EdgeInsets.only(left: 12, right: 4),
-                title: Text(
-                  s['name']?.toString() ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                title: Row(
+                  children: [
+                    Expanded(
+                      // 源名长短差得离谱，状态标签跟着走，别把名字挤没了。
+                      child: Text(
+                        s['name']?.toString() ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    _badge(_probe[(s['id'] as num?)?.toInt()]),
+                  ],
                 ),
                 subtitle: Text(
-                  s['url']?.toString() ?? '',
+                  _sub(s),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
+                    color: _probe[(s['id'] as num?)?.toInt()]?['ok'] == false
+                        ? cs.error
+                        : cs.onSurfaceVariant,
                   ),
                 ),
                 trailing: Row(
@@ -232,6 +301,58 @@ class _BookSourcesSectionState extends State<BookSourcesSection> {
               ),
             ),
       ],
+    );
+  }
+
+  /// 副标题：默认念地址；连不上的换成原因——地址那儿写得再全也没用。
+  String _sub(Map<String, dynamic> s) {
+    final p = _probe[(s['id'] as num?)?.toInt()];
+    final u = s['url']?.toString() ?? '';
+    if (p == null) return u;
+    if (p['ok'] == true) return '$u　·　${p['ms']}ms';
+    return '连不上：${p['msg'] ?? ''}';
+  }
+
+  /// v6 绿、v4 橙、断红。只走 v4 也能用，但走的是兜底隧道，
+  /// 标出来是让人知道「慢或者封的时候就是这条」。
+  Widget _badge(Map<String, dynamic>? p) {
+    final cs = Theme.of(context).colorScheme;
+    String text;
+    Color fg;
+    Color bg;
+    if (_probing && p == null) {
+      text = '…';
+      fg = cs.outline;
+      bg = cs.surfaceContainerHighest;
+    } else if (p == null) {
+      text = '未测';
+      fg = cs.outline;
+      bg = cs.surfaceContainerHighest;
+    } else if (p['ok'] == true) {
+      final v6 = p['via'] == 'v6';
+      text = v6 ? 'v6' : 'v4';
+      fg = v6 ? const Color(0xFF2E7D32) : const Color(0xFFE65100);
+      bg = fg.withValues(alpha: .14);
+    } else {
+      text = '断';
+      fg = cs.error;
+      bg = cs.error.withValues(alpha: .14);
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          height: 1.3,
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
+      ),
     );
   }
 }

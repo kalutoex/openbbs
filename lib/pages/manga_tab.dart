@@ -7,6 +7,7 @@ import '../widgets/retry_image.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
 import 'manga_detail_page.dart';
+import 'source_search_page.dart';
 
 import '../l10n/l10n.dart';
 /// 书架：本地已经抓下来的漫画，网格铺封面。
@@ -166,6 +167,13 @@ class _MangaTabState extends State<MangaTab>
         title:
             Text('漫画', style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
         actions: [
+          IconButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SourceSearchPage()),
+            ),
+            icon: const Icon(Icons.search),
+            tooltip: '搜书源',
+          ),
           IconButton(
             onPressed: _reload,
             icon: const Icon(Icons.refresh),

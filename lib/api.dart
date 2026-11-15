@@ -635,14 +635,13 @@ class Api {
     String path, {
     Map<String, String>? query,
     bool cache = false,
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
     final key = cache ? _cacheKey(path, query) : '';
     try {
       final r = await _withFailover(
-        () => http
-            .get(_uri(path, query), headers: _headers)
-            .timeout(const Duration(seconds: 15)),
+        () => http.get(_uri(path, query), headers: _headers).timeout(timeout),
       );
       final d = _decode(r);
       lastFromCache = false;
@@ -677,9 +676,11 @@ class Api {
             base = ok;
             lastGood = ok;
             onChannelChanged?.call(ok);
-            final r = await http
-                .get(_uri(path, query), headers: _headers)
-                .timeout(const Duration(seconds: 15));
+            final r = await _withFailover(
+              () => http
+                  .get(_uri(path, query), headers: _headers)
+                  .timeout(timeout),
+            );
             final d = _decode(r);
             lastFromCache = false;
             _netOk();
@@ -703,7 +704,11 @@ class Api {
     }
   }
 
-  static Future<dynamic> post(String path, Map<String, dynamic> body) async {
+  static Future<dynamic> post(
+    String path,
+    Map<String, dynamic> body, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
     final rid = newRequestId();
     try {
@@ -714,7 +719,7 @@ class Api {
               headers: _writeHeaders(rid),
               body: jsonEncode(body),
             )
-            .timeout(const Duration(seconds: 15)),
+            .timeout(timeout),
       );
       final d = _decode(r);
       _netOk();

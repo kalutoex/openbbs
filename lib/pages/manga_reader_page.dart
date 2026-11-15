@@ -15,10 +15,15 @@ class MangaReaderPage extends StatefulWidget {
   final MangaDetail detail;
   final int index;
 
+  /// 图片从哪来。本地书架走 [MangaApi.pages]（磁盘目录），
+  /// 书源那套走 SourceApi，两边共用这一个阅读器。
+  final Future<List<String>> Function(MangaChapter ch)? loader;
+
   const MangaReaderPage({
     super.key,
     required this.detail,
     required this.index,
+    this.loader,
   });
 
   @override
@@ -66,7 +71,9 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     });
     try {
       final ch = _chs[ci];
-      final pages = await MangaApi.pages(widget.detail.dir, ch.dir);
+      final pages = widget.loader != null
+          ? await widget.loader!(ch)
+          : await MangaApi.pages(widget.detail.dir, ch.dir);
       if (!mounted) return;
       setState(() {
         _pages = pages;
