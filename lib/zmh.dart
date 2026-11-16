@@ -41,8 +41,7 @@ class ZmhBook {
       );
 }
 
-class ZmhChapter {
-  final int id;
+class ZmhChapter {  final int id;
   final String name;
   final int order;
   final bool fee;
@@ -100,8 +99,44 @@ class ZmhDetail {
       );
 }
 
+/// 一页榜单。`error` = 服务端去源站没取到（这时候空列表是真的空不了）。
+class ZmhRankPage {
+  final List<ZmhBook> list;
+  final bool error;
+
+  const ZmhRankPage(this.list, {this.error = false});
+}
+
 class ZmhApi {
   static const _ref = 'https://www.zaimanhua.com/';
+
+  /// 榜单页的三个榜，顺序也就是界面上的 tab 顺序。
+  static const rankTabs = [('0', '人气'), ('1', '最新'), ('2', '好评')];
+
+  /// 排行榜一整页。和 recommend 不同，这里取不到要说出来：
+  /// 用户是主动点进来的，空着不给解释就是白屏。
+  static Future<ZmhRankPage> rank(String type, {int page = 1}) async {
+    try {
+      final d = await Api.get('/manga/rank',
+          query: {'rank_type': type, 'page': '$page'},
+          timeout: const Duration(seconds: 25));
+      return parseRank(d);
+    } catch (_) {
+      return const ZmhRankPage([], error: true);
+    }
+  }
+
+  /// 把 /manga/rank 的响应翻成页面要的。空壳、坏条目、error 标记都在这里收口，
+  /// 免得页面里到处写 `as List?`。
+  static ZmhRankPage parseRank(Object? d) {
+    final m = (d is Map) ? d : const {};
+    final list = ((m['list'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => ZmhBook.fromJson(e.cast<String, dynamic>()))
+        .where((b) => b.id > 0 && b.title.isNotEmpty)
+        .toList();
+    return ZmhRankPage(list, error: m['error'] == true);
+  }
 
   /// 首页推荐。后端挂了就返回空，推荐位本来就可以没有。
   static Future<List<ZmhBook>> recommend({int limit = 18}) async {

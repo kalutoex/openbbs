@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../manga.dart';
 import '../manga_user.dart';
 import '../read_pos.dart';
+import '../store.dart';
 import '../widgets/retry_image.dart';
 
 import '../l10n/l10n.dart';
@@ -32,7 +33,10 @@ class MangaReaderPage extends StatefulWidget {
   final ReadRef? readRef;
 
   /// 书源的图经过后端转一道，一话又长，默认顺着往下滑更像看条漫。
-  final bool initialVertical;
+  ///
+  /// 显式传了就听传的；不传就按上次在这台机器上的选择（[MangaPref]）走，
+  /// 第一回没选过才落到 false。以前三处页面各写死一个值，用户切了也白切。
+  final bool? initialVertical;
 
   const MangaReaderPage({
     super.key,
@@ -40,7 +44,7 @@ class MangaReaderPage extends StatefulWidget {
     required this.index,
     this.loader,
     this.readRef,
-    this.initialVertical = false,
+    this.initialVertical,
   });
 
   @override
@@ -54,7 +58,15 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   bool _loading = true;
   String? _err;
   bool _chrome = true;
-  late bool _vertical = widget.initialVertical;
+  late bool _vertical = widget.initialVertical ?? false;
+
+  /// 亮度只压这一页：遮一层黑，不去调系统亮度（改系统亮度会影响别的 App，
+  /// 退出阅读器还得记得调回来，那是副作用不是功能）。
+  double _bright = MangaPref.brightMax;
+  /// 条漫两页之间留的空，0 = 接死。
+  double _gap = 0;
+  /// 底下那条设置栏开着没。
+  bool _panel = false;
 
   PageController? _pc;
   final _tv = TransformationController();
@@ -75,7 +87,25 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   void initState() {
     super.initState();
     _pc = PageController();
+    _loadPref();
     _load(_ci, resume: true);
+  }
+
+  /// 上次的读法/亮度/页间距。显式传了 initialVertical 的话，那个优先。
+  Future<void> _loadPref() async {
+    try {
+      final v = await MangaPref.vertical();
+      final b = await MangaPref.brightness();
+      final g = await MangaPref.gap();
+      if (!mounted) return;
+      setState(() {
+        if (widget.initialVertical == null && v != null) _vertical = v;
+        _bright = b;
+        _gap = g;
+      });
+    } catch (_) {
+      // 偏好读不出来不值得拦人，用默认的看。
+    }
   }
 
   @override
@@ -217,6 +247,15 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
       body: Stack(
         children: [
           Positioned.fill(child: _content(context)),
+          // 压暗：只盖图，不盖上下两条工具条，不然调到暗处连按钮都找不着。
+          if (_bright < MangaPref.brightMax - .001)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 1 - _bright),
+                ),
+              ),
+            ),
           Positioned(
             top: 0,
             left: 0,
@@ -280,13 +319,79 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
             ),
           ),
           IconButton(
-            onPressed: () => setState(() => _vertical = !_vertical),
+            onPressed: () {
+              final next = !_vertical;
+              setState(() => _vertical = next);
+              unawaited(MangaPref.setVertical(next));
+            },
             icon: Icon(
               _vertical ? Icons.swap_horiz : Icons.view_day_outlined,
               color: Colors.white,
             ),
             tooltip: _vertical ? '横向翻页' : '纵向连续',
           ),
+          IconButton(
+            onPressed: () => setState(() => _panel = !_panel),
+            icon: Icon(_panel ? Icons.tune : Icons.brightness_6_outlined,
+                color: Colors.white),
+            tooltip: '亮度与页间距',
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 亮度滑条 + 条漫页间距。压暗是盖一层黑，退出阅读器就没了。
+  Widget _settings(ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.brightness_low, size: 16, color: Colors.white70),
+              Expanded(
+                child: Slider(
+                  value: _bright,
+                  min: MangaPref.brightMin,
+                  max: MangaPref.brightMax,
+                  activeColor: Colors.white,
+                  inactiveColor: Colors.white24,
+                  onChanged: (v) {
+                    // 拖动时每帧都写盘没必要，松手再存。
+                    setState(() => _bright = v);
+                  },
+                  onChangeEnd: (v) => unawaited(MangaPref.setBrightness(v)),
+                ),
+              ),
+              const Icon(Icons.brightness_high, size: 16, color: Colors.white70),
+            ],
+          ),
+          if (_vertical)
+            Row(
+              children: [
+                const SizedBox(width: 4),
+                const Text('页间距',
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(width: 8),
+                for (final g in const [0.0, 8.0, 16.0, 24.0])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(g == 0 ? '接死' : '${g.toInt()}',
+                          style: const TextStyle(fontSize: 11)),
+                      selected: (_gap - g).abs() < 0.5,
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onSelected: (_) {
+                        setState(() => _gap = g);
+                        unawaited(MangaPref.setGap(g));
+                      },
+                    ),
+                  ),
+              ],
+            ),
         ],
       ),
     );
@@ -296,23 +401,29 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     return Container(
       padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
       color: Colors.black.withValues(alpha: .62),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          TextButton(
-            onPressed: _ci > 0 ? () => _gotoChapter(-1) : null,
-            child: const Text('上一话', style: TextStyle(color: Colors.white)),
-          ),
-          Expanded(
-            child: Center(
-              child: Text(
-                '${_page + 1} / ${_pages.isEmpty ? 0 : _pages.length}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+          if (_panel) _settings(cs),
+          Row(
+            children: [
+              TextButton(
+                onPressed: _ci > 0 ? () => _gotoChapter(-1) : null,
+                child: const Text('上一话', style: TextStyle(color: Colors.white)),
               ),
-            ),
-          ),
-          TextButton(
-            onPressed: _ci + 1 < _chs.length ? () => _gotoChapter(1) : null,
-            child: const Text('下一话', style: TextStyle(color: Colors.white)),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    '${_page + 1} / ${_pages.isEmpty ? 0 : _pages.length}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _ci + 1 < _chs.length ? () => _gotoChapter(1) : null,
+                child: const Text('下一话', style: TextStyle(color: Colors.white)),
+              ),
+            ],
           ),
         ],
       ),
@@ -407,14 +518,18 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
           itemCount: _pages.length,
           // 一屏放几张就建几张，长话滚下去也不会一次解码五十多张图。
           scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
-          itemBuilder: (_, i) => SizedBox(
-            width: double.infinity,
-            child: RetryImage(
-              url: _pages[i],
-              fit: BoxFit.fitWidth,
-              bustCache: true,
-              probeSize: false,
-              placeholderHeight: 320,
+          itemBuilder: (_, i) => Padding(
+            padding: EdgeInsets.only(
+                bottom: (i + 1 == _pages.length) ? 0 : _gap),
+            child: SizedBox(
+              width: double.infinity,
+              child: RetryImage(
+                url: _pages[i],
+                fit: BoxFit.fitWidth,
+                bustCache: true,
+                probeSize: false,
+                placeholderHeight: 320,
+              ),
             ),
           ),
         ),

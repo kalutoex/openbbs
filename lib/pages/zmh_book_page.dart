@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../manga.dart';
@@ -46,6 +48,8 @@ class _ZmhBookPageState extends State<ZmhBookPage> {
         _d = d;
         _fav = fav;
       });
+      // 收藏着的连载点开了 = 新话看见了，让服务端把追更基线推上去。
+      if (fav) unawaited(MangaUserApi.markSeen('zmh', '${widget.book.id}'));
     } catch (e) {
       if (!mounted) return;
       setState(() => _err = '$e');
@@ -90,7 +94,6 @@ class _ZmhBookPageState extends State<ZmhBookPage> {
             author: d.authors,
             cover: d.cover,
           ),
-          initialVertical: true,
         ),
       ),
     );

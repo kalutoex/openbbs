@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../manga.dart';
 import '../zmh.dart';
+import '../widgets/manga_card.dart';
 import '../widgets/retry_image.dart';
 import '../widgets/page_width.dart';
 import 'manga_detail_page.dart';
+import 'manga_rank_page.dart';
 import 'source_search_page.dart';
 import 'zmh_book_page.dart';
 
@@ -506,6 +508,18 @@ class _MangaTabState extends State<MangaTab>
               const SizedBox(width: 6),
               Text('再漫画 · 点开即看',
                   style: TextStyle(fontSize: 11, color: cs.outline)),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MangaRankPage()),
+                ),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 30),
+                ),
+                child: const Text('更多 ›', style: TextStyle(fontSize: 12)),
+              ),
             ],
           ),
         ),
@@ -585,49 +599,14 @@ class _MangaTabState extends State<MangaTab>
   }
 
   Widget _cell(MangaBook b) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
     final p = b.progress;
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
+    return MangaCoverCard(
+      title: b.title,
+      sub: p != null ? p.label : '${b.chapterCount} 话',
+      highlight: p != null,
+      coverUrl: b.coverUrl,
+      imageKey: '$_epoch',
       onTap: () => _open(b),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: b.coverUrl.isEmpty
-                  ? Container(
-                      color: cs.surfaceContainerHighest,
-                      child: Icon(Icons.menu_book, color: cs.outline),
-                    )
-                  : RetryImage(
-                      key: ValueKey('${b.coverUrl}#$_epoch'),
-                      url: b.coverUrl,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 320,
-                      probeSize: false,
-                    ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            b.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          Text(
-            p != null ? p.label : '${b.chapterCount} 话',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: tt.labelSmall?.copyWith(
-              color: p != null ? cs.primary : cs.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

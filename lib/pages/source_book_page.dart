@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../manga.dart';
@@ -50,6 +52,7 @@ class _SourceBookPageState extends State<SourceBookPage> {
         _d = d;
         _fav = fav;
       });
+      if (fav) unawaited(MangaUserApi.markSeen('source', widget.book.url));
     } catch (e) {
       if (!mounted) return;
       setState(() => _err = '$e');
@@ -92,7 +95,6 @@ class _SourceBookPageState extends State<SourceBookPage> {
           index: i,
           loader: (ch) => SourceApi.pages(sid, ch.dir),
           readRef: ReadRef.fromSource(widget.book),
-          initialVertical: true,
         ),
       ),
     );

@@ -14,6 +14,63 @@ import 'token_store.dart';
 
 import '../l10n/l10n.dart';
 
+/// 漫画阅读器的偏好：横读还是条漫、亮到什么程度、条漫两页之间留多少空。
+///
+/// key 必须带「站 + 人」——和阅读位置同一套作用域。这三个值以前是
+/// 页面里的临时状态，退出就丢；要是改成全局一份，A 号在熄灯时调到 0.4，
+/// 换个号登进来第一眼就是黑的。
+class MangaPref {
+  static const brightMin = 0.3;
+  static const brightMax = 1.0;
+  static const gapMax = 24.0;
+
+  /// `<站点key>_u<uid>`，和 read_pos.dart 里那套一致。
+  static String get scope {
+    final st = AppState.instance;
+    final site = st.activeKey.isEmpty ? 'default' : st.activeKey;
+    final who = st.uid == 0 ? 'guest' : 'u${st.uid}';
+    return '${site}_$who';
+  }
+
+  static String keyOf(String name) => 'manga_read_${name}_$scope';
+
+  static Future<bool?> vertical() async {
+    final sp = await SharedPreferences.getInstance();
+    return sp.getBool(keyOf('vertical'));
+  }
+
+  static Future<void> setVertical(bool v) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setBool(keyOf('vertical'), v);
+  }
+
+  /// 没存过就是 1.0（不压暗）。存坏了、越界了也按 1.0 算。
+  static Future<double> brightness() async {
+    final sp = await SharedPreferences.getInstance();
+    final v = sp.getDouble(keyOf('brightness'));
+    return clampBright(v ?? brightMax);
+  }
+
+  static Future<void> setBrightness(double v) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setDouble(keyOf('brightness'), clampBright(v));
+  }
+
+  static Future<double> gap() async {
+    final sp = await SharedPreferences.getInstance();
+    final v = sp.getDouble(keyOf('gap'));
+    return clampGap(v ?? 0);
+  }
+
+  static Future<void> setGap(double v) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setDouble(keyOf('gap'), clampGap(v));
+  }
+
+  static double clampBright(double v) => v.clamp(brightMin, brightMax);
+  static double clampGap(double v) => v.clamp(0.0, gapMax);
+}
+
 /// 全局状态：服务器地址、登录状态。页面用它判断要不要显示「我的」内容。
 class AppState extends ChangeNotifier {
   AppState._();

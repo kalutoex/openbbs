@@ -20,6 +20,8 @@ class MangaFav {
   final String author;
   final String cover;
   final String sourceName;
+  final String lastChapter;
+  final bool hasNew;
   final int at;
 
   const MangaFav({
@@ -30,6 +32,8 @@ class MangaFav {
     required this.author,
     required this.cover,
     this.sourceName = '',
+    this.lastChapter = '',
+    this.hasNew = false,
     required this.at,
   });
 
@@ -54,6 +58,8 @@ class MangaFav {
         author: '${j['author'] ?? ''}',
         cover: '${j['cover'] ?? ''}',
         sourceName: '${j['source_name'] ?? ''}',
+        lastChapter: '${j['last_chapter'] ?? ''}',
+        hasNew: j['has_new'] == true,
         at: (j['at'] as num?)?.toInt() ?? 0,
       );
 }
@@ -153,8 +159,18 @@ class MangaUserApi {
     return (d is Map) && d['fav'] == true;
   }
 
-  static Future<List<MangaFav>> favs() async {
-    final d = await Api.get('/manga/favs');
+  /// 点开一本收藏的连载 = 新话已经看见了，让服务端把基线推到最新。
+  /// 基线由服务端算（它自己会去问源站），这里只报个到——两边算法必须一致。
+  static Future<void> markSeen(String kind, String ref) async {
+    if (ref.isEmpty) return;
+    try {
+      await Api.post('/manga/fav/seen', {'kind': kind, 'ref': ref});
+    } catch (_) {
+      // 消红点失败不是大事，下次点开还会再报一次。
+    }
+  }
+
+  static Future<List<MangaFav>> favs() async {    final d = await Api.get('/manga/favs');
     final list = (d is Map ? (d['list'] as List?) : null) ?? const [];
     return list
         .whereType<Map>()

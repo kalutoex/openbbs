@@ -249,6 +249,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
                   title: f.title,
                   sub: f.isSource ? '书源' : '本地',
                   coverUrl: f.coverUrl,
+                  hasNew: f.hasNew,
                   onTap: () => _openManga(
                     kind: f.kind,
                     ref: f.ref,
@@ -289,6 +290,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
     required String sub,
     required String coverUrl,
     required VoidCallback onTap,
+    bool hasNew = false,
   }) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
@@ -304,17 +306,37 @@ class _ThreadListPageState extends State<ThreadListPage> {
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
                 height: 122,
-                child: coverUrl.isEmpty
-                    ? Container(
-                        color: cs.surfaceContainerHighest,
-                        child: Icon(Icons.menu_book, color: cs.outline),
-                      )
-                    : RetryImage(
-                        url: coverUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: 240,
-                        probeSize: false,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: coverUrl.isEmpty
+                          ? Container(
+                              color: cs.surfaceContainerHighest,
+                              child: Icon(Icons.menu_book, color: cs.outline),
+                            )
+                          : RetryImage(
+                              url: coverUrl,
+                              fit: BoxFit.cover,
+                              memCacheWidth: 240,
+                              probeSize: false,
+                            ),
+                    ),
+                    if (hasNew)
+                      Positioned(
+                        top: 5,
+                        right: 5,
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: cs.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: cs.surface, width: 1.2),
+                          ),
+                        ),
                       ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 4),
