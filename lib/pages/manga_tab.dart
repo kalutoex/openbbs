@@ -34,6 +34,10 @@ class _MangaTabState extends State<MangaTab>
   int _total = 0;
   bool _first = true;
   bool _loadingMore = false;
+
+  /// 正在按新的排序/筛选重拉第一页。清空列表到结果回来之间，
+  /// 界面该转圈而不是显示「没找到」。
+  bool _filtering = false;
   String? _err;
 
   /// 从详情页回来时 +1。CanvasKit 会把不在当前页的图片纹理回收掉，
@@ -44,6 +48,18 @@ class _MangaTabState extends State<MangaTab>
   /// 顶上推荐的这一排，来自再漫画排行榜。null = 还在取。
   /// 取不到就是空列表，书架照常显示，不为推荐位红一片。
   List<ZmhBook>? _recs;
+
+  /// 排序：recent / title / progress。后端只认这三个，别的按 recent 处理。
+  String _sort = 'recent';
+
+  /// 状态筛选，空串 = 全部。
+  String _status = '';
+
+  /// 书架内搜索词，空串 = 不筛。搜的是本地这个库，不跳书源搜索。
+  String _q = '';
+  bool _searchOpen = false;
+  final TextEditingController _searchCtl = TextEditingController();
+  Timer? _searchDebounce;
 
   @override
   bool get wantKeepAlive => true;
@@ -61,8 +77,49 @@ class _MangaTabState extends State<MangaTab>
   void dispose() {
     _sc.removeListener(_onScroll);
     _sc.dispose();
+    _searchDebounce?.cancel();
+    _searchCtl.dispose();
     mangaBump.removeListener(_onBump);
     super.dispose();
+  }
+
+  void _openSearch() {
+    setState(() => _searchOpen = true);
+  }
+
+  void _closeSearch() {
+    _searchDebounce?.cancel();
+    _searchCtl.clear();
+    final had = _q.isNotEmpty;
+    setState(() {
+      _searchOpen = false;
+      _q = '';
+    });
+    if (had) unawaited(_applyFilter(recs: false));
+  }
+
+  void _onQuery(String v) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final key = v.trim();
+      if (key == _q) return;
+      _q = key;
+      unawaited(_applyFilter(recs: false));
+    });
+  }
+
+  /// 排序 / 筛选 / 搜索变了：页码归零，回到顶部重新拉第一页。
+  Future<void> _applyFilter({bool recs = false}) async {
+    setState(() {
+      _books.clear();
+      _total = 0;
+      _first = true;
+      _filtering = true;
+      _err = null;
+    });
+    if (_sc.hasClients) _sc.jumpTo(0);
+    await _reload(withRecs: recs);
   }
 
   bool get _hasMore => _books.length < _total;
@@ -98,10 +155,16 @@ class _MangaTabState extends State<MangaTab>
     if (mounted) setState(() => _recs = list);
   }
 
-  Future<void> _reload() async {
-    unawaited(_loadRecs());
+  Future<void> _reload({bool withRecs = true}) async {
+    if (withRecs) unawaited(_loadRecs());
     try {
-      final page = await MangaApi.shelf(offset: 0, limit: _pageSize);
+      final page = await MangaApi.shelf(
+        offset: 0,
+        limit: _pageSize,
+        sort: _sort,
+        status: _status,
+        q: _q,
+      );
       if (!mounted) return;
       setState(() {
         _books
@@ -109,6 +172,7 @@ class _MangaTabState extends State<MangaTab>
           ..addAll(page.books);
         _total = page.total;
         _first = false;
+        _filtering = false;
         _err = null;
       });
       _maybeFill();
@@ -116,6 +180,7 @@ class _MangaTabState extends State<MangaTab>
       if (!mounted) return;
       setState(() {
         _first = false;
+        _filtering = false;
         _err = '$e';
       });
     }
@@ -125,7 +190,13 @@ class _MangaTabState extends State<MangaTab>
   Future<void> _refreshLoaded() async {
     final want = _books.length < _pageSize ? _pageSize : _books.length;
     try {
-      final page = await MangaApi.shelf(offset: 0, limit: want);
+      final page = await MangaApi.shelf(
+        offset: 0,
+        limit: want,
+        sort: _sort,
+        status: _status,
+        q: _q,
+      );
       if (!mounted) return;
       setState(() {
         _books
@@ -144,7 +215,13 @@ class _MangaTabState extends State<MangaTab>
     if (_loadingMore || !_hasMore) return;
     setState(() => _loadingMore = true);
     try {
-      final page = await MangaApi.shelf(offset: _books.length, limit: _pageSize);
+      final page = await MangaApi.shelf(
+        offset: _books.length,
+        limit: _pageSize,
+        sort: _sort,
+        status: _status,
+        q: _q,
+      );
       if (!mounted) return;
       setState(() {
         // 抓取那边可能刚插了新书把顺序挤了一下，重复的按 id 剔掉。
@@ -176,25 +253,66 @@ class _MangaTabState extends State<MangaTab>
           tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
         ),
         titleSpacing: 0,
-        title:
-            Text('漫画', style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SourceSearchPage()),
-            ),
-            icon: const Icon(Icons.search),
-            tooltip: '搜书源',
-          ),
-          IconButton(
-            onPressed: _reload,
-            icon: const Icon(Icons.refresh),
-            tooltip: Lc.current.refresh,
-          ),
-        ],
+        title: _searchOpen
+            ? TextField(
+                controller: _searchCtl,
+                autofocus: true,
+                style: const TextStyle(fontSize: 15),
+                textInputAction: TextInputAction.search,
+                decoration: const InputDecoration(
+                  hintText: '搜书名 / 作者 / 标签',
+                  border: InputBorder.none,
+                  isDense: true,
+                ),
+                onChanged: _onQuery,
+                onSubmitted: _onQuery,
+              )
+            : Text('漫画', style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+        actions: _searchOpen
+            ? [
+                IconButton(
+                  onPressed: _closeSearch,
+                  icon: const Icon(Icons.close),
+                  tooltip: '关闭搜索',
+                ),
+              ]
+            : [
+                IconButton(
+                  onPressed: _openSearch,
+                  icon: const Icon(Icons.search),
+                  tooltip: '搜书架',
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SourceSearchPage()),
+                  ),
+                  icon: const Icon(Icons.travel_explore),
+                  tooltip: '搜书源',
+                ),
+                PopupMenuButton<String>(
+                  tooltip: '排序',
+                  icon: const Icon(Icons.sort),
+                  initialValue: _sort,
+                  onSelected: (v) {
+                    if (v == _sort) return;
+                    setState(() => _sort = v);
+                    unawaited(_applyFilter(recs: false));
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'recent', child: Text('最近更新')),
+                    PopupMenuItem(value: 'title', child: Text('书名')),
+                    PopupMenuItem(value: 'progress', child: Text('阅读进度')),
+                  ],
+                ),
+                IconButton(
+                  onPressed: () => unawaited(_reload()),
+                  icon: const Icon(Icons.refresh),
+                  tooltip: Lc.current.refresh,
+                ),
+              ],
       ),
       body: RefreshIndicator(
-        onRefresh: _reload,
+        onRefresh: () => _reload(),
         child: PageWidth(
           max: 1100,
           child: _first && _recs == null
@@ -254,39 +372,119 @@ class _MangaTabState extends State<MangaTab>
   }
 
   Widget _shelfHeader(ColorScheme cs) {
+    final filtering = _status.isNotEmpty || _q.isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('书架', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(width: 6),
-          Text('$_total 本', style: TextStyle(fontSize: 12, color: cs.outline)),
+          Row(
+            children: [
+              Text('书架', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  _q.isEmpty ? '$_total 本' : '$_total 本 · 「$_q」',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: cs.outline),
+                ),
+              ),
+              if (filtering)
+                TextButton(
+                  onPressed: () {
+                    _searchDebounce?.cancel();
+                    _searchCtl.clear();
+                    setState(() {
+                      _status = '';
+                      _q = '';
+                      _searchOpen = false;
+                    });
+                    unawaited(_applyFilter(recs: false));
+                  },
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 28),
+                  ),
+                  child: const Text('清除', style: TextStyle(fontSize: 12)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              _statusChip('全部', ''),
+              _statusChip('连载中', '连载'),
+              _statusChip('已完结', '完结'),
+            ],
+          ),
         ],
       ),
     );
   }
 
+  Widget _statusChip(String label, String value) {
+    final on = _status == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        selected: on,
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        onSelected: (_) {
+          if (_status == value) return;
+          setState(() => _status = value);
+          unawaited(_applyFilter(recs: false));
+        },
+      ),
+    );
+  }
+
   Widget _emptyShelf(ColorScheme cs) {
+    if (_filtering) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 48),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
     final bad = _err != null;
+    final filtered = _q.isNotEmpty || _status.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.only(top: 40, bottom: 40, left: 24, right: 24),
       child: Center(
         child: Column(
           children: [
-            Icon(bad ? Icons.cloud_off : Icons.menu_book_outlined,
-                size: 40, color: cs.outline),
+            Icon(
+                bad
+                    ? Icons.cloud_off
+                    : (filtered ? Icons.search_off : Icons.menu_book_outlined),
+                size: 40,
+                color: cs.outline),
             const SizedBox(height: 10),
-            Text(bad ? '书架取不到' : '书架还是空的',
+            Text(
+                bad
+                    ? '书架取不到'
+                    : (filtered ? '没找到' : '书架还是空的'),
                 style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
             const SizedBox(height: 4),
             Text(
-              bad ? _err! : '上面的推荐点开就能看，不用等下载',
+              bad
+                  ? _err!
+                  : (filtered ? '换个词，或者把筛选清掉' : '上面的推荐点开就能看，不用等下载'),
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.outline, fontSize: 12),
             ),
             if (bad) ...[
               const SizedBox(height: 10),
-              TextButton(onPressed: _reload, child: Text(Lc.current.retry)),
+              TextButton(onPressed: () => unawaited(_reload()), child: Text(Lc.current.retry)),
             ],
           ],
         ),
@@ -389,6 +587,7 @@ class _MangaTabState extends State<MangaTab>
   Widget _cell(MangaBook b) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final p = b.progress;
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: () => _open(b),
@@ -420,8 +619,12 @@ class _MangaTabState extends State<MangaTab>
             style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           Text(
-            '${b.chapterCount} 话',
-            style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+            p != null ? p.label : '${b.chapterCount} 话',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: tt.labelSmall?.copyWith(
+              color: p != null ? cs.primary : cs.onSurfaceVariant,
+            ),
           ),
         ],
       ),

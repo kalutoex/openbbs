@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../manga.dart';
 import '../manga_user.dart';
+import '../read_pos.dart';
 import '../widgets/retry_image.dart';
 
 import '../l10n/l10n.dart';
@@ -64,7 +65,7 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   Timer? _reportTimer;
 
   /// 字号级别的细节不重要，这里只关心「读到哪」。
-  String get _posKey => 'manga_pos_${widget.detail.dir}';
+  String get _posKey => mangaPosKey(widget.detail.dir);
 
   List<MangaChapter> get _chs => widget.detail.chapters;
 
@@ -120,7 +121,9 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   Future<void> _restore() async {
     try {
       final p = await SharedPreferences.getInstance();
-      final raw = p.getString(_posKey);
+      // 老 key 没有账号/站点作用域，只在新 key 空着时读一次，读到就按新 key 存回去
+      var raw = p.getString(_posKey);
+      raw ??= p.getString(mangaLegacyPosKey(widget.detail.dir));
       if (raw == null || !mounted) return;
       final parts = raw.split('|');
       if (parts.length != 2) return;

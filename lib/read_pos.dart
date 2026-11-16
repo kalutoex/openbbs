@@ -90,3 +90,17 @@ class ReadPos {
     return {};
   }
 }
+
+/// 漫画读到哪一话哪一页的 key。
+///
+/// 和帖子同理，必须带「站 + 人」：以前是 `manga_pos_<目录>`，A 号读到第 12 话，
+/// 换个号登进来看同一本书会直接落到别人的第 12 话上去。
+String mangaPosKey(String dir) {
+  final st = AppState.instance;
+  final site = st.activeKey.isEmpty ? 'default' : st.activeKey;
+  final who = st.uid == 0 ? 'guest' : 'u${st.uid}';
+  return 'manga_pos_v2_${site}_${who}_$dir';
+}
+
+/// 老 key。没有作用域，读得到就当迁移用一次，不许再往里写。
+String mangaLegacyPosKey(String dir) => 'manga_pos_$dir';

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../manga.dart';
 import '../manga_user.dart';
+import '../read_pos.dart';
 import '../widgets/retry_image.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
@@ -40,7 +41,8 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
   bool _fav = false;
   bool _favBusy = false;
 
-  String get _posKey => 'manga_pos_${widget.book.dir}';
+  /// 本机的阅读位置。key 带「站 + 人」，换号不会串到别人的进度上。
+  String get _posKey => mangaPosKey(widget.book.dir);
 
   @override
   void initState() {
@@ -55,13 +57,22 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
       var page = 0;
       try {
         final sp = await SharedPreferences.getInstance();
-        final raw = sp.getString(_posKey);
+        // 老 key 只在新的空着时兜一次，读到就按新 key 存回去
+        var raw = sp.getString(_posKey);
+        raw ??= sp.getString(mangaLegacyPosKey(widget.book.dir));
         if (raw != null && raw.contains('|')) {
           final cut = raw.lastIndexOf('|');
           ch = raw.substring(0, cut);
           page = int.tryParse(raw.substring(cut + 1)) ?? 0;
         }
       } catch (_) {}
+      // 本机没记过位置就接账号上的那条：换设备登录时靠它续上，
+      // 而不是让人从第一话重新翻。
+      final remote = d.progress;
+      if (ch.isEmpty && remote != null && remote.chapterRef.isNotEmpty) {
+        ch = remote.chapterRef;
+        page = remote.page;
+      }
       final fav = await MangaUserApi.favState('local', widget.book.dir);
       if (!mounted) return;
       setState(() {
@@ -428,13 +439,19 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
 
   Widget _cell(MangaDetail d, MangaChapter c) {
     final cs = Theme.of(context).colorScheme;
+    // 这里用 d.chapters（升序）算下标，别用显示顺序——_asc 只翻看的方向。
+    final i = d.chapters.indexOf(c);
     final here = c.dir == _posCh;
+    final read = !here && _posIndex >= 0 && i < _posIndex;
     return Material(
-      color: here ? cs.primaryContainer : cs.surfaceContainerHighest.withValues(alpha: .6),
+      color: here
+          ? cs.primaryContainer
+          : cs.surfaceContainerHighest
+              .withValues(alpha: read ? .28 : .6),
       borderRadius: BorderRadius.circular(6),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _open(d.chapters.indexOf(c)),
+        onTap: () => _open(i),
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -446,7 +463,9 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: here ? FontWeight.w600 : FontWeight.w400,
-                color: here ? cs.onPrimaryContainer : cs.onSurface,
+                color: here
+                    ? cs.onPrimaryContainer
+                    : (read ? cs.outline : cs.onSurface),
               ),
             ),
           ),
