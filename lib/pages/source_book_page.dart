@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../manga.dart';
 import '../manga_source.dart';
+import '../manga_user.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
 import '../widgets/retry_image.dart';
@@ -27,6 +28,10 @@ class _SourceBookPageState extends State<SourceBookPage> {
   bool _descOpen = false;
   bool _asc = false;
 
+  /// 收藏状态，和本地书那页同一套。
+  bool _fav = false;
+  bool _favBusy = false;
+
   /// 断点由阅读器自己按 detail.dir 记，这里不用管。
 
   @override
@@ -39,8 +44,12 @@ class _SourceBookPageState extends State<SourceBookPage> {
     setState(() => _err = null);
     try {
       final d = await SourceApi.detail(widget.book.sourceId, widget.book.url);
+      final fav = await MangaUserApi.favState('source', widget.book.url);
       if (!mounted) return;
-      setState(() => _d = d);
+      setState(() {
+        _d = d;
+        _fav = fav;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _err = '$e');
@@ -68,9 +77,13 @@ class _SourceBookPageState extends State<SourceBookPage> {
             .toList(),
       );
 
-  Future<void> _open(int i) async {
+  /// 按章节对象开，不按下标——列表倒序显示时下标和 d.chapters 是对着反的，
+  /// 传下标会点第 3 话翻到倒数第 3 话去。
+  Future<void> _open(SourceChapter c) async {
     final d = _d;
-    if (d == null || i < 0 || i >= d.chapters.length) return;
+    if (d == null) return;
+    final i = d.chapters.indexWhere((x) => x.url == c.url);
+    if (i < 0) return;
     final sid = widget.book.sourceId;
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -78,10 +91,42 @@ class _SourceBookPageState extends State<SourceBookPage> {
           detail: _asDetail(d),
           index: i,
           loader: (ch) => SourceApi.pages(sid, ch.dir),
+          readRef: ReadRef.fromSource(widget.book),
+          initialVertical: true,
         ),
       ),
     );
     if (mounted) setState(() {});
+  }
+
+  Future<void> _toggleFav() async {
+    if (_favBusy) return;
+    final d = _d;
+    setState(() => _favBusy = true);
+    try {
+      final on = await MangaUserApi.toggleFav(
+        kind: 'source',
+        ref: widget.book.url,
+        sourceId: widget.book.sourceId,
+        title: (d?.name.isNotEmpty == true) ? d!.name : widget.book.name,
+        author: (d?.author.isNotEmpty == true) ? d!.author : widget.book.author,
+        cover: (d?.cover.isNotEmpty == true) ? d!.cover : widget.book.cover,
+      );
+      if (!mounted) return;
+      setState(() => _fav = on);
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(
+          content: Text(on ? '已收藏' : '已取消收藏'),
+          duration: const Duration(seconds: 1),
+        ));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _favBusy = false);
+    }
   }
 
   @override
@@ -97,6 +142,12 @@ class _SourceBookPageState extends State<SourceBookPage> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         actions: [
+          IconButton(
+            onPressed: _toggleFav,
+            icon: Icon(_fav ? Icons.favorite : Icons.favorite_border),
+            color: _fav ? Theme.of(context).colorScheme.error : null,
+            tooltip: _fav ? '取消收藏' : '收藏',
+          ),
           IconButton(
             onPressed: _load,
             icon: const Icon(Icons.refresh),
@@ -151,7 +202,7 @@ class _SourceBookPageState extends State<SourceBookPage> {
                   mainAxisExtent: 38,
                 ),
                 delegate: SliverChildBuilderDelegate(
-                  (_, i) => _cell(chs[i], i),
+                  (_, i) => _cell(chs[i]),
                   childCount: chs.length,
                 ),
               ),
@@ -161,12 +212,12 @@ class _SourceBookPageState extends State<SourceBookPage> {
     );
   }
 
-  Widget _cell(SourceChapter c, int i) {
+  Widget _cell(SourceChapter c) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: () => _open(i),
+      onTap: () => _open(c),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
@@ -302,7 +353,7 @@ class _SourceBookPageState extends State<SourceBookPage> {
                   children: [
                     Expanded(
                       child: FilledButton(
-                        onPressed: n == 0 ? null : () => _open(0),
+                        onPressed: n == 0 ? null : () => _open(_asc ? d.chapters.first : d.chapters.last),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size(0, 38),
                           padding: EdgeInsets.zero,

@@ -21,6 +21,14 @@ class RetryImage extends StatefulWidget {
   /// 网页版上那次多在 iOS 上是白占一份显存。
   final bool probeSize;
 
+  /// 点一下重试时，往后端要一张新的（/sources/img 会跳过自己的缓存）。
+  /// 书源那边的图是经过服务端转的，服务端存了一张坏的，光清本地缓存没用。
+  final bool bustCache;
+
+  /// 加载中占多高。纵向看漫画时一张图撑满宽度、高度未知，
+  /// 给它一个占位高度，图回来之前列表不会缩成一条。
+  final double? placeholderHeight;
+
   const RetryImage({
     super.key,
     required this.url,
@@ -28,6 +36,8 @@ class RetryImage extends StatefulWidget {
     this.memCacheWidth,
     this.alignment = Alignment.center,
     this.probeSize = true,
+    this.bustCache = false,
+    this.placeholderHeight,
   });
 
   @override
@@ -76,8 +86,16 @@ class RetryImageState extends State<RetryImage> {
     }
   }
 
+  /// 第几轮重试之后的地址。bustCache 打开时给 URL 挂个 f 参数，
+  /// 后端据此跳过自己的磁盘缓存，重新问一次源站。
+  String get _url {
+    if (!widget.bustCache || _round == 0) return widget.url;
+    final sep = widget.url.contains('?') ? '&' : '?';
+    return '${widget.url}${sep}f=$_round';
+  }
+
   Future<void> _retry() async {
-    await ImgCache.evict(widget.url);
+    await ImgCache.evict(_url);
     if (mounted) setState(() => _round++);
   }
 
@@ -92,11 +110,12 @@ class RetryImageState extends State<RetryImage> {
       imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
       key: ValueKey('${widget.url}#$_round'),
       fadeInDuration: const Duration(milliseconds: 180),
-      imageUrl: widget.url,
+      imageUrl: _url,
       memCacheWidth: widget.memCacheWidth,
       fit: widget.fit,
       alignment: widget.alignment,
-      placeholder: (_, _) => _box(cs, loading: true),
+      placeholder: (_, _) =>
+          _box(cs, loading: true, h: widget.placeholderHeight),
       errorWidget: (_, _, _) => GestureDetector(
         onTap: _retry,
         behavior: HitTestBehavior.opaque,
@@ -105,7 +124,10 @@ class RetryImageState extends State<RetryImage> {
     );
   }
 
-  Widget _box(ColorScheme cs, {required bool loading}) => Container(
+  /// 占位框。loading 时才按 placeholderHeight 撑高度——
+  /// 图回来了得按它自己的比例走，固定高度会把条漫长图压扁。
+  Widget _box(ColorScheme cs, {required bool loading, double? h}) => Container(
+    height: loading ? h : null,
     color: cs.surfaceContainerHighest,
     alignment: Alignment.center,
     child: loading

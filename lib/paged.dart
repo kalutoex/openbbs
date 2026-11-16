@@ -99,7 +99,10 @@ class Pager<T> {
       if (seq != _seq) return;
       error = e;
     } finally {
-      if (seq == _seq) busy = false;
+      if (seq == _seq) {
+        busy = false;
+        loadingMore = false;
+      }
     }
   }
 

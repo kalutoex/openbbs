@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../manga.dart';
+import '../manga_user.dart';
 import '../widgets/retry_image.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
@@ -34,6 +35,11 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
   String _posCh = '';
   int _posPage = 0;
 
+  /// 收藏状态。先按「没收藏」画，查到是收藏中的再点亮，
+  /// 免得每次进详情都先闪一下空心的心。
+  bool _fav = false;
+  bool _favBusy = false;
+
   String get _posKey => 'manga_pos_${widget.book.dir}';
 
   @override
@@ -56,12 +62,14 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
           page = int.tryParse(raw.substring(cut + 1)) ?? 0;
         }
       } catch (_) {}
+      final fav = await MangaUserApi.favState('local', widget.book.dir);
       if (!mounted) return;
       setState(() {
         _d = d;
         _err = null;
         _posCh = ch;
         _posPage = page;
+        _fav = fav;
       });
     } catch (e) {
       if (!mounted) return;
@@ -74,9 +82,43 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
     if (d == null || i < 0 || i >= d.chapters.length) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => MangaReaderPage(detail: d, index: i),
+        builder: (_) => MangaReaderPage(
+          detail: d,
+          index: i,
+          readRef: ReadRef.fromBook(widget.book),
+        ),
       ),
     ).then((_) => _load());
+  }
+
+  /// 点一下收藏 / 取消。等接口回来再变图标，中途连点会被 _favBusy 挡住。
+  Future<void> _toggleFav() async {
+    if (_favBusy) return;
+    final d = _d;
+    setState(() => _favBusy = true);
+    try {
+      final on = await MangaUserApi.toggleFav(
+        kind: 'local',
+        ref: widget.book.dir,
+        title: d?.title ?? widget.book.title,
+        author: d?.authors ?? widget.book.authors,
+        cover: d?.cover.isNotEmpty == true ? d!.cover : widget.book.cover,
+      );
+      if (!mounted) return;
+      setState(() => _fav = on);
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(
+          content: Text(on ? '已收藏' : '已取消收藏'),
+          duration: const Duration(seconds: 1),
+        ));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _favBusy = false);
+    }
   }
 
   /// 上次读到的那一话在 chapters 里的下标，没读过就是 -1。
@@ -101,6 +143,14 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
+        actions: [
+          IconButton(
+            onPressed: _toggleFav,
+            icon: Icon(_fav ? Icons.favorite : Icons.favorite_border),
+            color: _fav ? Theme.of(context).colorScheme.error : null,
+            tooltip: _fav ? '取消收藏' : '收藏',
+          ),
+        ],
       ),
       body: _err != null
           ? EmptyView(

@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../manga.dart';
+import '../zmh.dart';
 import '../widgets/retry_image.dart';
-import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
 import 'manga_detail_page.dart';
 import 'source_search_page.dart';
+import 'zmh_book_page.dart';
 
 import '../l10n/l10n.dart';
 /// 书架：本地已经抓下来的漫画，网格铺封面。
@@ -40,6 +41,10 @@ class _MangaTabState extends State<MangaTab>
   /// 换个 key 让封面重新走一遍解码，纹理就回来了。
   int _epoch = 0;
 
+  /// 顶上推荐的这一排，来自再漫画排行榜。null = 还在取。
+  /// 取不到就是空列表，书架照常显示，不为推荐位红一片。
+  List<ZmhBook>? _recs;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -48,6 +53,7 @@ class _MangaTabState extends State<MangaTab>
     super.initState();
     _sc.addListener(_onScroll);
     unawaited(_reload());
+    unawaited(_loadRecs());
     mangaBump.addListener(_onBump);
   }
 
@@ -87,7 +93,13 @@ class _MangaTabState extends State<MangaTab>
     }
   }
 
+  Future<void> _loadRecs() async {
+    final list = await ZmhApi.recommend(limit: 18);
+    if (mounted) setState(() => _recs = list);
+  }
+
   Future<void> _reload() async {
+    unawaited(_loadRecs());
     try {
       final page = await MangaApi.shelf(offset: 0, limit: _pageSize);
       if (!mounted) return;
@@ -183,53 +195,33 @@ class _MangaTabState extends State<MangaTab>
       ),
       body: RefreshIndicator(
         onRefresh: _reload,
-        child: _first
-            ? const Center(child: CircularProgressIndicator())
-            : _err != null && _books.isEmpty
-                ? ListView(
-                    children: [
-                      const SizedBox(height: 120),
-                      Icon(Icons.cloud_off, size: 44, color: cs.outline),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: Text(
-                          _err!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: cs.onSurfaceVariant),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: TextButton(
-                            onPressed: _reload, child: Text(Lc.current.retry)),
-                      ),
-                    ],
-                  )
-                : _books.isEmpty
-                    ? ListView(
-                        children: const [
-                          SizedBox(height: 90),
-                          EmptyView(
-                            icon: Icons.menu_book_outlined,
-                            title: '书架还是空的',
-                            hint: '抓取任务在后台跑，过会儿下拉刷新',
-                          ),
-                        ],
-                      )
-                    : _grid(),
+        child: PageWidth(
+          max: 1100,
+          child: _first && _recs == null
+              ? const Center(child: CircularProgressIndicator())
+              : _scrollBody(cs),
+        ),
       ),
     );
   }
 
-  Widget _grid() {
-    return PageWidth(
-      max: 1100,
-      child: CustomScrollView(
-        controller: _sc,
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
+  /// 一屏从上到下：推荐、书架、加载更多。
+  ///
+  /// 全都是 sliver，滚动条只有一条——推荐那一排要是单独一个 ListView
+  /// 塞在 Column 里，下拉刷新就只作用在上面那一半。
+  Widget _scrollBody(ColorScheme cs) {
+    final recs = _recs ?? const <ZmhBook>[];
+    return CustomScrollView(
+      controller: _sc,
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        if (recs.isNotEmpty) SliverToBoxAdapter(child: _recRow(cs, recs)),
+        SliverToBoxAdapter(child: _shelfHeader(cs)),
+        if (_books.isEmpty)
+          SliverToBoxAdapter(child: _emptyShelf(cs))
+        else
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 132,
@@ -243,21 +235,144 @@ class _MangaTabState extends State<MangaTab>
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: _hasMore ? 56 : 24,
-              child: _hasMore
-                  ? const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : null,
-            ),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: _hasMore ? 56 : 24,
+            child: _hasMore
+                ? const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : null,
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _shelfHeader(ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
+      child: Row(
+        children: [
+          Text('书架', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(width: 6),
+          Text('$_total 本', style: TextStyle(fontSize: 12, color: cs.outline)),
         ],
+      ),
+    );
+  }
+
+  Widget _emptyShelf(ColorScheme cs) {
+    final bad = _err != null;
+    return Padding(
+      padding: const EdgeInsets.only(top: 40, bottom: 40, left: 24, right: 24),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(bad ? Icons.cloud_off : Icons.menu_book_outlined,
+                size: 40, color: cs.outline),
+            const SizedBox(height: 10),
+            Text(bad ? '书架取不到' : '书架还是空的',
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+            const SizedBox(height: 4),
+            Text(
+              bad ? _err! : '上面的推荐点开就能看，不用等下载',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: cs.outline, fontSize: 12),
+            ),
+            if (bad) ...[
+              const SizedBox(height: 10),
+              TextButton(onPressed: _reload, child: Text(Lc.current.retry)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 推荐那一条横滑。封面比书架小一圈，一行放得下三四本。
+  Widget _recRow(ColorScheme cs, List<ZmhBook> recs) {
+    final tt = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+          child: Row(
+            children: [
+              Text('推荐', style: tt.titleSmall),
+              const SizedBox(width: 6),
+              Text('再漫画 · 点开即看',
+                  style: TextStyle(fontSize: 11, color: cs.outline)),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 196,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: recs.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (_, i) => _recCell(recs[i]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _recCell(ZmhBook b) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    return SizedBox(
+      width: 96,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => ZmhBookPage(book: b)),
+          );
+          if (mounted) setState(() => _epoch++);
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                height: 132,
+                child: b.coverUrl.isEmpty
+                    ? Container(
+                        color: cs.surfaceContainerHighest,
+                        child: Icon(Icons.menu_book, color: cs.outline),
+                      )
+                    : RetryImage(
+                        key: ValueKey('${b.coverUrl}#$_epoch'),
+                        url: b.coverUrl,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 260,
+                        probeSize: false,
+                        bustCache: true,
+                      ),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(b.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              b.last.isEmpty ? (b.types.isEmpty ? '再漫画' : b.types) : b.last,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 10, color: cs.outline),
+            ),
+          ],
+        ),
       ),
     );
   }

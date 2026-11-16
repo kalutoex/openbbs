@@ -2,15 +2,23 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../manga.dart';
+import '../manga_user.dart';
+import '../widgets/retry_image.dart';
 
 import '../l10n/l10n.dart';
 /// 看漫画。
 ///
 /// 两种读法：横向翻页（单页，双击放大）和纵向连续（条漫、长页）。
 /// 位置按书存，退出再进来接着上次那一话那一页。
+///
+/// 图片走 [RetryImage]：网页版上裸 CachedNetworkImage 会走 <img> 那条路，
+/// 滑几屏之后纹理被回收、缓存里又记着「已解码」，结果一整片黑。
+/// 书源的图还得带「重试时让后端也重新取」——后端存了一张坏的，
+/// 只清本地缓存是清不掉的。
 class MangaReaderPage extends StatefulWidget {
   final MangaDetail detail;
   final int index;
@@ -19,11 +27,19 @@ class MangaReaderPage extends StatefulWidget {
   /// 书源那套走 SourceApi，两边共用这一个阅读器。
   final Future<List<String>> Function(MangaChapter ch)? loader;
 
+  /// 这本书的身份，用来往「浏览历史」里记一条。空着就不记。
+  final ReadRef? readRef;
+
+  /// 书源的图经过后端转一道，一话又长，默认顺着往下滑更像看条漫。
+  final bool initialVertical;
+
   const MangaReaderPage({
     super.key,
     required this.detail,
     required this.index,
     this.loader,
+    this.readRef,
+    this.initialVertical = false,
   });
 
   @override
@@ -37,16 +53,22 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   bool _loading = true;
   String? _err;
   bool _chrome = true;
-  bool _vertical = false;
+  late bool _vertical = widget.initialVertical;
 
   PageController? _pc;
   final _tv = TransformationController();
   double _zoom = 1;
 
+  /// 上报节流：翻页一次一次发会把接口打爆，1.2 秒内只记最后一次。
+  int _lastReportAt = 0;
+  Timer? _reportTimer;
+
   /// 字号级别的细节不重要，这里只关心「读到哪」。
   String get _posKey => 'manga_pos_${widget.detail.dir}';
 
   List<MangaChapter> get _chs => widget.detail.chapters;
+
+  MangaChapter? get _ch => _chs.isEmpty ? null : _chs[_ci];
 
   @override
   void initState() {
@@ -57,6 +79,8 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
 
   @override
   void dispose() {
+    _reportTimer?.cancel();
+    _sendPos();
     _pc?.dispose();
     _tv.dispose();
     super.dispose();
@@ -81,6 +105,7 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
         _page = 0;
       });
       if (_pc != null && _pc!.hasClients) _pc!.jumpToPage(0);
+      _sendPos(force: true);
       if (resume) await _restore();
     } catch (e) {
       if (!mounted) return;
@@ -117,10 +142,42 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   }
 
   void _save(int page) {
-    final ch = _chs[_ci];
+    final ch = _ch;
+    if (ch == null) return;
     SharedPreferences.getInstance()
         .then((p) => p.setString(_posKey, '${ch.dir}|$page'))
         .catchError((_) => false);
+    _sendPos();
+  }
+
+  /// 记到服务端，给「我的-浏览历史」看。本地那份还是 SharedPreferences，
+  /// 那是「这本续到哪」；服务端这份是「看过什么」，两码事。
+  void _sendPos({bool force = false}) {
+    final r = widget.readRef;
+    final ch = _ch;
+    if (r == null || ch == null || _pages.isEmpty) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (!force && now - _lastReportAt < 1200) {
+      _reportTimer?.cancel();
+      _reportTimer = Timer(
+        Duration(milliseconds: 1200 - (now - _lastReportAt)),
+        _sendPos,
+      );
+      return;
+    }
+    _lastReportAt = now;
+    unawaited(MangaUserApi.markRead(
+      kind: r.kind,
+      ref: r.ref,
+      sourceId: r.sourceId,
+      title: r.title,
+      author: r.author,
+      cover: r.cover,
+      chapter: ch.name,
+      chapterRef: ch.dir,
+      page: _page,
+      total: _pages.length,
+    ));
   }
 
   void _onPage(int i) {
@@ -150,7 +207,7 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final ch = _chs.isEmpty ? null : _chs[_ci];
+    final ch = _ch;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -309,22 +366,11 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
             panEnabled: _zoom > 1.01,
             scaleEnabled: true,
             child: Center(
-              child: CachedNetworkImage(
-                imageUrl: _pages[i],
+              child: RetryImage(
+                url: _pages[i],
                 fit: BoxFit.contain,
-                fadeInDuration: const Duration(milliseconds: 80),
-                placeholder: (_, _) => const Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white24),
-                  ),
-                ),
-                errorWidget: (_, _, _) => const Center(
-                  child: Icon(Icons.broken_image_outlined,
-                      color: Colors.white38, size: 36),
-                ),
+                bustCache: true,
+                probeSize: false,
               ),
             ),
           );
@@ -351,29 +397,21 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
         }
         return false;
       },
-      child: ListView.builder(
-        padding: EdgeInsets.zero,
-        itemCount: _pages.length,
-        itemBuilder: (_, i) => CachedNetworkImage(
-          imageUrl: _pages[i],
-          fit: BoxFit.fitWidth,
-          width: double.infinity,
-          placeholder: (_, _) => const SizedBox(
-            height: 320,
-            child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white24),
-              ),
-            ),
-          ),
-          errorWidget: (_, _, _) => const SizedBox(
-            height: 120,
-            child: Center(
-              child: Icon(Icons.broken_image_outlined,
-                  color: Colors.white38, size: 28),
+      child: GestureDetector(
+        onTap: () => setState(() => _chrome = !_chrome),
+        child: ListView.builder(
+          padding: EdgeInsets.zero,
+          itemCount: _pages.length,
+          // 一屏放几张就建几张，长话滚下去也不会一次解码五十多张图。
+          scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
+          itemBuilder: (_, i) => SizedBox(
+            width: double.infinity,
+            child: RetryImage(
+              url: _pages[i],
+              fit: BoxFit.fitWidth,
+              bustCache: true,
+              probeSize: false,
+              placeholderHeight: 320,
             ),
           ),
         ),
