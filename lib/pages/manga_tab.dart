@@ -3,20 +3,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../manga.dart';
-import '../zmh.dart';
 import '../widgets/manga_card.dart';
 import '../widgets/retry_image.dart';
 import '../widgets/page_width.dart';
 import 'manga_detail_page.dart';
 import 'manga_rank_page.dart';
-import 'source_search_page.dart';
-import 'zmh_book_page.dart';
 
 import '../l10n/l10n.dart';
-/// 书架：本地已经抓下来的漫画，网格铺封面。
+
+/// 内部书源：本地已经抓下来的漫画，网格铺封面。
 ///
 /// 数据来自后端扫目录，抓取任务是另一个进程在跑，所以这里随时可能变多——
 /// 下拉刷新即可，不用重启 App。
+///
+/// 2026-11 起只留一个书源（就是这个库），外部书源那套入口全下线了：
+/// 所以顶上只有一个搜索框，搜的永远是这批书。
 class MangaTab extends StatefulWidget {
   final VoidCallback onMenu;
 
@@ -47,21 +48,29 @@ class _MangaTabState extends State<MangaTab>
   /// 换个 key 让封面重新走一遍解码，纹理就回来了。
   int _epoch = 0;
 
-  /// 顶上推荐的这一排，来自再漫画排行榜。null = 还在取。
-  /// 取不到就是空列表，书架照常显示，不为推荐位红一片。
-  List<ZmhBook>? _recs;
+  /// 顶上推荐那一排：就是内部书源里热度最高的十几本，点开直接看。
+  /// null = 还在取；取不到就是空列表，书库照常显示，不为推荐位红一片。
+  List<MangaBook>? _recs;
 
-  /// 排序：recent / title / progress。后端只认这三个，别的按 recent 处理。
-  String _sort = 'recent';
+  /// 排序：hot / recent / title / progress。后端只认这几个。
+  /// hot 是默认——书是按人气榜下的，按名字排出来的顺序没意义。
+  String _sort = 'hot';
 
   /// 状态筛选，空串 = 全部。
   String _status = '';
 
-  /// 书架内搜索词，空串 = 不筛。搜的是本地这个库，不跳书源搜索。
+  /// 书库内搜索词，空串 = 不筛。搜书名、作者、标签。
   String _q = '';
   bool _searchOpen = false;
   final TextEditingController _searchCtl = TextEditingController();
   Timer? _searchDebounce;
+
+  static const _sorts = <(String, String, IconData)>[
+    ('hot', '热度', Icons.local_fire_department_outlined),
+    ('recent', '最近更新', Icons.update),
+    ('title', '书名', Icons.sort_by_alpha),
+    ('progress', '阅读进度', Icons.bookmark_outline),
+  ];
 
   @override
   bool get wantKeepAlive => true;
@@ -152,9 +161,14 @@ class _MangaTabState extends State<MangaTab>
     }
   }
 
+  /// 推荐位固定按热度取，不跟着排序走——它就是「大家都在看」那一排。
   Future<void> _loadRecs() async {
-    final list = await ZmhApi.recommend(limit: 18);
-    if (mounted) setState(() => _recs = list);
+    try {
+      final page = await MangaApi.shelf(offset: 0, limit: 18, sort: 'hot');
+      if (mounted) setState(() => _recs = page.books);
+    } catch (_) {
+      if (mounted) setState(() => _recs = const []);
+    }
   }
 
   Future<void> _reload({bool withRecs = true}) async {
@@ -241,6 +255,44 @@ class _MangaTabState extends State<MangaTab>
     }
   }
 
+  /// 排序换一种。用底部弹层而不是 PopupMenuButton：
+  /// 之前那个小菜单贴在上巴右上角，三项挤成一条，还看不出当前选的是哪个。
+  Future<void> _pickSort() async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+                child: Text('排序方式',
+                    style: TextStyle(fontSize: 13, color: cs.outline)),
+              ),
+              for (final s in _sorts)
+                ListTile(
+                  leading: Icon(s.$3, size: 20),
+                  title: Text(s.$2),
+                  trailing: s.$1 == _sort
+                      ? Icon(Icons.check, size: 20, color: cs.primary)
+                      : null,
+                  onTap: () => Navigator.pop(ctx, s.$1),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked == null || picked == _sort) return;
+    setState(() => _sort = picked);
+    await _applyFilter(recs: false);
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -282,34 +334,12 @@ class _MangaTabState extends State<MangaTab>
                 IconButton(
                   onPressed: _openSearch,
                   icon: const Icon(Icons.search),
-                  tooltip: '搜书架',
+                  tooltip: '搜索',
                 ),
                 IconButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SourceSearchPage()),
-                  ),
-                  icon: const Icon(Icons.travel_explore),
-                  tooltip: '搜书源',
-                ),
-                PopupMenuButton<String>(
-                  tooltip: '排序',
+                  onPressed: _pickSort,
                   icon: const Icon(Icons.sort),
-                  initialValue: _sort,
-                  onSelected: (v) {
-                    if (v == _sort) return;
-                    setState(() => _sort = v);
-                    unawaited(_applyFilter(recs: false));
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'recent', child: Text('最近更新')),
-                    PopupMenuItem(value: 'title', child: Text('书名')),
-                    PopupMenuItem(value: 'progress', child: Text('阅读进度')),
-                  ],
-                ),
-                IconButton(
-                  onPressed: () => unawaited(_reload()),
-                  icon: const Icon(Icons.refresh),
-                  tooltip: Lc.current.refresh,
+                  tooltip: '排序',
                 ),
               ],
       ),
@@ -325,17 +355,18 @@ class _MangaTabState extends State<MangaTab>
     );
   }
 
-  /// 一屏从上到下：推荐、书架、加载更多。
+  /// 一屏从上到下：推荐、书库、加载更多。
   ///
   /// 全都是 sliver，滚动条只有一条——推荐那一排要是单独一个 ListView
   /// 塞在 Column 里，下拉刷新就只作用在上面那一半。
   Widget _scrollBody(ColorScheme cs) {
-    final recs = _recs ?? const <ZmhBook>[];
+    final recs = _recs ?? const <MangaBook>[];
+    final showRecs = recs.isNotEmpty && _q.isEmpty && !_searchOpen;
     return CustomScrollView(
       controller: _sc,
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
-        if (recs.isNotEmpty) SliverToBoxAdapter(child: _recRow(cs, recs)),
+        if (showRecs) SliverToBoxAdapter(child: _recRow(cs, recs)),
         SliverToBoxAdapter(child: _shelfHeader(cs)),
         if (_books.isEmpty)
           SliverToBoxAdapter(child: _emptyShelf(cs))
@@ -382,7 +413,7 @@ class _MangaTabState extends State<MangaTab>
         children: [
           Row(
             children: [
-              Text('书架', style: Theme.of(context).textTheme.titleSmall),
+              Text('内部书源', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
@@ -473,14 +504,14 @@ class _MangaTabState extends State<MangaTab>
             const SizedBox(height: 10),
             Text(
                 bad
-                    ? '书架取不到'
-                    : (filtered ? '没找到' : '书架还是空的'),
+                    ? '书库取不到'
+                    : (filtered ? '没找到' : '书库里还没有书'),
                 style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
             const SizedBox(height: 4),
             Text(
               bad
                   ? _err!
-                  : (filtered ? '换个词，或者把筛选清掉' : '上面的推荐点开就能看，不用等下载'),
+                  : (filtered ? '换个词，或者把筛选清掉' : '抓取那边下完一本，这里就多一本'),
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.outline, fontSize: 12),
             ),
@@ -494,8 +525,8 @@ class _MangaTabState extends State<MangaTab>
     );
   }
 
-  /// 推荐那一条横滑。封面比书架小一圈，一行放得下三四本。
-  Widget _recRow(ColorScheme cs, List<ZmhBook> recs) {
+  /// 推荐那一条横滑。就是书库里热度最高的十几本，封面比格子小一圈。
+  Widget _recRow(ColorScheme cs, List<MangaBook> recs) {
     final tt = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,7 +537,7 @@ class _MangaTabState extends State<MangaTab>
             children: [
               Text('推荐', style: tt.titleSmall),
               const SizedBox(width: 6),
-              Text('再漫画 · 点开即看',
+              Text('按热度 · 点开即看',
                   style: TextStyle(fontSize: 11, color: cs.outline)),
               const Spacer(),
               TextButton(
@@ -537,19 +568,14 @@ class _MangaTabState extends State<MangaTab>
     );
   }
 
-  Widget _recCell(ZmhBook b) {
+  Widget _recCell(MangaBook b) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     return SizedBox(
       width: 96,
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: () async {
-          await Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => ZmhBookPage(book: b)),
-          );
-          if (mounted) setState(() => _epoch++);
-        },
+        onTap: () => _open(b),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -568,7 +594,6 @@ class _MangaTabState extends State<MangaTab>
                         fit: BoxFit.cover,
                         memCacheWidth: 260,
                         probeSize: false,
-                        bustCache: true,
                       ),
               ),
             ),
@@ -578,7 +603,7 @@ class _MangaTabState extends State<MangaTab>
                 overflow: TextOverflow.ellipsis,
                 style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
             Text(
-              b.last.isEmpty ? (b.types.isEmpty ? '再漫画' : b.types) : b.last,
+              b.chapterCount > 0 ? '${b.chapterCount} 话' : '本地',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 10, color: cs.outline),

@@ -70,6 +70,10 @@ class MangaBook {
   final int chapterCount;
   final String lastChapter;
 
+  /// 人气值。抓取那边按人气榜下的单，下完落了一份 id→热度到书库根目录，
+  /// 排序默认就按它来。
+  final int hot;
+
   /// 读到哪了。未登录或没读过就是 null。
   final MangaProgress? progress;
 
@@ -84,6 +88,7 @@ class MangaBook {
     required this.cover,
     required this.chapterCount,
     required this.lastChapter,
+    this.hot = 0,
     this.progress,
   });
 
@@ -98,6 +103,7 @@ class MangaBook {
         cover: '${j['cover'] ?? ''}',
         chapterCount: (j['chapter_count'] as num?)?.toInt() ?? 0,
         lastChapter: '${j['last_chapter'] ?? ''}',
+        hot: (j['hot'] as num?)?.toInt() ?? 0,
         progress: MangaProgress.fromJson(j['progress']),
       );
 
@@ -147,6 +153,7 @@ class MangaDetail {
   final String status;
   final String desc;
   final String cover;
+  final int hot;
   final List<MangaChapter> chapters;
 
   /// 读到哪了。用于详情页的「继续看」和章节打勾。
@@ -160,6 +167,7 @@ class MangaDetail {
     required this.status,
     required this.desc,
     required this.cover,
+    this.hot = 0,
     required this.chapters,
     this.progress,
   });
@@ -172,6 +180,7 @@ class MangaDetail {
         status: '${j['status'] ?? ''}',
         desc: '${j['desc'] ?? ''}',
         cover: '${j['cover'] ?? ''}',
+        hot: (j['hot'] as num?)?.toInt() ?? 0,
         chapters: ((j['chapters'] as List?) ?? const [])
             .whereType<Map>()
             .map((e) => MangaChapter.fromJson(e.cast<String, dynamic>()))
@@ -180,6 +189,14 @@ class MangaDetail {
       );
 
   String get coverUrl => url(cover);
+}
+
+/// 人气值写成「12.3万」这种。位数多了直接数零没人看得懂。
+String hotText(int n) {
+  if (n <= 0) return '';
+  if (n >= 100000000) return '${(n / 100000000).toStringAsFixed(1)}亿';
+  if (n >= 10000) return '${(n / 10000).toStringAsFixed(1)}万';
+  return '$n';
 }
 
 /// 站点内相对路径拼成绝对地址。网页版同源，App 走当前选中的通道。
@@ -200,11 +217,21 @@ class MangaApi {
   static Future<MangaShelfPage> shelf({
     int offset = 0,
     int limit = 12,
-    String sort = 'recent',
+    String sort = 'hot',
     String status = '',
     String q = '',
+    String author = '',
+    String tag = '',
   }) async {
-    final qs = shelfQuery(offset: offset, limit: limit, sort: sort, status: status, q: q);
+    final qs = shelfQuery(
+      offset: offset,
+      limit: limit,
+      sort: sort,
+      status: status,
+      q: q,
+      author: author,
+      tag: tag,
+    );
     final d = await Api.get('/manga/shelf$qs');
     final list = (d is Map ? (d['list'] as List?) : null) ?? const [];
     final books = list
@@ -221,19 +248,26 @@ class MangaApi {
   static String shelfQuery({
     int offset = 0,
     int limit = 12,
-    String sort = 'recent',
+    String sort = 'hot',
     String status = '',
     String q = '',
+    String author = '',
+    String tag = '',
   }) {
     final params = <String, String>{};
     if (limit > 0) {
       params['offset'] = '$offset';
       params['limit'] = '$limit';
     }
-    if (sort.isNotEmpty && sort != 'recent') params['sort'] = sort;
+    // hot 是后端默认值，不写进串里省几个字节；别的排序照写。
+    if (sort.isNotEmpty && sort != 'hot') params['sort'] = sort;
     if (status.isNotEmpty) params['status'] = status;
     final key = q.trim();
     if (key.isNotEmpty) params['q'] = key;
+    final who = author.trim();
+    if (who.isNotEmpty) params['author'] = who;
+    final what = tag.trim();
+    if (what.isNotEmpty) params['tag'] = what;
     if (params.isEmpty) return '';
     return '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
   }

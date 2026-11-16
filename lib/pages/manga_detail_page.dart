@@ -7,6 +7,7 @@ import '../read_pos.dart';
 import '../widgets/retry_image.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
+import 'manga_filter_page.dart';
 import 'manga_reader_page.dart';
 
 import '../l10n/l10n.dart';
@@ -225,9 +226,17 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
     final n = d.chapters.length;
     final pi = _posIndex;
 
-    final tags = [
-      if (d.types.isNotEmpty) d.types,
-    ].where((s) => s.isNotEmpty).join(' ');
+    // 作者和标签拆成一个个小胶囊：以前是一整行死字，点了没反应。
+    final authors = d.authors
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final tags = d.types
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -258,14 +267,23 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
                       fontWeight: FontWeight.w700, height: 1.25),
                 ),
                 const SizedBox(height: 8),
-                if (d.authors.isNotEmpty)
-                  _iconLine(Icons.person_outline, d.authors),
-                if (tags.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  _iconLine(Icons.tag, tags, color: cs.primary),
+                if (authors.isNotEmpty || tags.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final a in authors) _chip(a, author: true),
+                      for (final t in tags) _chip(t, author: false),
+                    ],
+                  ),
                 ],
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 _iconLine(Icons.schedule, '$n 话已下载'),
+                if (d.hot > 0) ...[
+                  const SizedBox(height: 4),
+                  _iconLine(Icons.local_fire_department_outlined,
+                      '热度 ${hotText(d.hot)}'),
+                ],
                 const SizedBox(height: 14),
                 Row(
                   children: [
@@ -303,6 +321,44 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 点作者 / 点标签，去搜同一个作者、同一个标签。
+  void _filter({String author = '', String tag = ''}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MangaFilterPage(author: author, tag: tag),
+      ),
+    );
+  }
+
+  Widget _chip(String text, {required bool author}) {
+    final cs = Theme.of(context).colorScheme;
+    final fg = author ? cs.onSurfaceVariant : cs.primary;
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: () => _filter(author: author ? text : '', tag: author ? '' : text),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: author
+              ? cs.surfaceContainerHighest.withValues(alpha: .8)
+              : cs.primary.withValues(alpha: .10),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(author ? Icons.person_outline : Icons.tag, size: 11, color: fg),
+            const SizedBox(width: 3),
+            Text(
+              text,
+              style: TextStyle(fontSize: 11, height: 1.2, color: fg),
+            ),
+          ],
+        ),
       ),
     );
   }

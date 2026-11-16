@@ -16,11 +16,21 @@ void main() {
           '?sort=title');
     });
 
-    test('recent 不写进串里，别的排序照写', () {
-      expect(MangaApi.shelfQuery(sort: 'recent'), '?offset=0&limit=12');
+    test('hot 是默认值不写进串里，别的排序照写', () {
+      expect(MangaApi.shelfQuery(sort: 'hot'), '?offset=0&limit=12');
+      expect(MangaApi.shelfQuery(sort: 'recent'),
+          '?offset=0&limit=12&sort=recent');
       expect(MangaApi.shelfQuery(sort: 'title'), '?offset=0&limit=12&sort=title');
       expect(MangaApi.shelfQuery(sort: 'progress'),
           '?offset=0&limit=12&sort=progress');
+    });
+
+    test('点作者、点标签：按整段字段里的某一个值精确筛', () {
+      final s = MangaApi.shelfQuery(author: '丸戸史明', tag: '爱情');
+      expect(s.contains('author=%E4%B8%B8%E6%88%B8%E5%8F%B2%E6%98%8E'), isTrue,
+          reason: s);
+      expect(s.contains('tag=%E7%88%B1%E6%83%85'), isTrue, reason: s);
+      expect(MangaApi.shelfQuery(author: '  '), '?offset=0&limit=12');
     });
 
     test('中文搜索词要编码，空格要去掉', () {
