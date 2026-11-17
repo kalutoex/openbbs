@@ -597,7 +597,7 @@ class Api {
   /// 等回包时全局已经有了，_decode 那头就会把 401 当成令牌被废。
   static Map<String, String> _headersWith(String? tok) => {
     'Content-Type': 'application/json',
-    if (tok != null && tok.isNotEmpty) 'Authorization': 'Bearer \$tok',
+    if (tok != null && tok.isNotEmpty) 'Authorization': 'Bearer $tok',
   };
 
   /// [sent] 是这一发实际带出去的令牌，不是「现在」的令牌。
