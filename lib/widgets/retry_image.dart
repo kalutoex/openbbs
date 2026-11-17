@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart'
     show ImageRenderMethodForWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart'
+    show HttpExceptionWithStatus;
 
 import '../img_cache.dart';
 import '../img_size_store.dart';
@@ -47,10 +49,43 @@ class RetryImage extends StatefulWidget {
 class RetryImageState extends State<RetryImage> {
   int _round = 0;
 
+  /// 自动重试的节奏。头两下贴着走：坏的多半是本地缓存里那张，
+  /// 换掉就能出；后面拉开间隔，给慢网把包收完的时间。
+  /// 五下加起来约 3.5 秒，不成就露「点击重试」。
+  static const _autoDelays = <Duration>[
+    Duration(milliseconds: 100),
+    Duration(milliseconds: 100),
+    Duration(milliseconds: 400),
+    Duration(milliseconds: 900),
+    Duration(seconds: 2),
+  ];
+
+  int _auto = 0; // 已经自动试过几次
+  bool _gaveUp = false; // 五下都白搭，交给用户点
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
     if (widget.probeSize) unawaited(_remember());
+  }
+
+  @override
+  void didUpdateWidget(covariant RetryImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 列表把这一格拿去显示下一张图了，重试次数得从头算。
+    if (oldWidget.url != widget.url) {
+      _timer?.cancel();
+      _auto = 0;
+      _gaveUp = false;
+      _round = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   /// 解码一次拿到真实宽高存起来，下次这个帖子再滑到就不用猜比例了。
@@ -94,7 +129,35 @@ class RetryImageState extends State<RetryImage> {
     return '${widget.url}${sep}f=$_round';
   }
 
+  /// 图挂了。先自己悄悄试几下，试满了才把「点击重试」摆出来。
+  void _onError(Object e) {
+    if (!mounted) return;
+    // 404/403 这类再试也没用，别白烧五次。
+    if (e is HttpExceptionWithStatus &&
+        e.statusCode >= 400 &&
+        e.statusCode < 500) {
+      if (!_gaveUp) setState(() => _gaveUp = true);
+      return;
+    }
+    if (_auto >= _autoDelays.length) {
+      if (!_gaveUp) setState(() => _gaveUp = true);
+      return;
+    }
+    // 一屏几十张一起挂的时候别同时打过去，按格子错开几十毫秒。
+    final jitter = Duration(milliseconds: (hashCode % 7) * 20);
+    final wait = _autoDelays[_auto++] + jitter;
+    _timer?.cancel();
+    _timer = Timer(wait, () async {
+      if (!mounted) return;
+      await ImgCache.evict(_url);
+      if (mounted) setState(() => _round++);
+    });
+  }
+
   Future<void> _retry() async {
+    _timer?.cancel();
+    _auto = 0;
+    _gaveUp = false;
     await ImgCache.evict(_url);
     if (mounted) setState(() => _round++);
   }
@@ -114,13 +177,17 @@ class RetryImageState extends State<RetryImage> {
       memCacheWidth: widget.memCacheWidth,
       fit: widget.fit,
       alignment: widget.alignment,
+      errorListener: _onError,
       placeholder: (_, _) =>
           _box(cs, loading: true, h: widget.placeholderHeight),
-      errorWidget: (_, _, _) => GestureDetector(
-        onTap: _retry,
-        behavior: HitTestBehavior.opaque,
-        child: _box(cs, loading: false),
-      ),
+      // 还在自动重试的时候继续转圈，别让用户以为已经放弃了。
+      errorWidget: (_, _, _) => _gaveUp
+          ? GestureDetector(
+              onTap: _retry,
+              behavior: HitTestBehavior.opaque,
+              child: _box(cs, loading: false),
+            )
+          : _box(cs, loading: true, h: widget.placeholderHeight),
     );
   }
 
