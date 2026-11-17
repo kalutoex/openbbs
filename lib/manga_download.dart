@@ -144,8 +144,7 @@ class MangaDown extends ChangeNotifier {
 
   /// 本机存着的那些书，最近下的在前。
   List<MangaDlBook> get offlineBooks {
-    final out = _books.values.toList()
-      ..sort((a, b) => b.at.compareTo(a.at));
+    final out = _books.values.toList()..sort((a, b) => b.at.compareTo(a.at));
     return out;
   }
 
@@ -182,7 +181,9 @@ class MangaDown extends ChangeNotifier {
   /// 第 i 页（0 基）在本机的话给路径。
   String? localPageAt(String dir, String chDir, int i) {
     final ch = _books[dir]?.chapters[chDir];
-    if (ch == null || i < 0 || i >= ch.files.length || _root.isEmpty) return null;
+    if (ch == null || i < 0 || i >= ch.files.length || _root.isEmpty) {
+      return null;
+    }
     return '$_root/$dir/$chDir/${ch.files[i]}';
   }
 
@@ -229,7 +230,8 @@ class MangaDown extends ChangeNotifier {
     final warn = await spaceWarn(estimateBytes(targets));
     if (warn != null) return MangaEnqueueResult(0, skipped, warn);
 
-    final j = job ??
+    final j =
+        job ??
         (_jobs[d.dir] = MangaDlJob(
           dir: d.dir,
           title: d.title,
@@ -266,10 +268,12 @@ class MangaDown extends ChangeNotifier {
     while (_busy < _maxWorkers && _q.isNotEmpty) {
       final t = _q.removeAt(0);
       _busy++;
-      unawaited(_run(t).whenComplete(() {
-        _busy--;
-        _pump();
-      }));
+      unawaited(
+        _run(t).whenComplete(() {
+          _busy--;
+          _pump();
+        }),
+      );
     }
   }
 
@@ -312,11 +316,8 @@ class MangaDown extends ChangeNotifier {
       }
       final b = _books.putIfAbsent(
         dir,
-        () => MangaDlBook(
-          dir: dir,
-          title: t.detail.title,
-          cover: t.detail.cover,
-        ),
+        () =>
+            MangaDlBook(dir: dir, title: t.detail.title, cover: t.detail.cover),
       );
       b.title = t.detail.title;
       b.cover = t.detail.cover;
@@ -363,8 +364,10 @@ class MangaDown extends ChangeNotifier {
 
   String _extOf(String u) {
     final p = Uri.tryParse(u)?.path ?? u;
-    final m = RegExp(r'\.(jpe?g|png|webp|gif|bmp)$', caseSensitive: false)
-        .firstMatch(p);
+    final m = RegExp(
+      r'\.(jpe?g|png|webp|gif|bmp)$',
+      caseSensitive: false,
+    ).firstMatch(p);
     return m == null ? '.img' : m.group(0)!.toLowerCase();
   }
 
@@ -473,8 +476,12 @@ class MangaDlChapter {
   /// 这一话每页的文件名，按页序。索引里只存文件名，不存 URL。
   final List<String> files;
 
-  Map<String, Object?> toJson() =>
-      {'pages': pages, 'bytes': bytes, 'at': at, 'files': files};
+  Map<String, Object?> toJson() => {
+    'pages': pages,
+    'bytes': bytes,
+    'at': at,
+    'files': files,
+  };
 
   static MangaDlChapter? fromJson(Object? raw) {
     if (raw is! Map) return null;
@@ -542,7 +549,8 @@ class MangaDlBook {
       at: (raw['at'] as num?)?.toInt() ?? 0,
       chapters: chs,
     );
-    b.bytes = (raw['bytes'] as num?)?.toInt() ??
+    b.bytes =
+        (raw['bytes'] as num?)?.toInt() ??
         chs.values.fold<int>(0, (a, c) => a + c.bytes);
     return b;
   }

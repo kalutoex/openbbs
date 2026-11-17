@@ -45,10 +45,10 @@ class MangaFav {
   String get coverUrl => cover.isEmpty
       ? ''
       : isSource
-          ? srcImage(cover)
-          : isZmh
-              ? srcImage(cover, referer: 'https://www.zaimanhua.com/')
-              : url(cover);
+      ? srcImage(cover)
+      : isZmh
+      ? srcImage(cover, referer: 'https://www.zaimanhua.com/')
+      : url(cover);
 
   /// 卡片刻度用的封面：本地书走 240px 缩略切图，书源的图让后端按宽切。
   String get coverThumb {
@@ -63,17 +63,17 @@ class MangaFav {
   }
 
   factory MangaFav.fromJson(Map<String, dynamic> j) => MangaFav(
-        kind: '${j['kind'] ?? 'local'}',
-        ref: '${j['ref'] ?? ''}',
-        sourceId: (j['source_id'] as num?)?.toInt() ?? 0,
-        title: '${j['title'] ?? ''}',
-        author: '${j['author'] ?? ''}',
-        cover: '${j['cover'] ?? ''}',
-        sourceName: '${j['source_name'] ?? ''}',
-        lastChapter: '${j['last_chapter'] ?? ''}',
-        hasNew: j['has_new'] == true,
-        at: (j['at'] as num?)?.toInt() ?? 0,
-      );
+    kind: '${j['kind'] ?? 'local'}',
+    ref: '${j['ref'] ?? ''}',
+    sourceId: (j['source_id'] as num?)?.toInt() ?? 0,
+    title: '${j['title'] ?? ''}',
+    author: '${j['author'] ?? ''}',
+    cover: '${j['cover'] ?? ''}',
+    sourceName: '${j['source_name'] ?? ''}',
+    lastChapter: '${j['last_chapter'] ?? ''}',
+    hasNew: j['has_new'] == true,
+    at: (j['at'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class MangaHist {
@@ -111,10 +111,10 @@ class MangaHist {
   String get coverUrl => cover.isEmpty
       ? ''
       : isSource
-          ? srcImage(cover)
-          : isZmh
-              ? srcImage(cover, referer: 'https://www.zaimanhua.com/')
-              : url(cover);
+      ? srcImage(cover)
+      : isZmh
+      ? srcImage(cover, referer: 'https://www.zaimanhua.com/')
+      : url(cover);
 
   /// 卡片刻度用的封面：本地书走 240px 缩略切图，书源的图让后端按宽切。
   String get coverThumb {
@@ -137,27 +137,29 @@ class MangaHist {
   }
 
   factory MangaHist.fromJson(Map<String, dynamic> j) => MangaHist(
-        kind: '${j['kind'] ?? 'local'}',
-        ref: '${j['ref'] ?? ''}',
-        sourceId: (j['source_id'] as num?)?.toInt() ?? 0,
-        title: '${j['title'] ?? ''}',
-        author: '${j['author'] ?? ''}',
-        cover: '${j['cover'] ?? ''}',
-        chapter: '${j['chapter'] ?? ''}',
-        chapterRef: '${j['chapter_ref'] ?? ''}',
-        page: (j['page'] as num?)?.toInt() ?? 0,
-        total: (j['total'] as num?)?.toInt() ?? 0,
-        sourceName: '${j['source_name'] ?? ''}',
-        at: (j['at'] as num?)?.toInt() ?? 0,
-      );
+    kind: '${j['kind'] ?? 'local'}',
+    ref: '${j['ref'] ?? ''}',
+    sourceId: (j['source_id'] as num?)?.toInt() ?? 0,
+    title: '${j['title'] ?? ''}',
+    author: '${j['author'] ?? ''}',
+    cover: '${j['cover'] ?? ''}',
+    chapter: '${j['chapter'] ?? ''}',
+    chapterRef: '${j['chapter_ref'] ?? ''}',
+    page: (j['page'] as num?)?.toInt() ?? 0,
+    total: (j['total'] as num?)?.toInt() ?? 0,
+    sourceName: '${j['source_name'] ?? ''}',
+    at: (j['at'] as num?)?.toInt() ?? 0,
+  );
 }
 
 class MangaUserApi {
   static Future<bool> favState(String kind, String ref) async {
     if (ref.isEmpty) return false;
     try {
-      final d = await Api.get('/manga/fav/state',
-          query: {'kind': kind, 'ref': ref});
+      final d = await Api.get(
+        '/manga/fav/state',
+        query: {'kind': kind, 'ref': ref},
+      );
       return (d is Map) && d['fav'] == true;
     } catch (_) {
       return false;
@@ -194,7 +196,8 @@ class MangaUserApi {
     }
   }
 
-  static Future<List<MangaFav>> favs() async {    final d = await Api.get('/manga/favs');
+  static Future<List<MangaFav>> favs() async {
+    final d = await Api.get('/manga/favs');
     final list = (d is Map ? (d['list'] as List?) : null) ?? const [];
     return list
         .whereType<Map>()
@@ -203,8 +206,10 @@ class MangaUserApi {
   }
 
   static Future<List<MangaHist>> hist({int limit = 100}) async {
-    final d = await Api.get('/manga/history',
-        query: {'limit': '${limit.clamp(1, 500)}'});
+    final d = await Api.get(
+      '/manga/history',
+      query: {'limit': '${limit.clamp(1, 500)}'},
+    );
     final list = (d is Map ? (d['list'] as List?) : null) ?? const [];
     return list
         .whereType<Map>()
@@ -302,19 +307,19 @@ class ReadRef {
   });
 
   static ReadRef fromBook(MangaBook b) => ReadRef(
-        kind: 'local',
-        ref: b.dir,
-        title: b.title,
-        author: b.authors,
-        cover: b.cover,
-      );
+    kind: 'local',
+    ref: b.dir,
+    title: b.title,
+    author: b.authors,
+    cover: b.cover,
+  );
 
   static ReadRef fromSource(SourceBook b) => ReadRef(
-        kind: 'source',
-        ref: b.url,
-        sourceId: b.sourceId,
-        title: b.name,
-        author: b.author,
-        cover: b.cover,
-      );
+    kind: 'source',
+    ref: b.url,
+    sourceId: b.sourceId,
+    title: b.name,
+    author: b.author,
+    cover: b.cover,
+  );
 }

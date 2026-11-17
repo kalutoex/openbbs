@@ -32,8 +32,11 @@ void main() {
       await MangaPref.setVertical(true);
 
       st.user = {'id': 8};
-      expect(await MangaPref.brightness(), MangaPref.brightMax,
-          reason: '新号进阅读器第一眼不该是别人调暗的');
+      expect(
+        await MangaPref.brightness(),
+        MangaPref.brightMax,
+        reason: '新号进阅读器第一眼不该是别人调暗的',
+      );
       expect(await MangaPref.vertical(), isNull);
 
       st.user = {'id': 7};

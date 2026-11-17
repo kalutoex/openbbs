@@ -29,7 +29,12 @@ void main() {
     });
 
     test('后端取不到源站：空列表 + error=true，界面才知道该提示重试', () {
-      final page = ZmhApi.parseRank({'type': '2', 'page': 1, 'list': [], 'error': true});
+      final page = ZmhApi.parseRank({
+        'type': '2',
+        'page': 1,
+        'list': [],
+        'error': true,
+      });
       expect(page.list, isEmpty);
       expect(page.error, isTrue);
     });

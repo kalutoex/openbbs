@@ -37,7 +37,10 @@ void main() {
       'chs': {
         '第1话': {'pages': 2, 'files': <String>[]},
         '第2话': {'pages': 2, 'files': null},
-        '第3话': {'pages': 2, 'files': ['001.jpg']},
+        '第3话': {
+          'pages': 2,
+          'files': ['001.jpg'],
+        },
       },
     })!;
     expect(back.chapters.keys, ['第3话']);
@@ -46,8 +49,14 @@ void main() {
   test('bytes 没记就按各话加起来，老索引也能读', () {
     final back = MangaDlBook.fromJson('a_b', {
       'chs': {
-        '1': {'bytes': 100, 'files': ['001.jpg']},
-        '2': {'bytes': 250, 'files': ['001.jpg']},
+        '1': {
+          'bytes': 100,
+          'files': ['001.jpg'],
+        },
+        '2': {
+          'bytes': 250,
+          'files': ['001.jpg'],
+        },
       },
     })!;
     expect(back.bytes, 350);

@@ -25,15 +25,14 @@ class SourceBook {
     Map<String, dynamic> j, {
     required int sourceId,
     required String sourceName,
-  }) =>
-      SourceBook(
-        sourceId: sourceId,
-        sourceName: sourceName,
-        name: '${j['name'] ?? ''}',
-        author: '${j['author'] ?? ''}',
-        cover: '${j['cover'] ?? ''}',
-        url: '${j['url'] ?? ''}',
-      );
+  }) => SourceBook(
+    sourceId: sourceId,
+    sourceName: sourceName,
+    name: '${j['name'] ?? ''}',
+    author: '${j['author'] ?? ''}',
+    cover: '${j['cover'] ?? ''}',
+    url: '${j['url'] ?? ''}',
+  );
 
   String get coverUrl => srcImage(cover);
 
@@ -70,8 +69,13 @@ class SourceGroup {
       ms: (j['ms'] as num?)?.toInt() ?? 0,
       books: ((j['books'] as List?) ?? const [])
           .whereType<Map>()
-          .map((e) => SourceBook.fromJson(e.cast<String, dynamic>(),
-              sourceId: sid, sourceName: name))
+          .map(
+            (e) => SourceBook.fromJson(
+              e.cast<String, dynamic>(),
+              sourceId: sid,
+              sourceName: name,
+            ),
+          )
           .where((b) => b.url.isNotEmpty)
           .toList(),
     );
@@ -99,10 +103,8 @@ class SourceChapter {
 
   const SourceChapter({required this.name, required this.url});
 
-  factory SourceChapter.fromJson(Map<String, dynamic> j) => SourceChapter(
-        name: '${j['name'] ?? ''}',
-        url: '${j['url'] ?? ''}',
-      );
+  factory SourceChapter.fromJson(Map<String, dynamic> j) =>
+      SourceChapter(name: '${j['name'] ?? ''}', url: '${j['url'] ?? ''}');
 }
 
 class SourceBookDetail {
@@ -125,18 +127,18 @@ class SourceBookDetail {
   });
 
   factory SourceBookDetail.fromJson(Map<String, dynamic> j) => SourceBookDetail(
-        name: '${j['name'] ?? ''}',
-        author: '${j['author'] ?? ''}',
-        cover: '${j['cover'] ?? ''}',
-        intro: '${j['intro'] ?? ''}',
-        kind: '${j['kind'] ?? ''}',
-        last: '${j['last'] ?? ''}',
-        chapters: ((j['chapters'] as List?) ?? const [])
-            .whereType<Map>()
-            .map((e) => SourceChapter.fromJson(e.cast<String, dynamic>()))
-            .where((c) => c.name.isNotEmpty)
-            .toList(),
-      );
+    name: '${j['name'] ?? ''}',
+    author: '${j['author'] ?? ''}',
+    cover: '${j['cover'] ?? ''}',
+    intro: '${j['intro'] ?? ''}',
+    kind: '${j['kind'] ?? ''}',
+    last: '${j['last'] ?? ''}',
+    chapters: ((j['chapters'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => SourceChapter.fromJson(e.cast<String, dynamic>()))
+        .where((c) => c.name.isNotEmpty)
+        .toList(),
+  );
 
   String get coverUrl => srcImage(cover);
 

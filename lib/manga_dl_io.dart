@@ -158,7 +158,11 @@ Future<int> _one(
       if (have > 0) {
         final r = await _get(client, url, from: have);
         if (r.statusCode == 206) {
-          await part.writeAsBytes(r.bodyBytes, mode: FileMode.append, flush: true);
+          await part.writeAsBytes(
+            r.bodyBytes,
+            mode: FileMode.append,
+            flush: true,
+          );
           have += r.bodyBytes.length;
         } else if (r.statusCode == 200) {
           // 不认 Range，整张重来
