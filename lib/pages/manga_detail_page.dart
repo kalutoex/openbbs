@@ -13,6 +13,7 @@ import 'manga_filter_page.dart';
 import 'manga_reader_page.dart';
 
 import '../l10n/l10n.dart';
+
 /// 一本书的详情：封面、信息、简介、章节格子。
 ///
 /// 版式照着大家习惯的漫画 App 来——封面在左、信息在右、按钮就在手边，
@@ -35,6 +36,10 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
   bool _descOpen = false;
   bool _asc = false;
 
+  /// 章节格子默认只铺四行（4×4=16 话），多的点「展开」再看。
+  /// 状态按书记，下次进来还是上次那样。
+  bool _gridOpen = false;
+
   /// 上次读到的话（章节目录名）和页码，没有就是空。
   String _posCh = '';
   int _posPage = 0;
@@ -51,6 +56,16 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
 
   /// 本机的阅读位置。key 带「站 + 人」，换号不会串到别人的进度上。
   String get _posKey => mangaPosKey(widget.book.dir);
+
+  String get _gridKey => 'mgGridOpen:${widget.book.dir}';
+
+  void _toggleGrid() {
+    final v = !_gridOpen;
+    setState(() => _gridOpen = v);
+    SharedPreferences.getInstance()
+        .then((sp) => sp.setBool(_gridKey, v))
+        .catchError((_) => false);
+  }
 
   @override
   void initState() {
@@ -83,8 +98,10 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
       final d = await MangaApi.detail(widget.book.dir);
       String ch = '';
       var page = 0;
+      var gridOpen = false;
       try {
         final sp = await SharedPreferences.getInstance();
+        gridOpen = sp.getBool(_gridKey) ?? false;
         // 老 key 只在新的空着时兜一次，读到就按新 key 存回去
         var raw = sp.getString(_posKey);
         raw ??= sp.getString(mangaLegacyPosKey(widget.book.dir));
@@ -109,6 +126,7 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
         _posCh = ch;
         _posPage = page;
         _fav = fav;
+        _gridOpen = gridOpen;
       });
     } catch (e) {
       if (!mounted) return;
@@ -119,15 +137,17 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
   void _open(int i) {
     final d = _d;
     if (d == null || i < 0 || i >= d.chapters.length) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => MangaReaderPage(
-          detail: d,
-          index: i,
-          readRef: ReadRef.fromBook(widget.book),
-        ),
-      ),
-    ).then((_) => _load());
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => MangaReaderPage(
+              detail: d,
+              index: i,
+              readRef: ReadRef.fromBook(widget.book),
+            ),
+          ),
+        )
+        .then((_) => _load());
   }
 
   /// 点一下收藏 / 取消。等接口回来再变图标，中途连点会被 _favBusy 挡住。
@@ -147,14 +167,15 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
       setState(() => _fav = on);
       ScaffoldMessenger.of(context)
         ..clearSnackBars()
-        ..showSnackBar(SnackBar(
-          content: Text(on ? '已收藏' : '已取消收藏'),
-          duration: const Duration(seconds: 1),
-        ));
+        ..showSnackBar(
+          SnackBar(
+            content: Text(on ? '已收藏' : '已取消收藏'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     } finally {
       if (mounted) setState(() => _favBusy = false);
     }
@@ -198,19 +219,25 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
               title: '取不到这本书',
               hint: _err,
               error: true,
-              action: TextButton(onPressed: _load, child: Text(Lc.current.retry)),
+              action: TextButton(
+                onPressed: _load,
+                child: Text(Lc.current.retry),
+              ),
             )
           : d == null
-              ? const Center(child: CircularProgressIndicator())
-              : _body(d),
+          ? const Center(child: CircularProgressIndicator())
+          : _body(d),
     );
   }
 
   Widget _body(MangaDetail d) {
     final cs = Theme.of(context).colorScheme;
-    final chs = _asc
-        ? [...d.chapters]
-        : d.chapters.reversed.toList();
+    final chs = _asc ? [...d.chapters] : d.chapters.reversed.toList();
+
+    // 四行四列封顶，多的收起来；只有真超出一屏才给那个箭头。
+    const foldLimit = 16;
+    final foldable = chs.length > foldLimit;
+    final shown = foldable && !_gridOpen ? chs.sublist(0, foldLimit) : chs;
 
     return PageWidth(
       max: 820,
@@ -233,15 +260,40 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
                 crossAxisSpacing: 8,
                 mainAxisExtent: 38,
               ),
-              itemCount: chs.length,
-              itemBuilder: (_, i) => _cell(d, chs[i]),
+              itemCount: shown.length,
+              itemBuilder: (_, i) => _cell(d, shown[i]),
             ),
           ),
+          if (foldable)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Center(
+                child: TextButton.icon(
+                  onPressed: _toggleGrid,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  icon: Icon(
+                    _gridOpen
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 20,
+                  ),
+                  label: Text(
+                    _gridOpen ? '收起' : '展开全部 ${chs.length} 话',
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
+                ),
+              ),
+            ),
           if (chs.isEmpty)
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Text('还没有下载任何一话',
-                  style: TextStyle(color: cs.onSurfaceVariant)),
+              child: Text(
+                '还没有下载任何一话',
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
             ),
         ],
       ),
@@ -272,10 +324,7 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            cs.primary.withValues(alpha: .10),
-            cs.surface,
-          ],
+          colors: [cs.primary.withValues(alpha: .10), cs.surface],
         ),
       ),
       child: Row(
@@ -292,7 +341,9 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: tt.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700, height: 1.25),
+                    fontWeight: FontWeight.w700,
+                    height: 1.25,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 if (authors.isNotEmpty || tags.isNotEmpty) ...[
@@ -309,8 +360,10 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
                 _iconLine(Icons.schedule, '$n 话已下载'),
                 if (d.hot > 0) ...[
                   const SizedBox(height: 4),
-                  _iconLine(Icons.local_fire_department_outlined,
-                      '热度 ${hotText(d.hot)}'),
+                  _iconLine(
+                    Icons.local_fire_department_outlined,
+                    '热度 ${hotText(d.hot)}',
+                  ),
                 ],
                 const SizedBox(height: 14),
                 Row(
@@ -339,8 +392,11 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
                           minimumSize: const Size(0, 38),
                           padding: EdgeInsets.zero,
                         ),
-                        child: const Text('从头看',
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        child: const Text(
+                          '从头看',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ],
@@ -379,12 +435,13 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(author ? Icons.person_outline : Icons.tag, size: 11, color: fg),
-            const SizedBox(width: 3),
-            Text(
-              text,
-              style: TextStyle(fontSize: 11, height: 1.2, color: fg),
+            Icon(
+              author ? Icons.person_outline : Icons.tag,
+              size: 11,
+              color: fg,
             ),
+            const SizedBox(width: 3),
+            Text(text, style: TextStyle(fontSize: 11, height: 1.2, color: fg)),
           ],
         ),
       ),
@@ -416,7 +473,9 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
 
   Widget _cover(MangaDetail d) {
     final cs = Theme.of(context).colorScheme;
-    final done = d.status.contains('连载') ? '连载中' : (d.status.isEmpty ? '' : d.status);
+    final done = d.status.contains('连载')
+        ? '连载中'
+        : (d.status.isEmpty ? '' : d.status);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
@@ -442,8 +501,7 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
               left: 0,
               bottom: 0,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 color: cs.primary,
                 child: Text(
                   done,
@@ -500,11 +558,15 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
       padding: const EdgeInsets.fromLTRB(16, 0, 8, 6),
       child: Row(
         children: [
-          Text('连载体',
-              style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            '连载体',
+            style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(width: 4),
-          Text('（${d.chapters.length} 话）',
-              style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+          Text(
+            '（${d.chapters.length} 话）',
+            style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+          ),
           const SizedBox(width: 6),
           if (MangaDown.i.offlineChapters(d.dir) > 0)
             Container(
@@ -539,9 +601,14 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 8),
             ),
-            icon: Icon(_asc ? Icons.arrow_downward : Icons.arrow_upward,
-                size: 15),
-            label: Text(_asc ? '正序' : '倒序', style: const TextStyle(fontSize: 12)),
+            icon: Icon(
+              _asc ? Icons.arrow_downward : Icons.arrow_upward,
+              size: 15,
+            ),
+            label: Text(
+              _asc ? '正序' : '倒序',
+              style: const TextStyle(fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -560,9 +627,8 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
       color: picked
           ? cs.primary.withValues(alpha: .22)
           : here
-              ? cs.primaryContainer
-              : cs.surfaceContainerHighest
-                  .withValues(alpha: read ? .28 : .6),
+          ? cs.primaryContainer
+          : cs.surfaceContainerHighest.withValues(alpha: read ? .28 : .6),
       borderRadius: BorderRadius.circular(6),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -579,11 +645,11 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
         onLongPress: _selOn || !MangaDown.i.supported
             ? null
             : () => setState(() {
-                  _selOn = true;
-                  _selCh
-                    ..clear()
-                    ..add(c.dir);
-                }),
+                _selOn = true;
+                _selCh
+                  ..clear()
+                  ..add(c.dir);
+              }),
         child: Stack(
           children: [
             Center(
@@ -596,12 +662,14 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: here || picked ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: here || picked
+                        ? FontWeight.w600
+                        : FontWeight.w400,
                     color: picked
                         ? cs.onSurface
                         : here
-                            ? cs.onPrimaryContainer
-                            : (read ? cs.outline : cs.onSurface),
+                        ? cs.onPrimaryContainer
+                        : (read ? cs.outline : cs.onSurface),
                   ),
                 ),
               ),
@@ -611,8 +679,11 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
               Positioned(
                 right: 3,
                 top: 3,
-                child: Icon(Icons.offline_pin,
-                    size: 11, color: cs.primary.withValues(alpha: .9)),
+                child: Icon(
+                  Icons.offline_pin,
+                  size: 11,
+                  color: cs.primary.withValues(alpha: .9),
+                ),
               ),
           ],
         ),
@@ -625,7 +696,10 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
   List<MangaChapter> get _selChapters {
     final d = _d;
     if (d == null) return const [];
-    return [for (final c in d.chapters) if (_selCh.contains(c.dir)) c];
+    return [
+      for (final c in d.chapters)
+        if (_selCh.contains(c.dir)) c,
+    ];
   }
 
   Widget _chapterBar(MangaDetail d) {
@@ -655,17 +729,23 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
             _barBtn(
               icon: Icons.download_rounded,
               label: '下载 ${picked.length}',
-              onTap: _busy || picked.isEmpty ? null : () => _downloadChapters(d, picked),
+              onTap: _busy || picked.isEmpty
+                  ? null
+                  : () => _downloadChapters(d, picked),
             ),
             _barBtn(
               icon: Icons.done_all,
               label: '标已读',
-              onTap: _busy || picked.isEmpty ? null : () => _markReadChapters(d, picked),
+              onTap: _busy || picked.isEmpty
+                  ? null
+                  : () => _markReadChapters(d, picked),
             ),
             _barBtn(
               icon: Icons.delete_outline,
               label: '删离线${off > 0 ? ' $off' : ''}',
-              onTap: _busy || off == 0 ? null : () => _deleteChapters(d, picked),
+              onTap: _busy || off == 0
+                  ? null
+                  : () => _deleteChapters(d, picked),
             ),
           ],
         ),
@@ -712,8 +792,7 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
     String msg;
     try {
       final r = await MangaDown.i.download(d, chs);
-      msg = r.error ??
-          (r.queued == 0 ? '这几话都已经离线了' : '排上 ${r.queued} 话');
+      msg = r.error ?? (r.queued == 0 ? '这几话都已经离线了' : '排上 ${r.queued} 话');
     } catch (e) {
       msg = '$e';
     } finally {
@@ -730,7 +809,7 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
   Future<void> _downloadUnread(MangaDetail d) async {
     final todo = [
       for (final c in d.chapters)
-        if (!MangaDown.i.isChapterOffline(d.dir, c.dir)) c
+        if (!MangaDown.i.isChapterOffline(d.dir, c.dir)) c,
     ];
     if (todo.isEmpty) return;
     setState(() => _busy = true);
@@ -747,10 +826,7 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
     toastOf(context, msg);
   }
 
-  Future<void> _markReadChapters(
-    MangaDetail d,
-    List<MangaChapter> chs,
-  ) async {
+  Future<void> _markReadChapters(MangaDetail d, List<MangaChapter> chs) async {
     final top = chs.isEmpty ? null : chs.last;
     setState(() => _busy = true);
     try {
@@ -781,13 +857,10 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
     }
   }
 
-  Future<void> _deleteChapters(
-    MangaDetail d,
-    List<MangaChapter> chs,
-  ) async {
+  Future<void> _deleteChapters(MangaDetail d, List<MangaChapter> chs) async {
     final dirs = [
       for (final c in chs)
-        if (MangaDown.i.isChapterOffline(d.dir, c.dir)) c.dir
+        if (MangaDown.i.isChapterOffline(d.dir, c.dir)) c.dir,
     ];
     if (dirs.isEmpty) return;
     setState(() => _busy = true);
