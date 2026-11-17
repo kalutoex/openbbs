@@ -4,7 +4,6 @@ import '../widgets/live_time.dart';
 
 import 'package:flutter/material.dart';
 
-import '../api.dart';
 import '../permissions.dart';
 import '../site_meta.dart';
 import '../store.dart';
@@ -185,45 +184,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// 连不上服务器时顶一条细提示。不拦人、不弹窗：
-  /// 大多数断网是十几秒的事，弹窗只会让人手忙脚乱。
-  /// 哪个请求通了它就自己收起来，不用点。
-  Widget _netBanner(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.surfaceContainerHighest,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
-        child: Row(
-          children: [
-            Icon(Icons.wifi_off_rounded, size: 16, color: cs.onSurfaceVariant),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                Lc.current.netDownBanner,
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                AppState.instance.refreshUnread();
-                AppState.instance.bumpFeed();
-              },
-              style: TextButton.styleFrom(
-                minimumSize: const Size(0, 32),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-              ),
-              child: Text(
-                Lc.current.retry,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -285,11 +245,6 @@ class _HomePageState extends State<HomePage> {
         final meta = AppState.instance.siteMeta;
         return Column(
           children: [
-            ValueListenableBuilder<bool>(
-              valueListenable: Api.netDown,
-              builder: (context, down, _) =>
-                  down ? _netBanner(context) : const SizedBox.shrink(),
-            ),
             if (meta != null && meta.tooNew) _tooNewBanner(context, meta.api),
             Expanded(
               // 三页并排，手指拖到哪就停在哪，松手自己吸附过去。
