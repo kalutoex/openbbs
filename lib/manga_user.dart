@@ -178,8 +178,9 @@ class MangaUserApi {
         .toList();
   }
 
-  static Future<List<MangaHist>> hist() async {
-    final d = await Api.get('/manga/history');
+  static Future<List<MangaHist>> hist({int limit = 100}) async {
+    final d = await Api.get('/manga/history',
+        query: {'limit': '${limit.clamp(1, 500)}'});
     final list = (d is Map ? (d['list'] as List?) : null) ?? const [];
     return list
         .whereType<Map>()

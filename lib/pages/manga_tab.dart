@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../manga.dart';
+import '../manga_user.dart';
 import '../widgets/manga_card.dart';
 import '../widgets/retry_image.dart';
 import '../widgets/page_width.dart';
 import 'manga_detail_page.dart';
 import 'manga_rank_page.dart';
+import 'manga_reader_page.dart';
 
 import '../l10n/l10n.dart';
 
@@ -52,6 +54,10 @@ class _MangaTabState extends State<MangaTab>
   /// null = 还在取；取不到就是空列表，书库照常显示，不为推荐位红一片。
   List<MangaBook>? _recs;
 
+  /// 最近在读的那几本，点开直接续到上次那一页。
+  /// null = 还在取（不显示），空列表 = 没读过（也不显示）。
+  List<MangaHist>? _resume;
+
   /// 排序：hot / recent / title / progress。后端只认这几个。
   /// hot 是默认——书是按人气榜下的，按名字排出来的顺序没意义。
   String _sort = 'hot';
@@ -81,6 +87,7 @@ class _MangaTabState extends State<MangaTab>
     _sc.addListener(_onScroll);
     unawaited(_reload());
     unawaited(_loadRecs());
+    unawaited(_loadResume());
     mangaBump.addListener(_onBump);
   }
 
@@ -154,10 +161,27 @@ class _MangaTabState extends State<MangaTab>
   /// 抓取任务那边动了（mangaBump）：已经把书翻出来看的这些人不动位置，
   /// 只把手上这一截重新对一遍，省得又从头翻。
   void _onBump() {
+    unawaited(_loadResume());
     if (_books.isEmpty) {
       unawaited(_reload());
     } else {
       unawaited(_refreshLoaded());
+    }
+  }
+
+  /// 书架顶上「继续阅读」：服务端记的浏览历史里挑本地书，最近的几本。
+  ///
+  /// 只在登录后才有（接口要身份），取不到就当没有——这一行不值得弹错误。
+  Future<void> _loadResume() async {
+    try {
+      final list = await MangaUserApi.hist(limit: 12);
+      final mine = list
+          .where((h) => h.kind == 'local' && h.ref.isNotEmpty)
+          .take(3)
+          .toList();
+      if (mounted) setState(() => _resume = mine);
+    } catch (_) {
+      if (mounted) setState(() => _resume = const []);
     }
   }
 
@@ -172,7 +196,10 @@ class _MangaTabState extends State<MangaTab>
   }
 
   Future<void> _reload({bool withRecs = true}) async {
-    if (withRecs) unawaited(_loadRecs());
+    if (withRecs) {
+      unawaited(_loadRecs());
+      unawaited(_loadResume());
+    }
     try {
       final page = await MangaApi.shelf(
         offset: 0,
@@ -250,8 +277,7 @@ class _MangaTabState extends State<MangaTab>
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
 
@@ -270,8 +296,10 @@ class _MangaTabState extends State<MangaTab>
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
-                child: Text('排序方式',
-                    style: TextStyle(fontSize: 13, color: cs.outline)),
+                child: Text(
+                  '排序方式',
+                  style: TextStyle(fontSize: 13, color: cs.outline),
+                ),
               ),
               for (final s in _sorts)
                 ListTile(
@@ -321,7 +349,10 @@ class _MangaTabState extends State<MangaTab>
                 onChanged: _onQuery,
                 onSubmitted: _onQuery,
               )
-            : Text('漫画', style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            : Text(
+                '漫画',
+                style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
         actions: _searchOpen
             ? [
                 IconButton(
@@ -362,10 +393,13 @@ class _MangaTabState extends State<MangaTab>
   Widget _scrollBody(ColorScheme cs) {
     final recs = _recs ?? const <MangaBook>[];
     final showRecs = recs.isNotEmpty && _q.isEmpty && !_searchOpen;
+    final resume = _resume ?? const <MangaHist>[];
+    final showResume = resume.isNotEmpty && _q.isEmpty && !_searchOpen;
     return CustomScrollView(
       controller: _sc,
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
+        if (showResume) SliverToBoxAdapter(child: _resumeRow(cs, resume)),
         if (showRecs) SliverToBoxAdapter(child: _recRow(cs, recs)),
         SliverToBoxAdapter(child: _shelfHeader(cs)),
         if (_books.isEmpty)
@@ -496,33 +530,169 @@ class _MangaTabState extends State<MangaTab>
         child: Column(
           children: [
             Icon(
-                bad
-                    ? Icons.cloud_off
-                    : (filtered ? Icons.search_off : Icons.menu_book_outlined),
-                size: 40,
-                color: cs.outline),
+              bad
+                  ? Icons.cloud_off
+                  : (filtered ? Icons.search_off : Icons.menu_book_outlined),
+              size: 40,
+              color: cs.outline,
+            ),
             const SizedBox(height: 10),
             Text(
-                bad
-                    ? '书库取不到'
-                    : (filtered ? '没找到' : '书库里还没有书'),
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+              bad ? '书库取不到' : (filtered ? '没找到' : '书库里还没有书'),
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+            ),
             const SizedBox(height: 4),
             Text(
-              bad
-                  ? _err!
-                  : (filtered ? '换个词，或者把筛选清掉' : '抓取那边下完一本，这里就多一本'),
+              bad ? _err! : (filtered ? '换个词，或者把筛选清掉' : '抓取那边下完一本，这里就多一本'),
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.outline, fontSize: 12),
             ),
             if (bad) ...[
               const SizedBox(height: 10),
-              TextButton(onPressed: () => unawaited(_reload()), child: Text(Lc.current.retry)),
+              TextButton(
+                onPressed: () => unawaited(_reload()),
+                child: Text(Lc.current.retry),
+              ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  /// 「继续阅读」那一条：最近读过的三本，点一下直接落到上次那一页。
+  Widget _resumeRow(ColorScheme cs, List<MangaHist> list) {
+    final tt = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+          child: Row(
+            children: [
+              Text('继续阅读', style: tt.titleSmall),
+              const SizedBox(width: 6),
+              Text(
+                '接着上次那一页',
+                style: TextStyle(fontSize: 11, color: cs.outline),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 76,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: list.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (_, i) => _resumeCell(cs, list[i]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _resumeCell(ColorScheme cs, MangaHist h) {
+    final tt = Theme.of(context).textTheme;
+    final total = h.total;
+    final pct = total > 0 ? ((h.page + 1) * 100 / total).round() : null;
+    final sub = [
+      if (h.chapter.isNotEmpty) h.chapter,
+      if (pct != null) '$pct%',
+    ].join(' · ');
+    final cover = url(h.cover);
+    return SizedBox(
+      width: 220,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => unawaited(_openResume(h)),
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 46,
+                  height: 62,
+                  child: cover.isEmpty
+                      ? Container(
+                          color: cs.surfaceContainerHighest,
+                          child: Icon(
+                            Icons.menu_book,
+                            size: 18,
+                            color: cs.outline,
+                          ),
+                        )
+                      : RetryImage(
+                          url: cover,
+                          fit: BoxFit.cover,
+                          memCacheWidth: 140,
+                          probeSize: false,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      h.title.isEmpty ? h.ref : h.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tt.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      sub.isEmpty ? '接着看' : sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: cs.outline),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 从「继续阅读」进书：先取详情，再带着页码进阅读器。
+  Future<void> _openResume(MangaHist h) async {
+    try {
+      final d = await MangaApi.detail(h.ref);
+      if (!mounted) return;
+      final i = d.chapters.indexWhere((c) => c.dir == h.chapterRef);
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MangaReaderPage(
+            detail: d,
+            index: i < 0 ? 0 : i,
+            initialPage: i < 0 ? 0 : h.page,
+            readRef: ReadRef(
+              kind: 'local',
+              ref: d.dir,
+              title: d.title,
+              author: d.authors,
+              cover: d.cover,
+            ),
+          ),
+        ),
+      );
+      if (!mounted) return;
+      setState(() => _epoch++);
+      unawaited(_loadResume());
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 
   /// 推荐那一条横滑。就是书库里热度最高的十几本，封面比格子小一圈。
@@ -537,8 +707,10 @@ class _MangaTabState extends State<MangaTab>
             children: [
               Text('推荐', style: tt.titleSmall),
               const SizedBox(width: 6),
-              Text('按热度 · 点开即看',
-                  style: TextStyle(fontSize: 11, color: cs.outline)),
+              Text(
+                '按热度 · 点开即看',
+                style: TextStyle(fontSize: 11, color: cs.outline),
+              ),
               const Spacer(),
               TextButton(
                 onPressed: () => Navigator.of(context).push(
@@ -598,10 +770,12 @@ class _MangaTabState extends State<MangaTab>
               ),
             ),
             const SizedBox(height: 5),
-            Text(b.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              b.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
             Text(
               b.chapterCount > 0 ? '${b.chapterCount} 话' : '本地',
               maxLines: 1,
@@ -615,9 +789,8 @@ class _MangaTabState extends State<MangaTab>
   }
 
   Future<void> _open(MangaBook b) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => MangaDetailPage(book: b)),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => MangaDetailPage(book: b)));
     if (!mounted) return;
     // 回来只重解纹理，不重新拉数据——手上这一截还是对的。
     setState(() => _epoch++);

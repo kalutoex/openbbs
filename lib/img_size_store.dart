@@ -20,6 +20,9 @@ class ImgSizeStore {
 
   static Size? get(String url) => _mem[url];
 
+  /// 读漫画时要用尺寸估算纵向滚动位置，但 get 是同步的——先等这份表落进内存。
+  static Future<void> ensureLoaded() => _load();
+
   static Future<void> _load() async {
     if (_loaded) return;
     _loaded = true;
