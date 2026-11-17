@@ -15,6 +15,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'api.dart';
 import 'bg_poll.dart';
 import 'l10n/app_localizations.dart';
+import 'manga_download.dart';
 import 'notify.dart';
 import 'pages/chat_page.dart';
 import 'pages/home_page.dart';
@@ -76,6 +77,8 @@ Future<void> _boot() async {
     debugPrint('failed to read settings, starting with defaults: $e');
     AppState.instance.ready = true;
   }
+  // 离线漫画的索引按站点分目录，得等当前站点读出来才能定位。
+  unawaited(MangaDown.i.init());
   // 当前站点探一遍：v6 入口先，连不上按入口顺序回落。
   // 选路全在手机上判断，失败就退回上次连通的地址，别让用户对着死地址。
   try {

@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.view.KeyEvent
 import androidx.annotation.RequiresApi
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -33,6 +34,7 @@ class MainActivity : FlutterActivity() {
         private const val ICON_CHANNEL = "openbbs/icon"
         private const val KEEPALIVE_CHANNEL = "openbbs/keepalive"
         private const val POWER_CHANNEL = "openbbs/power"
+        private const val READER_CHANNEL = "openbbs/reader"
         private const val REQ_DIR = 4801
         private const val FOLDER = "OpenBBS"
 
@@ -138,6 +140,29 @@ class MainActivity : FlutterActivity() {
 
     private var dirResult: MethodChannel.Result? = null
 
+    private var readerChannel: MethodChannel? = null
+    private var volumeKeysOn = false
+
+    /**
+     * 音量键翻页。
+     *
+     * 音量键是系统键，Flutter 的键盘事件收不到，只能在 Activity 这一层截：
+     * 阅读器开着的时候把上下键改成翻页，其他时候原样放给系统调音量。
+     * 返回 true 才算吃掉，否则系统还会再调一次音量。
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val vol = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
+            event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+        if (volumeKeysOn && vol) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                val up = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                readerChannel?.invokeMethod("volume", if (up) "up" else "down")
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
         MethodChannel(engine.dartExecutor.binaryMessenger, ICON_CHANNEL)
@@ -186,6 +211,19 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(engine.dartExecutor.binaryMessenger, READER_CHANNEL).also { ch ->
+            readerChannel = ch
+            ch.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    // 阅读器进来就打开，退出去关掉——否则看完漫画按音量键没反应。
+                    "volumeKeys" -> {
+                        volumeKeysOn = call.argument<Boolean>("on") ?: false
+                        result.success(volumeKeysOn)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
         MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

@@ -11,6 +11,7 @@ import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../upload_manager.dart';
 import '../utils.dart';
+import '../widgets/manga_dl_section.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/file_card.dart';
@@ -158,6 +159,7 @@ class DownloadsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        const MangaDlSection(),
         AnimatedBuilder(
           animation: DownloadManager.i,
           builder: (context, _) {

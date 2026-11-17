@@ -243,6 +243,43 @@ class MangaUserApi {
       // 记进度失败不值得吵人，下次翻页还会再发一次。
     }
   }
+
+  /// 一次把好几本标成已读。
+  ///
+  /// 书架上一勾几十本，一本一个请求会让后端和隧道都跟着抖；后端开了
+  /// `/history/batch`，一批最多 200 条，这里按 200 切段发。
+  /// 返回真的记下的本数；没登录会抛，调用方自己提示。
+  static Future<int> markReadBatch(
+    List<ReadRef> refs, {
+    List<MangaBook> books = const [],
+  }) async {
+    if (refs.isEmpty) return 0;
+    final byDir = {for (final b in books) b.dir: b};
+    var n = 0;
+    for (var i = 0; i < refs.length; i += 200) {
+      final seg = refs.sublist(i, (i + 200).clamp(0, refs.length));
+      final items = <Map<String, Object?>>[];
+      for (final r in seg) {
+        final b = byDir[r.ref];
+        items.add({
+          'ref': r.ref,
+          'kind': r.kind,
+          'source_id': r.sourceId,
+          'title': r.title,
+          'author': r.author,
+          'cover': r.cover,
+          if (b != null) 'total': b.chapterCount,
+          if (b != null) 'chapter': b.lastChapter,
+        });
+      }
+      final d = await Api.post('/manga/history/batch', {
+        'kind': seg.first.kind,
+        'refs': items,
+      });
+      n += (d is Map ? (d['ok'] as num?)?.toInt() : null) ?? seg.length;
+    }
+    return n;
+  }
 }
 
 /// 阅读器要知道「这本书是谁」。本地和书源两套模型长得不一样，

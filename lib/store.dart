@@ -14,6 +14,30 @@ import 'token_store.dart';
 
 import '../l10n/l10n.dart';
 
+/// 阅读方向。前三种都是一屏一页，最后一种是一屏接一张往下滚。
+enum ReadMode {
+  /// 向左翻：往左滑是下一页（左到右文字的读法）。
+  ltr,
+
+  /// 向右翻：往右滑是下一页（日漫、港漫的读法）。
+  rtl,
+
+  /// 上下翻页：往上滑是下一页。
+  down,
+
+  /// 条漫：不分页，一张接一张往下滚。
+  scroll,
+}
+
+/// 点屏幕的判定区域。
+enum TapLayout {
+  /// 三栏：左 / 中 / 右，中间那栏只切工具栏。
+  three,
+
+  /// L 样式：右边一条加底下一条都是「下一页」，左边是「上一页」。
+  lShape,
+}
+
 /// 漫画阅读器的偏好：横读还是条漫、亮到什么程度、条漫两页之间留多少空。
 ///
 /// key 必须带「站 + 人」——和阅读位置同一套作用域。这三个值以前是
@@ -65,6 +89,50 @@ class MangaPref {
   static Future<void> setGap(double v) async {
     final sp = await SharedPreferences.getInstance();
     await sp.setDouble(keyOf('gap'), clampGap(v));
+  }
+
+  /// 阅读方向。1.1.x 只存了 vertical 一个布尔，读到就顺手迁到新键。
+  static Future<ReadMode> mode() async {
+    final sp = await SharedPreferences.getInstance();
+    final s = sp.getString(keyOf('mode'));
+    if (s != null) {
+      for (final m in ReadMode.values) {
+        if (m.name == s) return m;
+      }
+    }
+    final v = sp.getBool(keyOf('vertical'));
+    if (v == null) return ReadMode.ltr;
+    return v ? ReadMode.scroll : ReadMode.ltr;
+  }
+
+  static Future<void> setMode(ReadMode m) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(keyOf('mode'), m.name);
+    // 老键继续写一份：退版回 1.1.x 至少还能读到「是不是条漫」。
+    await sp.setBool(keyOf('vertical'), m == ReadMode.scroll);
+  }
+
+  static Future<TapLayout> tapLayout() async {
+    final sp = await SharedPreferences.getInstance();
+    return sp.getString(keyOf('tap_layout')) == TapLayout.lShape.name
+        ? TapLayout.lShape
+        : TapLayout.three;
+  }
+
+  static Future<void> setTapLayout(TapLayout v) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(keyOf('tap_layout'), v.name);
+  }
+
+  /// 开关类偏好。没存过就当默认值，不为每个开关各写一对方法。
+  static Future<bool> flag(String name, bool dflt) async {
+    final sp = await SharedPreferences.getInstance();
+    return sp.getBool(keyOf(name)) ?? dflt;
+  }
+
+  static Future<void> setFlag(String name, bool v) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setBool(keyOf(name), v);
   }
 
   static double clampBright(double v) => v.clamp(brightMin, brightMax);

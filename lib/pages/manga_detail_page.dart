@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../manga.dart';
+import '../manga_download.dart';
 import '../manga_user.dart';
 import '../read_pos.dart';
 import '../widgets/retry_image.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/page_width.dart';
+import '../widgets/toast.dart';
 import 'manga_filter_page.dart';
 import 'manga_reader_page.dart';
 
@@ -42,13 +44,38 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
   bool _fav = false;
   bool _favBusy = false;
 
+  /// 章节多选：长按一话进来，勾几话一起下 / 一起标已读 / 一起删离线。
+  final Set<String> _selCh = <String>{};
+  bool _selOn = false;
+  bool _busy = false;
+
   /// 本机的阅读位置。key 带「站 + 人」，换号不会串到别人的进度上。
   String get _posKey => mangaPosKey(widget.book.dir);
 
   @override
   void initState() {
     super.initState();
+    MangaDown.i.addListener(_onDown);
     _load();
+  }
+
+  @override
+  void dispose() {
+    MangaDown.i.removeListener(_onDown);
+    super.dispose();
+  }
+
+  /// 离线索引或下载进度变了，章节格子上的勾和进度条要跟着动。
+  void _onDown() {
+    if (!mounted) return;
+    setState(() {});
+    // 一批下完/取消时模块留了一句话，这里弹一次就清掉
+    final msg = MangaDown.i.lastDone;
+    if (msg == null) return;
+    MangaDown.i.clearLastDone();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) toastOf(context, msg);
+    });
   }
 
   Future<void> _load() async {
@@ -164,6 +191,7 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
           ),
         ],
       ),
+      bottomNavigationBar: _selOn && d != null ? _chapterBar(d) : null,
       body: _err != null
           ? EmptyView(
               icon: Icons.cloud_off,
@@ -477,7 +505,34 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
           const SizedBox(width: 4),
           Text('（${d.chapters.length} 话）',
               style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+          const SizedBox(width: 6),
+          if (MangaDown.i.offlineChapters(d.dir) > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: .14),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '离线 ${MangaDown.i.offlineChapters(d.dir)}',
+                style: TextStyle(fontSize: 10.5, color: cs.primary),
+              ),
+            ),
           const Spacer(),
+          if (MangaDown.i.supported &&
+              d.chapters.length > MangaDown.i.offlineChapters(d.dir))
+            TextButton.icon(
+              onPressed: _busy ? null : () => _downloadUnread(d),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              icon: const Icon(Icons.download_rounded, size: 15),
+              label: Text(
+                '下载未读（${d.chapters.length - MangaDown.i.offlineChapters(d.dir)}）',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
           TextButton.icon(
             onPressed: () => setState(() => _asc = !_asc),
             style: TextButton.styleFrom(
@@ -499,34 +554,253 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
     final i = d.chapters.indexOf(c);
     final here = c.dir == _posCh;
     final read = !here && _posIndex >= 0 && i < _posIndex;
+    final off = MangaDown.i.isChapterOffline(d.dir, c.dir);
+    final picked = _selCh.contains(c.dir);
     return Material(
-      color: here
-          ? cs.primaryContainer
-          : cs.surfaceContainerHighest
-              .withValues(alpha: read ? .28 : .6),
+      color: picked
+          ? cs.primary.withValues(alpha: .22)
+          : here
+              ? cs.primaryContainer
+              : cs.surfaceContainerHighest
+                  .withValues(alpha: read ? .28 : .6),
       borderRadius: BorderRadius.circular(6),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _open(i),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              c.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: here ? FontWeight.w600 : FontWeight.w400,
-                color: here
-                    ? cs.onPrimaryContainer
-                    : (read ? cs.outline : cs.onSurface),
+        onTap: () {
+          if (_selOn) {
+            setState(() {
+              if (!_selCh.remove(c.dir)) _selCh.add(c.dir);
+              if (_selCh.isEmpty) _selOn = false;
+            });
+            return;
+          }
+          _open(i);
+        },
+        onLongPress: _selOn || !MangaDown.i.supported
+            ? null
+            : () => setState(() {
+                  _selOn = true;
+                  _selCh
+                    ..clear()
+                    ..add(c.dir);
+                }),
+        child: Stack(
+          children: [
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  c.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: here || picked ? FontWeight.w600 : FontWeight.w400,
+                    color: picked
+                        ? cs.onSurface
+                        : here
+                            ? cs.onPrimaryContainer
+                            : (read ? cs.outline : cs.onSurface),
+                  ),
+                ),
               ),
             ),
+            // 下过的那几话右上角一个小勾：不占地方，斜眼就能扫到
+            if (off)
+              Positioned(
+                right: 3,
+                top: 3,
+                child: Icon(Icons.offline_pin,
+                    size: 11, color: cs.primary.withValues(alpha: .9)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------ 章节批量
+
+  List<MangaChapter> get _selChapters {
+    final d = _d;
+    if (d == null) return const [];
+    return [for (final c in d.chapters) if (_selCh.contains(c.dir)) c];
+  }
+
+  Widget _chapterBar(MangaDetail d) {
+    final cs = Theme.of(context).colorScheme;
+    final picked = _selChapters;
+    final off = picked
+        .where((c) => MangaDown.i.isChapterOffline(d.dir, c.dir))
+        .length;
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          border: Border(top: BorderSide(color: cs.outlineVariant, width: .5)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Row(
+          children: [
+            _barBtn(
+              icon: Icons.close,
+              label: '取消',
+              onTap: () => setState(() {
+                _selOn = false;
+                _selCh.clear();
+              }),
+            ),
+            _barBtn(
+              icon: Icons.download_rounded,
+              label: '下载 ${picked.length}',
+              onTap: _busy || picked.isEmpty ? null : () => _downloadChapters(d, picked),
+            ),
+            _barBtn(
+              icon: Icons.done_all,
+              label: '标已读',
+              onTap: _busy || picked.isEmpty ? null : () => _markReadChapters(d, picked),
+            ),
+            _barBtn(
+              icon: Icons.delete_outline,
+              label: '删离线${off > 0 ? ' $off' : ''}',
+              onTap: _busy || off == 0 ? null : () => _deleteChapters(d, picked),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _barBtn({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final on = onTap != null;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: on ? cs.primary : cs.outline),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: on ? cs.primary : cs.outline,
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _downloadChapters(MangaDetail d, List<MangaChapter> chs) async {
+    setState(() => _busy = true);
+    String msg;
+    try {
+      final r = await MangaDown.i.download(d, chs);
+      msg = r.error ??
+          (r.queued == 0 ? '这几话都已经离线了' : '排上 ${r.queued} 话');
+    } catch (e) {
+      msg = '$e';
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (!mounted) return;
+    setState(() {
+      _selOn = false;
+      _selCh.clear();
+    });
+    toastOf(context, msg);
+  }
+
+  Future<void> _downloadUnread(MangaDetail d) async {
+    final todo = [
+      for (final c in d.chapters)
+        if (!MangaDown.i.isChapterOffline(d.dir, c.dir)) c
+    ];
+    if (todo.isEmpty) return;
+    setState(() => _busy = true);
+    String msg;
+    try {
+      final r = await MangaDown.i.download(d, todo);
+      msg = r.error ?? '排上 ${r.queued} 话，去「传输」里能看见进度';
+    } catch (e) {
+      msg = '$e';
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (!mounted) return;
+    toastOf(context, msg);
+  }
+
+  Future<void> _markReadChapters(
+    MangaDetail d,
+    List<MangaChapter> chs,
+  ) async {
+    final top = chs.isEmpty ? null : chs.last;
+    setState(() => _busy = true);
+    try {
+      await MangaUserApi.markRead(
+        kind: 'local',
+        ref: d.dir,
+        title: d.title,
+        author: d.authors,
+        cover: d.cover,
+        chapter: top?.name ?? '',
+        chapterRef: top?.dir ?? '',
+        page: top?.pages ?? 0,
+        // 标已读 = 这话看完了，进度条按满画
+        total: top?.pages ?? 0,
+      );
+      if (!mounted) return;
+      setState(() {
+        _selOn = false;
+        _selCh.clear();
+      });
+      await _load();
+      if (!mounted) return;
+      toastOf(context, '${chs.length} 话标成已读');
+    } catch (e) {
+      if (mounted) toastOf(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _deleteChapters(
+    MangaDetail d,
+    List<MangaChapter> chs,
+  ) async {
+    final dirs = [
+      for (final c in chs)
+        if (MangaDown.i.isChapterOffline(d.dir, c.dir)) c.dir
+    ];
+    if (dirs.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await MangaDown.i.deleteChapters(d.dir, dirs);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (!mounted) return;
+    setState(() {
+      _selOn = false;
+      _selCh.clear();
+    });
+    toastOf(context, '删掉 ${dirs.length} 话的离线文件');
   }
 }

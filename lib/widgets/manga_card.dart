@@ -19,6 +19,18 @@ class MangaCoverCard extends StatelessWidget {
   final String coverUrl;
   final VoidCallback onTap;
 
+  /// 长按。书架用它进多选（批量下载、标已读、删离线）。
+  final VoidCallback? onLongPress;
+
+  /// 左下角那个小标：离线下到第几话、或者正在下多少。
+  final String badge;
+
+  /// 正在下的进度（0..1）。空着就不画那根条。
+  final double? progress;
+
+  /// 被勾上了（多选模式）。
+  final bool selected;
+
   /// 换封面纹理用。CanvasKit 会把不在屏幕上的图回收，
   /// 而 ImageCache 还记着「已解码」，回来就是一整块黑。
   final String imageKey;
@@ -37,6 +49,10 @@ class MangaCoverCard extends StatelessWidget {
     this.highlight = false,
     required this.coverUrl,
     required this.onTap,
+    this.onLongPress,
+    this.badge = '',
+    this.progress,
+    this.selected = false,
     this.imageKey = '',
     this.bustCache = false,
     this.hasNew = false,
@@ -50,6 +66,7 @@ class MangaCoverCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -76,6 +93,61 @@ class MangaCoverCard extends StatelessWidget {
                           ),
                   ),
                 ),
+                if (badge.isNotEmpty)
+                  Positioned(
+                    left: 4,
+                    top: 4,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withValues(alpha: .92),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        badge,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          height: 1.1,
+                          color: cs.onPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (progress != null)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(10),
+                      ),
+                      child: LinearProgressIndicator(
+                        value: progress! <= 0 ? null : progress,
+                        minHeight: 3,
+                      ),
+                    ),
+                  ),
+                if (selected)
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: cs.primary.withValues(alpha: .22),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: cs.primary, width: 2),
+                      ),
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(Icons.check_circle,
+                              size: 18, color: cs.primary),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (hasNew)
                   Positioned(
                     top: 6,

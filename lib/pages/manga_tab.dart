@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../manga.dart';
+import '../manga_download.dart';
 import '../manga_user.dart';
 import '../widgets/manga_card.dart';
 import '../widgets/retry_image.dart';
 import '../widgets/page_width.dart';
+import '../widgets/toast.dart';
 import 'manga_detail_page.dart';
 import 'manga_rank_page.dart';
 import 'manga_reader_page.dart';
@@ -65,6 +67,13 @@ class _MangaTabState extends State<MangaTab>
   /// 状态筛选，空串 = 全部。
   String _status = '';
 
+  /// 多选：书架上一勾几本，底栏出批量操作。键是书目录。
+  final Set<String> _sel = <String>{};
+  bool _selecting = false;
+
+  /// 批量任务在跑（下详情、标已读），挡住重复点。
+  bool _batchBusy = false;
+
   /// 书库内搜索词，空串 = 不筛。搜书名、作者、标签。
   String _q = '';
   bool _searchOpen = false;
@@ -89,6 +98,13 @@ class _MangaTabState extends State<MangaTab>
     unawaited(_loadRecs());
     unawaited(_loadResume());
     mangaBump.addListener(_onBump);
+    MangaDown.i.addListener(_onDown);
+  }
+
+  /// 离线索引或下载进度变了，书架上的角标和进度条要跟着动。
+  void _onDown() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
@@ -98,6 +114,7 @@ class _MangaTabState extends State<MangaTab>
     _searchDebounce?.cancel();
     _searchCtl.dispose();
     mangaBump.removeListener(_onBump);
+    MangaDown.i.removeListener(_onDown);
     super.dispose();
   }
 
@@ -329,13 +346,24 @@ class _MangaTabState extends State<MangaTab>
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          onPressed: widget.onMenu,
-          icon: const Icon(Icons.menu),
-          tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-        ),
+        leading: _selecting
+            ? IconButton(
+                onPressed: _exitSelect,
+                icon: const Icon(Icons.close),
+                tooltip: '退出多选',
+              )
+            : IconButton(
+                onPressed: widget.onMenu,
+                icon: const Icon(Icons.menu),
+                tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+              ),
         titleSpacing: 0,
-        title: _searchOpen
+        title: _selecting
+            ? Text(
+                '已选 ${_sel.length} 本',
+                style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              )
+            : _searchOpen
             ? TextField(
                 controller: _searchCtl,
                 autofocus: true,
@@ -353,7 +381,19 @@ class _MangaTabState extends State<MangaTab>
                 '漫画',
                 style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
-        actions: _searchOpen
+        actions: _selecting
+            ? [
+                IconButton(
+                  onPressed: _toggleSelectAll,
+                  icon: Icon(
+                    _sel.length == _books.length && _books.isNotEmpty
+                        ? Icons.deselect
+                        : Icons.select_all,
+                  ),
+                  tooltip: '全选本页',
+                ),
+              ]
+            : _searchOpen
             ? [
                 IconButton(
                   onPressed: _closeSearch,
@@ -383,7 +423,224 @@ class _MangaTabState extends State<MangaTab>
               : _scrollBody(cs),
         ),
       ),
+      bottomNavigationBar: _selecting ? _selectBar(cs) : null,
     );
+  }
+
+  // ------------------------------------------------------------ 多选批量
+
+  void _enterSelect(MangaBook b) {
+    setState(() {
+      _selecting = true;
+      _sel
+        ..clear()
+        ..add(b.dir);
+    });
+  }
+
+  void _exitSelect() {
+    if (_sel.isEmpty && !_selecting) return;
+    setState(() {
+      _selecting = false;
+      _sel.clear();
+    });
+  }
+
+  void _toggleSelect(MangaBook b) {
+    setState(() {
+      if (!_sel.remove(b.dir)) _sel.add(b.dir);
+      if (_sel.isEmpty) _selecting = false;
+    });
+  }
+
+  void _toggleSelectAll() {
+    final all = _books.length;
+    setState(() {
+      if (_sel.length == all) {
+        _sel.clear();
+        _selecting = false;
+      } else {
+        _sel
+          ..clear()
+          ..addAll(_books.map((b) => b.dir));
+      }
+    });
+  }
+
+  List<MangaBook> get _selBooks =>
+      [for (final b in _books) if (_sel.contains(b.dir)) b];
+
+  Widget _selectBar(ColorScheme cs) {
+    final picked = _selBooks;
+    final offline = picked.where((b) => MangaDown.i.offlineChapters(b.dir) > 0);
+    final canDl = MangaDown.i.supported;
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          border: Border(top: BorderSide(color: cs.outlineVariant, width: .5)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Row(
+          children: [
+            _barBtn(
+              icon: Icons.download_rounded,
+              label: '下载',
+              onTap: canDl && !_batchBusy && picked.isNotEmpty ? _batchDownload : null,
+            ),
+            _barBtn(
+              icon: Icons.done_all,
+              label: '标已读',
+              onTap: !_batchBusy && picked.isNotEmpty ? _batchMarkRead : null,
+            ),
+            _barBtn(
+              icon: Icons.delete_outline,
+              label: '删离线${offline.isEmpty ? '' : ' ${offline.length}'}',
+              onTap: offline.isNotEmpty && !_batchBusy ? _batchDeleteOffline : null,
+            ),
+            _barBtn(
+              icon: Icons.close,
+              label: '取消',
+              onTap: _batchBusy ? null : _exitSelect,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _barBtn({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final on = onTap != null;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: on ? cs.primary : cs.outline),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: on ? cs.primary : cs.outline,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 批量下载：一本一本取详情（章节列表只在详情里），排进下载队列。
+  ///
+  /// 只下没下过的；中途取消由下载中心那边管。空间不够时先拒绝，
+  /// 别等下到一半才报错。
+  Future<void> _batchDownload() async {
+    final picked = _selBooks;
+    if (picked.isEmpty) return;
+    setState(() => _batchBusy = true);
+    var queued = 0;
+    var skipped = 0;
+    String? err;
+    try {
+      for (final b in picked) {
+        try {
+          final d = await MangaApi.detail(b.dir);
+          final r = await MangaDown.i.download(d, d.chapters);
+          queued += r.queued;
+          skipped += r.skipped;
+          if (r.error != null) {
+            err = r.error;
+            break;
+          }
+        } catch (e) {
+          err = '$e';
+          break;
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _batchBusy = false);
+    }
+    if (!mounted) return;
+    _exitSelect();
+    toastOf(
+      context,
+      err ??
+          (queued == 0
+              ? '这些书都已经离线了'
+              : '排上 $queued 话${skipped > 0 ? '，$skipped 话早就下过' : ''}'),
+    );
+  }
+
+  Future<void> _batchMarkRead() async {
+    final picked = _selBooks;
+    if (picked.isEmpty) return;
+    setState(() => _batchBusy = true);
+    try {
+      final n = await MangaUserApi.markReadBatch(
+        [for (final b in picked) ReadRef.fromBook(b)],
+        books: picked,
+      );
+      if (!mounted) return;
+      _exitSelect();
+      await _loadResume();
+      if (!mounted) return;
+      toastOf(context, '$n 本标成已读');
+    } catch (e) {
+      if (mounted) toastOf(context, e);
+    } finally {
+      if (mounted) setState(() => _batchBusy = false);
+    }
+  }
+
+  Future<void> _batchDeleteOffline() async {
+    final picked = [
+      for (final b in _selBooks)
+        if (MangaDown.i.offlineChapters(b.dir) > 0) b
+    ];
+    if (picked.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('删掉 ${picked.length} 本的离线文件？'),
+        content: const Text('只删手机里下好的那几话，书本身还在服务器上，随时能再下。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(Lc.current.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _batchBusy = true);
+    try {
+      for (final b in picked) {
+        await MangaDown.i.deleteBook(b.dir);
+      }
+    } finally {
+      if (mounted) setState(() => _batchBusy = false);
+    }
+    if (!mounted) return;
+    _exitSelect();
+    toastOf(context, '删掉了 ${picked.length} 本的离线文件');
   }
 
   /// 一屏从上到下：推荐、书库、加载更多。
@@ -809,13 +1066,24 @@ class _MangaTabState extends State<MangaTab>
     final sub = dupe
         ? [if (author.isNotEmpty) author, '${b.chapterCount} 话'].join(' · ')
         : (p != null ? p.label : '${b.chapterCount} 话');
+    final job = MangaDown.i.jobOf(b.dir);
+    final off = MangaDown.i.offlineChapters(b.dir);
+    final badge = job != null
+        ? '${(job.progress * 100).round()}%'
+        : (off > 0
+            ? (MangaDown.i.bookFullyOffline(b.dir) ? '离线' : '离线 $off')
+            : '');
     return MangaCoverCard(
       title: b.title,
       sub: sub,
       highlight: !dupe && p != null,
       coverUrl: b.coverThumb,
       imageKey: '$_epoch',
-      onTap: () => _open(b),
+      badge: badge,
+      progress: job?.progress,
+      selected: _selecting && _sel.contains(b.dir),
+      onTap: () => _selecting ? _toggleSelect(b) : _open(b),
+      onLongPress: _selecting ? null : () => _enterSelect(b),
     );
   }
 }
