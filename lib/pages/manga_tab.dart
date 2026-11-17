@@ -395,6 +395,12 @@ class _MangaTabState extends State<MangaTab>
     final showRecs = recs.isNotEmpty && _q.isEmpty && !_searchOpen;
     final resume = _resume ?? const <MangaHist>[];
     final showResume = resume.isNotEmpty && _q.isEmpty && !_searchOpen;
+    // 同名不等于重复：源站上有不同的作品撞标题（作者、话数都不同）。
+    // 撞了就把作者顶到小字里，读者才分得清点的是哪一本。
+    final dupTitles = <String, int>{};
+    for (final b in _books) {
+      dupTitles[b.title] = (dupTitles[b.title] ?? 0) + 1;
+    }
     return CustomScrollView(
       controller: _sc,
       physics: const AlwaysScrollableScrollPhysics(),
@@ -415,7 +421,7 @@ class _MangaTabState extends State<MangaTab>
                 mainAxisSpacing: 16,
               ),
               delegate: SliverChildBuilderDelegate(
-                (_, i) => _cell(_books[i]),
+                (_, i) => _cell(_books[i], dupTitles),
                 childCount: _books.length,
               ),
             ),
@@ -601,7 +607,9 @@ class _MangaTabState extends State<MangaTab>
       if (h.chapter.isNotEmpty) h.chapter,
       if (pct != null) '$pct%',
     ].join(' · ');
-    final cover = url(h.cover);
+    final cover = h.ref.isEmpty
+        ? url(h.cover)
+        : url('/api/manga/thumb/${Uri.encodeComponent(h.ref)}');
     return SizedBox(
       width: 220,
       child: InkWell(
@@ -755,14 +763,14 @@ class _MangaTabState extends State<MangaTab>
               borderRadius: BorderRadius.circular(10),
               child: SizedBox(
                 height: 132,
-                child: b.coverUrl.isEmpty
+                child: b.coverThumb.isEmpty
                     ? Container(
                         color: cs.surfaceContainerHighest,
                         child: Icon(Icons.menu_book, color: cs.outline),
                       )
                     : RetryImage(
-                        key: ValueKey('${b.coverUrl}#$_epoch'),
-                        url: b.coverUrl,
+                        key: ValueKey('${b.coverThumb}#$_epoch'),
+                        url: b.coverThumb,
                         fit: BoxFit.cover,
                         memCacheWidth: 260,
                         probeSize: false,
@@ -796,13 +804,18 @@ class _MangaTabState extends State<MangaTab>
     setState(() => _epoch++);
   }
 
-  Widget _cell(MangaBook b) {
+  Widget _cell(MangaBook b, Map<String, int> dupTitles) {
     final p = b.progress;
+    final dupe = (dupTitles[b.title] ?? 0) > 1;
+    final author = b.authors.split(',').first.trim();
+    final sub = dupe
+        ? [if (author.isNotEmpty) author, '${b.chapterCount} 话'].join(' · ')
+        : (p != null ? p.label : '${b.chapterCount} 话');
     return MangaCoverCard(
       title: b.title,
-      sub: p != null ? p.label : '${b.chapterCount} 话',
-      highlight: p != null,
-      coverUrl: b.coverUrl,
+      sub: sub,
+      highlight: !dupe && p != null,
+      coverUrl: b.coverThumb,
       imageKey: '$_epoch',
       onTap: () => _open(b),
     );

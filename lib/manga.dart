@@ -67,6 +67,9 @@ class MangaBook {
   final String status;
   final String desc;
   final String cover;
+
+  /// 列表用的小封面（240px）。后端还没转就是空串，回落 [coverUrl]。
+  final String thumb;
   final int chapterCount;
   final String lastChapter;
 
@@ -86,6 +89,7 @@ class MangaBook {
     required this.status,
     required this.desc,
     required this.cover,
+    this.thumb = '',
     required this.chapterCount,
     required this.lastChapter,
     this.hot = 0,
@@ -101,6 +105,7 @@ class MangaBook {
         status: '${j['status'] ?? ''}',
         desc: '${j['desc'] ?? ''}',
         cover: '${j['cover'] ?? ''}',
+        thumb: '${j['thumb'] ?? ''}',
         chapterCount: (j['chapter_count'] as num?)?.toInt() ?? 0,
         lastChapter: '${j['last_chapter'] ?? ''}',
         hot: (j['hot'] as num?)?.toInt() ?? 0,
@@ -109,6 +114,12 @@ class MangaBook {
 
   /// 接口返回的是 /manga/... 相对地址，补上站点前缀才能给 Image 用。
   String get coverUrl => url(cover);
+
+  /// 网格里用这张。没有缩略图就退回原图，不裂图。
+  String get coverThumb {
+    final t = url(thumb);
+    return t.isEmpty ? coverUrl : t;
+  }
 }
 
 /// 一页书架数据：这一页的书 + 一共有多少本（用来判断还有没有下一页）。
