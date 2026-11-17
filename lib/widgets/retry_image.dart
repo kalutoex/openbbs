@@ -31,6 +31,14 @@ class RetryImage extends StatefulWidget {
   /// 给它一个占位高度，图回来之前列表不会缩成一条。
   final double? placeholderHeight;
 
+  /// 转圈的颜色。默认跟主题走；黑底的大图查看器里要传白色，
+  /// 不然深色主题下那圈几乎看不见。
+  final Color? indicatorColor;
+
+  /// 彻底放弃（五次都没成）之后换成什么。传了就用它，不传就还是
+  /// 「点击重试」那块灰底。个人主页封面这种宁可退回渐变色也不想要一块灰。
+  final Widget? errorPlaceholder;
+
   const RetryImage({
     super.key,
     required this.url,
@@ -40,6 +48,8 @@ class RetryImage extends StatefulWidget {
     this.probeSize = true,
     this.bustCache = false,
     this.placeholderHeight,
+    this.indicatorColor,
+    this.errorPlaceholder,
   });
 
   @override
@@ -181,13 +191,17 @@ class RetryImageState extends State<RetryImage> {
       placeholder: (_, _) =>
           _box(cs, loading: true, h: widget.placeholderHeight),
       // 还在自动重试的时候继续转圈，别让用户以为已经放弃了。
-      errorWidget: (_, _, _) => _gaveUp
-          ? GestureDetector(
-              onTap: _retry,
-              behavior: HitTestBehavior.opaque,
-              child: _box(cs, loading: false),
-            )
-          : _box(cs, loading: true, h: widget.placeholderHeight),
+      errorWidget: (_, _, _) {
+        if (!_gaveUp) {
+          return _box(cs, loading: true, h: widget.placeholderHeight);
+        }
+        if (widget.errorPlaceholder != null) return widget.errorPlaceholder!;
+        return GestureDetector(
+          onTap: _retry,
+          behavior: HitTestBehavior.opaque,
+          child: _box(cs, loading: false),
+        );
+      },
     );
   }
 
@@ -198,10 +212,13 @@ class RetryImageState extends State<RetryImage> {
     color: cs.surfaceContainerHighest,
     alignment: Alignment.center,
     child: loading
-        ? const SizedBox(
+        ? SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(strokeWidth: 1.5),
+            child: CircularProgressIndicator(
+              strokeWidth: 1.5,
+              color: widget.indicatorColor,
+            ),
           )
         : Column(
             mainAxisSize: MainAxisSize.min,

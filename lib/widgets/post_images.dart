@@ -450,20 +450,13 @@ class _ZoomableImageState extends State<_ZoomableImage> {
             minScale: 1,
             maxScale: 4,
             child: Center(
-              child: CachedNetworkImage(
-                cacheManager: ImgCache.manager,
-                fadeInDuration: const Duration(milliseconds: 180),
-                imageUrl: widget.url,
+              child: RetryImage(
+                url: widget.url,
                 fit: BoxFit.contain,
                 memCacheWidth: widget.cacheWidth,
-                placeholder: (_, _) => const Center(
-                  child: CircularProgressIndicator(color: Colors.white54),
-                ),
-                errorWidget: (_, _, _) => const Icon(
-                  Icons.broken_image_outlined,
-                  color: Colors.white38,
-                  size: 40,
-                ),
+                // 查看器只认这一张，量尺寸没意义；黑底上转圈得用白的。
+                probeSize: false,
+                indicatorColor: Colors.white54,
               ),
             ),
           ),

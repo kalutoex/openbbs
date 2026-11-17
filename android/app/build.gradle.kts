@@ -57,9 +57,14 @@ android {
     // 那些目录里没有 libapp.so / libflutter.so，64 位设备误装会直接崩。
     // 用 -PonlyArm32 打，versionCode 仍是 pubspec 里的，不会像 split-per-abi 那样被加 1000。
     packaging {
-        if (project.hasProperty("onlyArm32")) {
-            jniLibs {
+        jniLibs {
+            // 插件自带的 .so 会把三种 ABI 目录都建出来，里面多数只有一个 libdartjni.so。
+            // 打 64 位包时留着 x86_64、armeabi-v7a 那两份纯属白占，装机也用不到；
+            // 打 32 位包（-PonlyArm32）则反过来只留 armeabi-v7a。
+            if (project.hasProperty("onlyArm32")) {
                 excludes += setOf("lib/arm64-v8a/**", "lib/x86_64/**", "lib/x86/**")
+            } else {
+                excludes += setOf("lib/x86/**", "lib/x86_64/**", "lib/armeabi-v7a/**")
             }
         }
     }

@@ -22,6 +22,7 @@ import 'gallery_picker_page.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/retry_image.dart';
 import '../widgets/toast.dart';
 
 /// 用户主页：封面 + 资料区 + 帖子列表，结构照着 X 来。
@@ -314,10 +315,12 @@ class _UserPageState extends State<UserPage> {
           children: [
             Positioned.fill(
               child: has
-                  ? Image.network(
-                      Api.img(cover),
+                  ? RetryImage(
+                      url: Api.img(cover),
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _gradient(cs),
+                      probeSize: false,
+                      // 封面加载不出来宁可退回渐变色，不要一块灰。
+                      errorPlaceholder: _gradient(cs),
                     )
                   : _gradient(cs),
             ),

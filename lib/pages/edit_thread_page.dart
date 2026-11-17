@@ -4,18 +4,15 @@ import '../widgets/page_width.dart';
 import '../widgets/app_sheet.dart';
 import '../widgets/app_card.dart';
 
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart'
-    show ImageRenderMethodForWeb;
 import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../attach.dart';
-import '../img_cache.dart';
 import '../widgets/file_card.dart';
 
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
+import '../widgets/retry_image.dart';
 import '../widgets/toast.dart';
 
 /// 改自己的帖子：标题、正文、配图。
@@ -376,16 +373,11 @@ class _EditThreadPageState extends State<EditThreadPage> {
       itemBuilder: (_, i) {
         Widget img;
         if (i < _remote.length) {
-          img = CachedNetworkImage(
-            cacheManager: ImgCache.manager,
-            imageRenderMethodForWeb: ImageRenderMethodForWeb.HttpGet,
-            imageUrl: Api.thumb(_remote[i], 320),
+          img = RetryImage(
+            url: Api.thumb(_remote[i], 320),
             fit: BoxFit.cover,
-            placeholder: (_, _) => Container(color: cs.surfaceContainerHighest),
-            errorWidget: (_, _, _) => Container(
-              color: cs.surfaceContainerHighest,
-              child: Icon(Icons.broken_image_outlined, color: cs.outline),
-            ),
+            memCacheWidth: 320,
+            probeSize: false,
           );
         } else {
           img = Image.memory(_added[i - _remote.length], fit: BoxFit.cover);
