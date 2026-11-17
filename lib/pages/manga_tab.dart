@@ -11,6 +11,7 @@ import '../widgets/retry_image.dart';
 import '../widgets/page_width.dart';
 import '../widgets/toast.dart';
 import 'manga_detail_page.dart';
+import 'manga_stats_page.dart';
 import 'manga_rank_page.dart';
 import 'manga_reader_page.dart';
 
@@ -426,6 +427,13 @@ class _MangaTabState extends State<MangaTab>
                 ),
               ]
             : [
+                IconButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MangaStatsPage()),
+                  ),
+                  icon: const Icon(Icons.insights),
+                  tooltip: '阅读统计',
+                ),
                 IconButton(
                   onPressed: _openSearch,
                   icon: const Icon(Icons.search),

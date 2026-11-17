@@ -10,8 +10,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../img_size_store.dart';
 import '../manga.dart';
+import '../manga_bookmark.dart';
 import '../manga_download.dart';
 import '../manga_image.dart';
+import '../manga_spread.dart';
+import '../manga_stats.dart';
 import '../manga_user.dart';
 import '../read_pos.dart';
 import '../store.dart';
@@ -92,6 +95,24 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   /// 双页拆分：跨页大图拆成左右两半，各占一屏。
   bool _split = false;
 
+  /// 双页并排：横屏时一屏摆两页。和拆页互斥（拆完再并排就是四块）。
+  bool _spread = false;
+
+  /// 现在是不是横屏。双页只在横屏生效，竖屏拿两页挤一屏，字比蚂蚁还小。
+  bool _wide = false;
+
+  /// 这本书的书签，最新的在前。
+  List<MangaBookmark> _bms = const [];
+
+  /// 这一趟读了多久。每 60 秒报一次，退出时把零头补上。
+  final Stopwatch _readSw = Stopwatch();
+  Timer? _statTimer;
+  int _statFlushed = 0;
+
+  /// 上一次记进统计的那一页，同一页翻来翻去只算一次。
+  int _countedPage = -1;
+  String _countedCh = '';
+
   /// 音量键翻页。
   bool _volume = true;
 
@@ -142,8 +163,44 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     _pc = PageController();
     _initKeys();
     _loadPref();
+    _startStats();
     _load(_ci, resume: true);
   }
+
+  /// 横竖屏会变（横屏才双页），每帧都问一遍 MediaQuery 不贵，但状态得落在字段上，
+  /// 因为翻页、跳页这些地方不在 build 里，拿不到 context。
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final sz = MediaQuery.sizeOf(context);
+    _wide = sz.width > sz.height;
+  }
+
+  /// 阅读统计只管时长：进来开始记，每 60 秒落一次盘，
+  /// 这样中途被杀进程最多丢一分钟。翻页和开话各在自己的口子上记。
+  void _startStats() {
+    _readSw.start();
+    _statTimer?.cancel();
+    _statTimer = Timer.periodic(
+      const Duration(seconds: 60),
+      (_) => _flushStats(),
+    );
+  }
+
+  void _flushStats() {
+    final sec = _readSw.elapsed.inSeconds;
+    final delta = sec - _statFlushed;
+    if (delta <= 0) return;
+    _statFlushed = sec;
+    unawaited(MangaStats.addSeconds(delta).catchError((_) {}));
+  }
+
+  /// 一屏几页。条漫、拆页都回落到一页。
+  int get _per => MangaSpread.per(
+    spread: _spread && _wide,
+    vertical: _vertical,
+    split: _split,
+  );
 
   /// 音量键翻页：键事件在 Activity 那层就被吃掉了，走不到 Flutter 的键盘
   /// 事件，所以只能开个通道把方向传上来。
@@ -197,6 +254,7 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
       final tr = await MangaPref.flag('tap_reverse', false);
       final si = await MangaPref.flag('show_info', false);
       final sp = await MangaPref.flag('split_spread', false);
+      final spd = await MangaPref.flag('spread_pages', false);
       final vk = await MangaPref.flag('volume_keys', true);
       final hs = await MangaPref.flag('hide_status', false);
       if (!mounted) return;
@@ -214,6 +272,7 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
         _tapReverse = tr;
         _showInfo = si;
         _split = sp;
+        _spread = spd;
         _volume = vk;
         _hideStatus = hs;
       });
@@ -238,6 +297,9 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
 
   @override
   void dispose() {
+    _flushStats();
+    _readSw.stop();
+    _statTimer?.cancel();
     _reportTimer?.cancel();
     _endMute?.cancel();
     _clock?.cancel();
@@ -276,8 +338,11 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
       var local = const <String, String>{};
       if (widget.loader == null) {
         await MangaDown.i.init();
-        final paths =
-            MangaDown.i.localPages(widget.detail.dir, ch.dir, pages.length);
+        final paths = MangaDown.i.localPages(
+          widget.detail.dir,
+          ch.dir,
+          pages.length,
+        );
         final m = <String, String>{};
         for (var i = 0; i < pages.length && i < paths.length; i++) {
           final p = paths[i];
@@ -292,10 +357,19 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
         _loading = false;
         _page = 0;
         _nearEnd = false;
+        _countedPage = -1;
+        _countedCh = '';
       });
       if (_pc != null && _pc!.hasClients) _pc!.jumpToPage(0);
       if (_sc.hasClients) _sc.jumpTo(0);
       _sendPos(force: true);
+      unawaited(_reloadBms());
+      unawaited(
+        MangaStats.addChapter(
+          widget.detail.dir,
+          widget.detail.title,
+        ).catchError((_) {}),
+      );
       if (resume) await _restore();
     } catch (e) {
       if (!mounted) return;
@@ -304,6 +378,52 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
         _err = '$e';
       });
     }
+  }
+
+  Future<void> _reloadBms() async {
+    try {
+      final l = await MangaBm.list(widget.detail.dir);
+      if (mounted) setState(() => _bms = l);
+    } catch (_) {
+      // 书签读不出来不该影响看书。
+    }
+  }
+
+  /// 当前这一页有没有书签。
+  bool get _hasBm {
+    final ch = _ch;
+    if (ch == null) return false;
+    return _bms.any((b) => b.isAt(ch.dir, _page));
+  }
+
+  /// 点一下：这一页有书签就删，没有就加。
+  Future<void> _toggleBm() async {
+    final ch = _ch;
+    if (ch == null) return;
+    final page = _page;
+    final had = _hasBm;
+    final l = await MangaBm.toggle(
+      dir: widget.detail.dir,
+      chDir: ch.dir,
+      chName: ch.name,
+      page: page,
+    );
+    if (!mounted) return;
+    setState(() => _bms = l);
+    _toast(had ? '书签已删除' : '已加书签：第 ${page + 1} 页');
+  }
+
+  void _toast(String s) {
+    final m = ScaffoldMessenger.maybeOf(context);
+    m?.hideCurrentSnackBar();
+    m?.showSnackBar(
+      SnackBar(
+        content: Text(s),
+        duration: const Duration(milliseconds: 1200),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.white24,
+      ),
+    );
   }
 
   /// 上次读到第几话第几页。只有第一次进来才用得上。
@@ -355,22 +475,24 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     if (!_vertical) {
       final pc = _pc;
       if (pc == null) return;
+      // 页码是单页的，PageView 走的是屏号：双页时第 12 页在第 6 屏。
+      final screen = MangaSpread.screenOf(target, _per);
       if (!pc.hasClients) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _pc != null && _pc!.hasClients) {
-            _pc!.jumpToPage(target);
+            _pc!.jumpToPage(screen);
           }
         });
         return;
       }
       if (animate) {
         await pc.animateToPage(
-          target,
+          screen,
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
         );
       } else {
-        pc.jumpToPage(target);
+        pc.jumpToPage(screen);
       }
       return;
     }
@@ -424,6 +546,105 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     }
   }
 
+  /// 书签列表。点一条跳过去，右边叉掉。
+  Future<void> _openBms() async {
+    await _reloadBms();
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF2B2B2B),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const _SheetTitle('书签'),
+              if (_bms.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  child: Text(
+                    '还没有书签。读到哪里想记住，点底栏那个书签图标。',
+                    style: TextStyle(color: Colors.white60, fontSize: 13),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _bms.length,
+                    itemBuilder: (_, i) {
+                      final b = _bms[i];
+                      final here = b.chDir == _ch?.dir && b.page == _page;
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          b.chName.isEmpty ? '未命名话' : b.chName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: here ? Colors.amber : Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '第 ${b.page + 1} 页',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.white38,
+                          ),
+                          tooltip: '删除',
+                          onPressed: () async {
+                            final l = await MangaBm.remove(
+                              dir: widget.detail.dir,
+                              chDir: b.chDir,
+                              page: b.page,
+                            );
+                            if (!mounted) return;
+                            setState(() => _bms = l);
+                            setSheet(() {});
+                          },
+                        ),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          unawaited(_goBm(b));
+                        },
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 跳到某条书签：不在这一话就先把那一话取回来。
+  Future<void> _goBm(MangaBookmark b) async {
+    final i = _chs.indexWhere((c) => c.dir == b.chDir);
+    if (i < 0) {
+      _toast('这一话已经不在目录里了');
+      return;
+    }
+    if (i != _ci) {
+      await _load(i);
+      if (!mounted) return;
+    }
+    await _jumpToPage(b.page);
+  }
+
   /// 点页码跳页。只收数字，越界就落在两头。
   Future<void> _askJump() async {
     final ctl = TextEditingController(text: '${_page + 1}');
@@ -459,7 +680,10 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   bool get _atEnd {
     if (_loading || _err != null || _pages.isEmpty) return false;
     if (DateTime.now().millisecondsSinceEpoch < _endMutedUntil) return false;
-    return _vertical ? _nearEnd : _page >= _units.length - 1;
+    if (_vertical) return _nearEnd;
+    final per = _per;
+    final last = MangaSpread.screens(_units.length, per) - 1;
+    return MangaSpread.screenOf(_page, per) >= last;
   }
 
   /// 读完一话点「下一话」：有下一话就翻，没有就退回详情页。
@@ -517,13 +741,17 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     );
   }
 
+  /// 翻到第几屏。[i] 是屏号，页码要换算：双页时第 6 屏是第 13 页。
   void _onPage(int i) {
-    setState(() => _page = i);
-    _save(i);
-    // 读到本话最后一页时把下一页预热上，翻过去不用等。
+    final page = MangaSpread.pageOf(i, _per).clamp(0, _units.length - 1);
+    setState(() => _page = page);
+    _save(page);
+    _countPage(page);
+    // 翻到这一屏的最后一页时把下一页预热上，翻过去不用等。
     final units = _units;
-    if (i + 1 < units.length) {
-      final next = units[i + 1].url;
+    final nextIdx = page + _per;
+    if (nextIdx < units.length) {
+      final next = units[nextIdx].url;
       final lp = _local[next];
       final prov = lp != null ? mangaFileProvider(lp) : null;
       if (prov != null) {
@@ -537,6 +765,20 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
         );
       }
     }
+  }
+
+  void _countPage(int page) {
+    final ch = _ch;
+    if (ch == null) return;
+    if (_countedCh == ch.dir && _countedPage == page) return;
+    _countedCh = ch.dir;
+    _countedPage = page;
+    unawaited(
+      MangaStats.addPage(
+        widget.detail.dir,
+        widget.detail.title,
+      ).catchError((_) {}),
+    );
   }
 
   void _gotoChapter(int d) {
@@ -753,14 +995,61 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
                   ),
                 ),
                 _sheetRow(
+                  '双页并排',
+                  sub: _wide ? '一屏两页，横屏才好读' : '横过来才生效，竖屏仍是一页',
+                  trailing: Switch(
+                    value: _spread,
+                    onChanged: (v) {
+                      final keep = _page;
+                      upd(() {
+                        _spread = v;
+                        // 并排和拆页互斥：拆完再并排就是四块。
+                        if (v) _split = false;
+                      });
+                      unawaited(MangaPref.setFlag('spread_pages', v));
+                      if (v) {
+                        unawaited(MangaPref.setFlag('split_spread', false));
+                      }
+                      // 屏号变了，页码带过去，别弹回第一屏。
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) unawaited(_jumpToPage(keep));
+                      });
+                    },
+                  ),
+                ),
+                _sheetRow(
                   '双页拆分',
                   sub: '跨页大图拆成左右两屏',
                   trailing: Switch(
                     value: _split,
                     onChanged: (v) {
-                      upd(() => _split = v);
+                      final keep = _page;
+                      upd(() {
+                        _split = v;
+                        if (v) _spread = false;
+                      });
                       unawaited(MangaPref.setFlag('split_spread', v));
+                      if (v) {
+                        unawaited(MangaPref.setFlag('spread_pages', false));
+                      }
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) unawaited(_jumpToPage(keep));
+                      });
                     },
+                  ),
+                ),
+                _sheetRow(
+                  '书签',
+                  sub: '${_bms.length} 条',
+                  trailing: TextButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      unawaited(_openBms());
+                    },
+                    child: const Text(
+                      '查看',
+                      style: TextStyle(color: Colors.white70),
+                    ),
                   ),
                 ),
                 // 网页版和 iOS 上没有音量键这条通道，不摆这个开关。
@@ -797,8 +1086,11 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
                 const _SheetTitle('亮度'),
                 Row(
                   children: [
-                    const Icon(Icons.brightness_low,
-                        size: 16, color: Colors.white70),
+                    const Icon(
+                      Icons.brightness_low,
+                      size: 16,
+                      color: Colors.white70,
+                    ),
                     Expanded(
                       child: Slider(
                         value: _bright,
@@ -808,13 +1100,15 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
                         inactiveColor: Colors.white24,
                         onChanged: (v) => upd(() => _bright = v),
                         // 拖动时每帧都写盘没必要，松手再存。
-                        onChangeEnd: (v) => unawaited(
-                          MangaPref.setBrightness(v),
-                        ),
+                        onChangeEnd: (v) =>
+                            unawaited(MangaPref.setBrightness(v)),
                       ),
                     ),
-                    const Icon(Icons.brightness_high,
-                        size: 16, color: Colors.white70),
+                    const Icon(
+                      Icons.brightness_high,
+                      size: 16,
+                      color: Colors.white70,
+                    ),
                   ],
                 ),
                 if (_vertical) ...[
@@ -901,7 +1195,11 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     );
   }
 
-  Widget _layoutChip(String label, TapLayout v, void Function(VoidCallback) upd) {
+  Widget _layoutChip(
+    String label,
+    TapLayout v,
+    void Function(VoidCallback) upd,
+  ) {
     return _choice(
       label,
       selected: _tapLayout == v,
@@ -913,7 +1211,11 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     );
   }
 
-  Widget _choice(String label, {required bool selected, required VoidCallback onTap}) {
+  Widget _choice(
+    String label, {
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
     return choiceChipBox(label, selected: selected, onTap: onTap);
   }
 
@@ -988,6 +1290,17 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
                 onPressed: _ci > 0 ? () => _gotoChapter(-1) : null,
                 child: const Text('上一话', style: TextStyle(color: Colors.white)),
               ),
+              IconButton(
+                onPressed: _pages.isEmpty ? null : _toggleBm,
+                onLongPress: _openBms,
+                visualDensity: VisualDensity.compact,
+                iconSize: 20,
+                icon: Icon(
+                  _hasBm ? Icons.bookmark : Icons.bookmark_border,
+                  color: _hasBm ? Colors.amber : Colors.white70,
+                ),
+                tooltip: '本页书签（长按看全部）',
+              ),
               Expanded(
                 child: Center(
                   child: TextButton(
@@ -997,7 +1310,7 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
                     child: Text(
-                      '${_page + 1} / ${_units.length}',
+                      MangaSpread.label(_page, _units.length, _per),
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
@@ -1093,35 +1406,64 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
   /// `Axis.vertical` 就是一屏一页的上下翻。
   Widget _pagedMode() {
     final units = _units;
-    final swipeAxis =
-        _mode == ReadMode.down ? Axis.vertical : Axis.horizontal;
+    final per = _per;
+    final screens = MangaSpread.screens(units.length, per);
+    final swipeAxis = _mode == ReadMode.down ? Axis.vertical : Axis.horizontal;
     return GestureDetector(
       onTapUp: _onTap,
-      onDoubleTap: _toggleZoom,
+      onDoubleTap: per > 1 ? null : _toggleZoom,
       child: PageView.builder(
         controller: _pc,
         scrollDirection: swipeAxis,
         reverse: _mode == ReadMode.rtl,
-        itemCount: units.length,
+        itemCount: screens,
         onPageChanged: _onPage,
         itemBuilder: (_, i) {
-          final u = units[i];
-          return InteractiveViewer(
-            transformationController: i == _page ? _tv : null,
-            minScale: 1,
-            maxScale: 4,
-            panEnabled: _zoom > 1.01,
-            scaleEnabled: true,
-            child: Center(
-              child: u.half == null
-                  ? _img(
-                      u.url,
-                      fit: BoxFit.contain,
-                      bustCache: true,
-                      probeSize: true,
-                    )
-                  : _halfImage(u.url, u.ratio ?? 1.4, u.half!),
-            ),
+          if (per == 1) {
+            final u = units[i];
+            return InteractiveViewer(
+              transformationController: i == _page ? _tv : null,
+              minScale: 1,
+              maxScale: 4,
+              panEnabled: _zoom > 1.01,
+              scaleEnabled: true,
+              child: Center(
+                child: u.half == null
+                    ? _img(
+                        u.url,
+                        fit: BoxFit.contain,
+                        bustCache: true,
+                        probeSize: true,
+                      )
+                    : _halfImage(u.url, u.ratio ?? 1.4, u.half!),
+              ),
+            );
+          }
+          // 双页并排：一屏两页，各自 contain 在自己那一半里。
+          final a = i * per;
+          final b = a + 1;
+          final left = b < units.length ? units[b] : null;
+          final right = units[a];
+          // 右到左的书，先看右边那页：左位放第 b 页。
+          final pair = _mode == ReadMode.rtl ? [left, right] : [right, left];
+          return Row(
+            children: [
+              for (final u in pair)
+                Expanded(
+                  child: u == null
+                      ? const SizedBox.shrink()
+                      : Center(
+                          child: u.half == null
+                              ? _img(
+                                  u.url,
+                                  fit: BoxFit.contain,
+                                  bustCache: true,
+                                  probeSize: true,
+                                )
+                              : _halfImage(u.url, u.ratio ?? 1.4, u.half!),
+                        ),
+                ),
+            ],
           );
         },
       ),
@@ -1213,6 +1555,7 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
               if (p != _page) {
                 setState(() => _page = p);
                 _save(p);
+                _countPage(p);
               }
               final near = n.metrics.extentAfter < 160;
               if (near != _nearEnd) setState(() => _nearEnd = near);
@@ -1290,8 +1633,7 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     if (!_probing.add(url)) return;
     final lp = _local[url];
     final fileProv = lp == null ? null : mangaFileProvider(lp);
-    final ImageProvider prov =
-        fileProv ?? CachedNetworkImageProvider(url);
+    final ImageProvider prov = fileProv ?? CachedNetworkImageProvider(url);
     final stream = prov.resolve(ImageConfiguration.empty);
     late final ImageStreamListener l;
     l = ImageStreamListener(
@@ -1331,7 +1673,8 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     int side;
     if (_tapLayout == TapLayout.lShape) {
       // L 样式：右边一条 + 底下一条都是「下一页」，左边一条是「上一页」。
-      if (x > size.width * .62 || (y > size.height * .8 && x > size.width * .18)) {
+      if (x > size.width * .62 ||
+          (y > size.height * .8 && x > size.width * .18)) {
         side = 1;
       } else if (x < size.width * .32) {
         side = -1;
@@ -1358,8 +1701,10 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
     if (_vertical) {
       if (!_sc.hasClients) return;
       final pos = _sc.position;
-      final target = (pos.pixels + step * pos.viewportDimension * .92)
-          .clamp(0.0, pos.maxScrollExtent);
+      final target = (pos.pixels + step * pos.viewportDimension * .92).clamp(
+        0.0,
+        pos.maxScrollExtent,
+      );
       if ((target - pos.pixels).abs() < 1) return;
       unawaited(
         _sc.animateTo(
@@ -1370,9 +1715,13 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
       );
       return;
     }
-    final n = _page + step;
-    if (n < 0 || n >= _units.length) return;
-    unawaited(_jumpToPage(n, animate: true));
+    // 双页时一屏两页，翻一次要跨两页，不然会停在半屏上。
+    final per = _per;
+    final cur = MangaSpread.screenOf(_page, per);
+    final last = MangaSpread.screens(_units.length, per) - 1;
+    final target = cur + step;
+    if (target < 0 || target > last) return;
+    unawaited(_jumpToPage(MangaSpread.pageOf(target, per), animate: true));
   }
 }
 
