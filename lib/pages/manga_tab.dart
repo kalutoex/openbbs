@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../api.dart';
 import '../manga.dart';
 import '../manga_download.dart';
 import '../manga_user.dart';
@@ -14,6 +15,7 @@ import 'manga_rank_page.dart';
 import 'manga_reader_page.dart';
 
 import '../l10n/l10n.dart';
+import '../store.dart';
 
 /// 内部书源：本地已经抓下来的漫画，网格铺封面。
 ///
@@ -60,6 +62,9 @@ class _MangaTabState extends State<MangaTab>
   /// null = 还在取（不显示），空列表 = 没读过（也不显示）。
   List<MangaHist>? _resume;
 
+  /// 上一次因为还没登录而跳过「继续阅读」，等登录态回来要补发。
+  bool _resumeWaiting = false;
+
   /// 排序：hot / recent / title / progress。后端只认这几个。
   /// hot 是默认——书是按人气榜下的，按名字排出来的顺序没意义。
   String _sort = 'hot';
@@ -99,6 +104,17 @@ class _MangaTabState extends State<MangaTab>
     unawaited(_loadResume());
     mangaBump.addListener(_onBump);
     MangaDown.i.addListener(_onDown);
+    // 冷启动时令牌还没从本地读出来，这时候发「继续阅读」必然是 401，
+    // 等登录态回来了再补一次。
+    AppState.instance.addListener(_onApp);
+  }
+
+  /// 登录态变了：先前因为没令牌跳过的那一次，现在补上。
+  void _onApp() {
+    if (!_resumeWaiting) return;
+    if (Api.token == null || Api.token!.isEmpty) return;
+    _resumeWaiting = false;
+    unawaited(_loadResume());
   }
 
   /// 离线索引或下载进度变了，书架上的角标和进度条要跟着动。
@@ -109,6 +125,7 @@ class _MangaTabState extends State<MangaTab>
 
   @override
   void dispose() {
+    AppState.instance.removeListener(_onApp);
     _sc.removeListener(_onScroll);
     _sc.dispose();
     _searchDebounce?.cancel();
@@ -190,6 +207,13 @@ class _MangaTabState extends State<MangaTab>
   ///
   /// 只在登录后才有（接口要身份），取不到就当没有——这一行不值得弹错误。
   Future<void> _loadResume() async {
+    // 没令牌就别发：这一发只会吃个 401，白让人以为登录废了。
+    if (Api.token == null || Api.token!.isEmpty) {
+      _resumeWaiting = true;
+      if (mounted && _resume == null) setState(() => _resume = const []);
+      return;
+    }
+    _resumeWaiting = false;
     try {
       final list = await MangaUserApi.hist(limit: 12);
       final mine = list
@@ -467,8 +491,10 @@ class _MangaTabState extends State<MangaTab>
     });
   }
 
-  List<MangaBook> get _selBooks =>
-      [for (final b in _books) if (_sel.contains(b.dir)) b];
+  List<MangaBook> get _selBooks => [
+    for (final b in _books)
+      if (_sel.contains(b.dir)) b,
+  ];
 
   Widget _selectBar(ColorScheme cs) {
     final picked = _selBooks;
@@ -487,7 +513,9 @@ class _MangaTabState extends State<MangaTab>
             _barBtn(
               icon: Icons.download_rounded,
               label: '下载',
-              onTap: canDl && !_batchBusy && picked.isNotEmpty ? _batchDownload : null,
+              onTap: canDl && !_batchBusy && picked.isNotEmpty
+                  ? _batchDownload
+                  : null,
             ),
             _barBtn(
               icon: Icons.done_all,
@@ -497,7 +525,9 @@ class _MangaTabState extends State<MangaTab>
             _barBtn(
               icon: Icons.delete_outline,
               label: '删离线${offline.isEmpty ? '' : ' ${offline.length}'}',
-              onTap: offline.isNotEmpty && !_batchBusy ? _batchDeleteOffline : null,
+              onTap: offline.isNotEmpty && !_batchBusy
+                  ? _batchDeleteOffline
+                  : null,
             ),
             _barBtn(
               icon: Icons.close,
@@ -590,10 +620,9 @@ class _MangaTabState extends State<MangaTab>
     if (picked.isEmpty) return;
     setState(() => _batchBusy = true);
     try {
-      final n = await MangaUserApi.markReadBatch(
-        [for (final b in picked) ReadRef.fromBook(b)],
-        books: picked,
-      );
+      final n = await MangaUserApi.markReadBatch([
+        for (final b in picked) ReadRef.fromBook(b),
+      ], books: picked);
       if (!mounted) return;
       _exitSelect();
       await _loadResume();
@@ -609,7 +638,7 @@ class _MangaTabState extends State<MangaTab>
   Future<void> _batchDeleteOffline() async {
     final picked = [
       for (final b in _selBooks)
-        if (MangaDown.i.offlineChapters(b.dir) > 0) b
+        if (MangaDown.i.offlineChapters(b.dir) > 0) b,
     ];
     if (picked.isEmpty) return;
     final ok = await showDialog<bool>(
@@ -1071,8 +1100,8 @@ class _MangaTabState extends State<MangaTab>
     final badge = job != null
         ? '${(job.progress * 100).round()}%'
         : (off > 0
-            ? (MangaDown.i.bookFullyOffline(b.dir) ? '离线' : '离线 $off')
-            : '');
+              ? (MangaDown.i.bookFullyOffline(b.dir) ? '离线' : '离线 $off')
+              : '');
     return MangaCoverCard(
       title: b.title,
       sub: sub,

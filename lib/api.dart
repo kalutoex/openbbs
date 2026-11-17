@@ -249,21 +249,18 @@ class Api {
     Map<String, dynamic> body,
   ) async {
     Object? last;
+    final tok = token;
     for (final b in urls) {
       if (b.isEmpty) continue;
       try {
         final r = await http
             .post(
               _uriAt(b, path),
-              headers: {
-                'Content-Type': 'application/json',
-                if (token != null && token!.isNotEmpty)
-                  'Authorization': 'Bearer $token',
-              },
+              headers: _headersWith(tok),
               body: jsonEncode(body),
             )
             .timeout(const Duration(seconds: 15));
-        return _decode(r);
+        return _decode(r, tok);
       } on ApiException {
         rethrow; // 服务端答了话，别换入口重试
       } catch (e) {
@@ -292,13 +289,14 @@ class Api {
   /// 站点管理页拉主站目录用它：目录属于登录站，跟当前在看哪座站无关。
   static Future<dynamic> getAt(List<String> urls, String path) async {
     Object? last;
+    final tok = token;
     for (final b in urls) {
       if (b.isEmpty) continue;
       try {
         final r = await http
-            .get(_uriAt(b, path), headers: _headers)
+            .get(_uriAt(b, path), headers: _headersWith(tok))
             .timeout(const Duration(seconds: 15));
-        return _decode(r);
+        return _decode(r, tok);
       } on ApiException {
         rethrow; // 服务端答了话，别换入口重试
       } catch (e) {
@@ -351,15 +349,16 @@ class Api {
     if (!configured) {
       throw ApiException(Lc.current.errNotConfigured, code: 'notConfigured');
     }
+    final tok = token;
     final body = jsonEncode({'name': name, 'data': base64Encode(bytes)});
     try {
       final r = await _withFailover(
         retryOnTimeout: false,
         () => http
-            .post(_uri('/upload'), headers: _headers, body: body)
+            .post(_uri('/upload'), headers: _headersWith(tok), body: body)
             .timeout(const Duration(seconds: 60)),
       );
-      final d = _decode(r);
+      final d = _decode(r, tok);
       final url = (d is Map ? d['url'] : null) as String?;
       if (url == null || url.isEmpty) {
         throw ApiException('upload returned no url', code: 'uploadNoUrl');
@@ -412,8 +411,8 @@ class Api {
   }
 
   /// 写请求的头：普通的那些，外加幂等号。
-  static Map<String, String> _writeHeaders(String rid) => {
-    ..._headers,
+  static Map<String, String> _writeHeaders(String rid, String? tok) => {
+    ..._headersWith(tok),
     'X-Request-Id': rid,
   };
 
@@ -528,13 +527,14 @@ class Api {
     String path,
     Map<String, dynamic> body,
   ) async {
+    final tok = token;
     final r = await _withFailover(
       retryOnTimeout: false,
       () => http
-          .post(_uri(path), headers: _headers, body: jsonEncode(body))
+          .post(_uri(path), headers: _headersWith(tok), body: jsonEncode(body))
           .timeout(const Duration(seconds: 60)),
     );
-    final d = _decode(r);
+    final d = _decode(r, tok);
     if (d is! Map) throw StateError('bad response');
     return Map<String, dynamic>.from(d);
   }
@@ -589,12 +589,20 @@ class Api {
         : uri.replace(queryParameters: query);
   }
 
-  static Map<String, String> get _headers => {
+  static Map<String, String> get _headers => _headersWith(token);
+
+  /// 按「这一发实际带上的令牌」拼头。
+  ///
+  /// 不能用全局 [token]：冷启动时它还是 null，请求空手发出去，
+  /// 等回包时全局已经有了，_decode 那头就会把 401 当成令牌被废。
+  static Map<String, String> _headersWith(String? tok) => {
     'Content-Type': 'application/json',
-    if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
+    if (tok != null && tok.isNotEmpty) 'Authorization': 'Bearer \$tok',
   };
 
-  static dynamic _decode(http.Response r) {
+  /// [sent] 是这一发实际带出去的令牌，不是「现在」的令牌。
+  /// 只有它非空还被告知要登录，才算令牌真废了。
+  static dynamic _decode(http.Response r, String? sent) {
     dynamic body;
     try {
       body = r.body.isEmpty ? null : jsonDecode(utf8.decode(r.bodyBytes));
@@ -614,8 +622,8 @@ class Api {
       // 令牌废了：清本地登录状态，别让人在页面里反复撞「请先登录」。
       // 只有带着令牌却被告知要登录才算，登录页密码输错不会走到这里。
       if (r.statusCode == 401 &&
-          token != null &&
-          token!.isNotEmpty &&
+          sent != null &&
+          sent.isNotEmpty &&
           d is String &&
           d.contains(needLoginMessage)) {
         onUnauthorized?.call();
@@ -651,12 +659,16 @@ class Api {
     Duration timeout = const Duration(seconds: 15),
   }) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
+    // 令牌在这一发发出去的时候就定死了，回包时全局可能已经变了。
+    final tok = token;
     final key = cache ? _cacheKey(path, query) : '';
     try {
       final r = await _withFailover(
-        () => http.get(_uri(path, query), headers: _headers).timeout(timeout),
+        () => http
+            .get(_uri(path, query), headers: _headersWith(tok))
+            .timeout(timeout),
       );
-      final d = _decode(r);
+      final d = _decode(r, tok);
       lastFromCache = false;
       _netOk();
       if (cache) unawaited(DiskCache.write(key, d));
@@ -691,10 +703,10 @@ class Api {
             onChannelChanged?.call(ok);
             final r = await _withFailover(
               () => http
-                  .get(_uri(path, query), headers: _headers)
+                  .get(_uri(path, query), headers: _headersWith(tok))
                   .timeout(timeout),
             );
-            final d = _decode(r);
+            final d = _decode(r, tok);
             lastFromCache = false;
             _netOk();
             if (cache) unawaited(DiskCache.write(key, d));
@@ -723,18 +735,19 @@ class Api {
     Duration timeout = const Duration(seconds: 15),
   }) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
+    final tok = token;
     final rid = newRequestId();
     try {
       final r = await _withFailover(
         () => http
             .post(
               _uri(path),
-              headers: _writeHeaders(rid),
+              headers: _writeHeaders(rid, tok),
               body: jsonEncode(body),
             )
             .timeout(timeout),
       );
-      final d = _decode(r);
+      final d = _decode(r, tok);
       _netOk();
       return d;
     } on ApiException {
@@ -751,14 +764,15 @@ class Api {
 
   static Future<dynamic> delete(String path) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
+    final tok = token;
     final rid = newRequestId();
     try {
       final r = await _withFailover(
         () => http
-            .delete(_uri(path), headers: _writeHeaders(rid))
+            .delete(_uri(path), headers: _writeHeaders(rid, tok))
             .timeout(const Duration(seconds: 15)),
       );
-      final d = _decode(r);
+      final d = _decode(r, tok);
       _netOk();
       return d;
     } on ApiException {
@@ -775,18 +789,19 @@ class Api {
 
   static Future<dynamic> put(String path, Map<String, dynamic> body) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
+    final tok = token;
     final rid = newRequestId();
     try {
       final r = await _withFailover(
         () => http
             .put(
               _uri(path),
-              headers: _writeHeaders(rid),
+              headers: _writeHeaders(rid, tok),
               body: jsonEncode(body),
             )
             .timeout(const Duration(seconds: 15)),
       );
-      final d = _decode(r);
+      final d = _decode(r, tok);
       _netOk();
       return d;
     } on ApiException {
@@ -803,18 +818,19 @@ class Api {
 
   static Future<dynamic> patch(String path, Map<String, dynamic> body) async {
     if (!configured) throw ApiException(Lc.current.errNotConfigured);
+    final tok = token;
     final rid = newRequestId();
     try {
       final r = await _withFailover(
         () => http
             .patch(
               _uri(path),
-              headers: _writeHeaders(rid),
+              headers: _writeHeaders(rid, tok),
               body: jsonEncode(body),
             )
             .timeout(const Duration(seconds: 15)),
       );
-      final d = _decode(r);
+      final d = _decode(r, tok);
       _netOk();
       return d;
     } on ApiException {
