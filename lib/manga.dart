@@ -200,6 +200,12 @@ class MangaDetail {
       );
 
   String get coverUrl => url(cover);
+
+  /// 详情页封面。本地书有现成的 240px 缩略切图，走服务端那条路由。
+  String get coverThumb {
+    if (dir.isEmpty) return coverUrl;
+    return url('/api/manga/thumb/${Uri.encodeComponent(dir)}');
+  }
 }
 
 /// 人气值写成「12.3万」这种。位数多了直接数零没人看得懂。

@@ -50,6 +50,18 @@ class MangaFav {
               ? srcImage(cover, referer: 'https://www.zaimanhua.com/')
               : url(cover);
 
+  /// 卡片刻度用的封面：本地书走 240px 缩略切图，书源的图让后端按宽切。
+  String get coverThumb {
+    if (cover.isEmpty) return '';
+    if (isSource) return srcImage(cover, w: 240);
+    if (isZmh) {
+      return srcImage(cover, w: 240, referer: 'https://www.zaimanhua.com/');
+    }
+    return ref.isEmpty
+        ? url(cover)
+        : url('/api/manga/thumb/${Uri.encodeComponent(ref)}');
+  }
+
   factory MangaFav.fromJson(Map<String, dynamic> j) => MangaFav(
         kind: '${j['kind'] ?? 'local'}',
         ref: '${j['ref'] ?? ''}',
@@ -103,6 +115,18 @@ class MangaHist {
           : isZmh
               ? srcImage(cover, referer: 'https://www.zaimanhua.com/')
               : url(cover);
+
+  /// 卡片刻度用的封面：本地书走 240px 缩略切图，书源的图让后端按宽切。
+  String get coverThumb {
+    if (cover.isEmpty) return '';
+    if (isSource) return srcImage(cover, w: 240);
+    if (isZmh) {
+      return srcImage(cover, w: 240, referer: 'https://www.zaimanhua.com/');
+    }
+    return ref.isEmpty
+        ? url(cover)
+        : url('/api/manga/thumb/${Uri.encodeComponent(ref)}');
+  }
 
   /// 「第 12 话 · 第 3 页」这种，缺哪段就不写哪段。
   String get where {

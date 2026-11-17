@@ -397,13 +397,13 @@ class _MangaDetailPageState extends State<MangaDetailPage> {
           SizedBox(
             width: 108,
             height: 148,
-            child: d.coverUrl.isEmpty
+            child: d.coverThumb.isEmpty
                 ? Container(
                     color: cs.surfaceContainerHighest,
                     child: Icon(Icons.menu_book, color: cs.outline),
                   )
                 : RetryImage(
-                    url: d.coverUrl,
+                    url: d.coverThumb,
                     fit: BoxFit.cover,
                     memCacheWidth: 320,
                     probeSize: false,

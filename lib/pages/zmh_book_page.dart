@@ -288,7 +288,8 @@ class _ZmhBookPageState extends State<ZmhBookPage> {
     final cs = Theme.of(context).colorScheme;
     final n = chs.length;
     final title = d.title.isEmpty ? widget.book.title : d.title;
-    final cover = d.coverUrl.isEmpty ? widget.book.coverUrl : d.coverUrl;
+    final cover =
+        d.coverThumb.isEmpty ? widget.book.coverThumb : d.coverThumb;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),

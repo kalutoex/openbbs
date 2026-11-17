@@ -248,7 +248,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
                 return _mangaCell(
                   title: f.title,
                   sub: f.isSource ? '书源' : '本地',
-                  coverUrl: f.coverUrl,
+                  coverUrl: f.coverThumb,
                   hasNew: f.hasNew,
                   onTap: () => _openManga(
                     kind: f.kind,
@@ -266,7 +266,7 @@ class _ThreadListPageState extends State<ThreadListPage> {
                 sub: h.where.isEmpty
                     ? (h.isSource ? '书源' : '本地')
                     : h.where,
-                coverUrl: h.coverUrl,
+                coverUrl: h.coverThumb,
                 onTap: () => _openManga(
                   kind: h.kind,
                   ref: h.ref,

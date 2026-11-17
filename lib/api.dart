@@ -330,6 +330,19 @@ class Api {
     return img(path);
   }
 
+  /// 封面专用的缩略图地址，不分平台。
+  ///
+  /// 封面到处都是：列表、详情、搜索、历史、收藏、帖子首图。每处都按原图拉
+  /// 一遍没道理——格子里就 100 来像素宽，原图多半是几千像素的扫描件。
+  /// 和 [thumb] 的差别只有一条：不看平台，App 也走小图。
+  static String cover(String path, int width) {
+    if (path.isEmpty) return path;
+    if (path.startsWith('/img/')) {
+      return img('/img/t/$width/${path.substring(5)}');
+    }
+    return img(path);
+  }
+
   /// 上传一张图，返回服务端的相对路径。
   static Future<String> uploadImage(
     Uint8List bytes, {

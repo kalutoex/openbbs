@@ -478,7 +478,7 @@ class _CoverCarouselState extends State<_CoverCarousel> {
               // 点图进全屏，从手上这张开始。
               onTap: () => widget.onOpen(i),
               child: RetryImage(
-                url: Api.thumb(widget.urls[i], 320),
+                url: Api.cover(widget.urls[i], 480),
                 fit: BoxFit.cover,
                 // 长图裁上面那截，内容从头开始才对。
                 alignment: Alignment.topCenter,

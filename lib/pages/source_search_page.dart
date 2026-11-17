@@ -257,13 +257,13 @@ class _SourceSearchPageState extends State<SourceSearchPage> {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: b.coverUrl.isEmpty
+                child: b.coverThumb.isEmpty
                     ? Container(
                         color: cs.surfaceContainerHighest,
                         child: Icon(Icons.menu_book, color: cs.outline),
                       )
                     : RetryImage(
-                        url: b.coverUrl,
+                        url: b.coverThumb,
                         fit: BoxFit.cover,
                         memCacheWidth: 320,
                         probeSize: false,

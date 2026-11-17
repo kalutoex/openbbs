@@ -36,6 +36,9 @@ class SourceBook {
       );
 
   String get coverUrl => srcImage(cover);
+
+  /// 格子里用的封面，让后端切到 240 宽。
+  String get coverThumb => srcImage(cover, w: 240);
 }
 
 /// 一个源这一轮搜索的结果。没搜到也是一种结果，得如实标出来。
@@ -136,19 +139,23 @@ class SourceBookDetail {
       );
 
   String get coverUrl => srcImage(cover);
+
+  String get coverThumb => srcImage(cover, w: 240);
 }
 
 /// 源站的图十有八九查 Referer，还常换域名，浏览器直接拿会 403 或者裂图。
 /// 统一从后端过一道：/sources/img 带 UA 和 Referer 去取，转回来。
 ///
 /// 图片标签带不了 Authorization，所以 token 挂在查询串上。
-String srcImage(String u, {String referer = ''}) {
+String srcImage(String u, {String referer = '', int w = 0}) {
   if (u.isEmpty) return '';
   final t = Api.token ?? '';
+  // w 给了就让后端按这个宽度切一刀，封面用；看图不给，原样转发。
+  final wq = w > 0 ? '&w=$w' : '';
   return '${Api.base}/api/sources/img'
       '?u=${Uri.encodeComponent(u)}'
       '&r=${Uri.encodeComponent(referer)}'
-      '&t=${Uri.encodeComponent(t)}';
+      '&t=${Uri.encodeComponent(t)}$wq';
 }
 
 class SourceApi {

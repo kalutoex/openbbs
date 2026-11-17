@@ -215,14 +215,14 @@ class _MangaShelfListState extends State<MangaShelfList>
         height: 60,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(6),
-          child: b.coverUrl.isEmpty
+          child: b.coverThumb.isEmpty
               ? Container(
                   color: cs.surfaceContainerHighest,
                   child: Icon(Icons.menu_book, size: 18, color: cs.outline),
                 )
               : RetryImage(
-                  key: ValueKey('${b.coverUrl}#$_epoch'),
-                  url: b.coverUrl,
+                  key: ValueKey('${b.coverThumb}#$_epoch'),
+                  url: b.coverThumb,
                   fit: BoxFit.cover,
                   memCacheWidth: 132,
                   probeSize: false,

@@ -29,6 +29,13 @@ class ZmhBook {
   /// 封面走服务端透传：源站不带 CORS 头，网页版直连画不出来。
   String get coverUrl => srcImage(cover, referer: 'https://www.zaimanhua.com/');
 
+  /// 列表/详情里的小封面，让后端切到 240 宽。
+  String get coverThumb => srcImage(
+        cover,
+        w: 240,
+        referer: 'https://www.zaimanhua.com/',
+      );
+
   factory ZmhBook.fromJson(Map<String, dynamic> j) => ZmhBook(
         id: (j['id'] as num?)?.toInt() ?? 0,
         title: '${j['title'] ?? ''}',
@@ -83,6 +90,13 @@ class ZmhDetail {
   });
 
   String get coverUrl => srcImage(cover, referer: 'https://www.zaimanhua.com/');
+
+  /// 列表/详情里的小封面，让后端切到 240 宽。
+  String get coverThumb => srcImage(
+        cover,
+        w: 240,
+        referer: 'https://www.zaimanhua.com/',
+      );
 
   factory ZmhDetail.fromJson(Map<String, dynamic> j) => ZmhDetail(
         id: (j['id'] as num?)?.toInt() ?? 0,

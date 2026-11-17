@@ -607,9 +607,7 @@ class _MangaTabState extends State<MangaTab>
       if (h.chapter.isNotEmpty) h.chapter,
       if (pct != null) '$pct%',
     ].join(' · ');
-    final cover = h.ref.isEmpty
-        ? url(h.cover)
-        : url('/api/manga/thumb/${Uri.encodeComponent(h.ref)}');
+    final cover = h.coverThumb;
     return SizedBox(
       width: 220,
       child: InkWell(
