@@ -12,25 +12,44 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// 原图挑完复制进应用目录再记路径：相册里那张被删、被清理软件扫掉，
 /// 背景不至于跟着白掉。
+///
+/// 键里带自己的 uid：peerId 是每座站各自编的，光靠它两个账号会互相覆盖。
 class ChatBg {
   ChatBg._();
 
-  /// 按会话记，一个会话一张。用 threadId 做键，跟人换号、改名都不受影响。
-  static String _key(int tid) => 'dm_bg_$tid';
+  /// 一个会话一张。读写两边必须用这一个函数算键，别各自拼。
+  static String keyOf(int myId, int peerId) => 'dm_bg_u${myId}_p$peerId';
 
   /// 文件路径。文件被人删了就当没设过，不报错。
-  static Future<String?> pathOf(int tid) async {
+  ///
+  /// [legacy] 是旧版本用过的键。1.1.9+100179 到 +100181 那几版里，聊天页按
+  /// peerId 读、聊天信息页按 threadId 写，看着就是「设了背景但存不住」。
+  /// 读的时候顺手把旧键搬过来，搬完删掉，用户不用重设一次。
+  static Future<String?> pathOf(
+    String key, {
+    List<String> legacy = const [],
+  }) async {
     final p = await SharedPreferences.getInstance();
-    final path = p.getString(_key(tid));
+    var path = p.getString(key);
+    if (path == null || path.isEmpty) {
+      for (final k in legacy) {
+        final old = p.getString(k);
+        if (old == null || old.isEmpty) continue;
+        if (await _alive(old)) {
+          await p.setString(key, old);
+          path = old;
+          await p.remove(k);
+          break;
+        }
+        await p.remove(k);
+      }
+    }
     if (path == null || path.isEmpty) return null;
-    try {
-      if (await File(path).exists()) return path;
-    } catch (_) {}
-    return null;
+    return await _alive(path) ? path : null;
   }
 
   /// 从相册挑一张。返回新路径，取消返回 null。
-  static Future<String?> pick(int tid) async {
+  static Future<String?> pick(String key) async {
     final f = await ImagePicker().pickImage(
       source: ImageSource.gallery,
       maxWidth: 2000,
@@ -40,22 +59,41 @@ class ChatBg {
     final sup = await getApplicationSupportDirectory();
     final dir = Directory('${sup.path}/chat_bg');
     if (!await dir.exists()) await dir.create(recursive: true);
-    final dst =
-        '${dir.path}/$tid-${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final dst = '${dir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
     await File(f.path).copy(dst);
     final p = await SharedPreferences.getInstance();
-    final old = p.getString(_key(tid));
-    await p.setString(_key(tid), dst);
+    final old = p.getString(key);
+    await p.setString(key, dst);
     // 换下来的那张顺手删掉，别在应用目录里堆着。
     if (old != null && old != dst) await _drop(old);
     return dst;
   }
 
-  static Future<void> clear(int tid) async {
+  static Future<void> clear(
+    String key, {
+    List<String> legacy = const [],
+  }) async {
     final p = await SharedPreferences.getInstance();
-    final old = p.getString(_key(tid));
-    await p.remove(_key(tid));
-    if (old != null) await _drop(old);
+    final gone = <String>{};
+    final old = p.getString(key);
+    if (old != null) gone.add(old);
+    await p.remove(key);
+    for (final k in legacy) {
+      final v = p.getString(k);
+      if (v != null) gone.add(v);
+      await p.remove(k);
+    }
+    for (final f in gone) {
+      await _drop(f);
+    }
+  }
+
+  static Future<bool> _alive(String path) async {
+    try {
+      return await File(path).exists();
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<void> _drop(String path) async {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat_bg.dart';
+import '../store.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
 import '../user_hue.dart';
@@ -66,6 +67,34 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
 
   /// 连点开关会连发请求，改一半再改回来，状态就飘了。一次只放一个进去。
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBg();
+  }
+
+  /// 图在本地文件里，聊天页那边可能还没读完就点进来了。自己再读一次，
+  /// 顺带把旧键上的背景搬过来。
+  Future<void> _loadBg() async {
+    final path = await ChatBg.pathOf(_bgKey, legacy: _bgLegacy);
+    if (!mounted || path == _bg) return;
+    setState(() => _bg = path);
+  }
+
+  int get _peerId => (widget.peer['id'] ?? 0) as int;
+
+  int get _myId => (AppState.instance.user?['id'] ?? 0) as int;
+
+  /// 跟聊天页同一套键。之前这儿用的是 threadId，聊天页按 peerId 读，
+  /// 设完背景退出去就白设了。
+  String get _bgKey => ChatBg.keyOf(_myId, _peerId);
+
+  /// 1.1.9+100179 到 +100181 写在这两个键上，读到就搬走。
+  List<String> get _bgLegacy => [
+    if (widget.threadId != 0) 'dm_bg_${widget.threadId}',
+    'dm_bg_$_peerId',
+  ];
 
   String get _name =>
       (widget.peer['nickname'] ?? widget.peer['name'] ?? '') as String;
@@ -138,12 +167,12 @@ class _ChatInfoPageState extends State<ChatInfoPage> {
     );
     if (pick == null || !mounted) return;
     if (pick == 'clear') {
-      await ChatBg.clear(widget.threadId);
+      await ChatBg.clear(_bgKey, legacy: _bgLegacy);
       if (!mounted) return;
       setState(() => _bg = null);
       return;
     }
-    final path = await ChatBg.pick(widget.threadId);
+    final path = await ChatBg.pick(_bgKey);
     if (!mounted) return;
     if (path == null) return;
     setState(() => _bg = path);

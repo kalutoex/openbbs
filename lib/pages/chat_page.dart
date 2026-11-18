@@ -123,6 +123,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   late double _peerHue = hueOfUser(widget.peer);
   double get _myHue => AppState.instance.accentHue.value;
 
+  /// 背景按「我 + 对方」算键。peerId 是每座站各自编的，不带自己的 uid，
+  /// 两个账号在同一台手机上会互相盖。写和读都走 ChatBg.keyOf，别另拼。
+  String get _bgKey => ChatBg.keyOf(_myId, _peerId);
+
   int get _peerId => (widget.peer['id'] ?? 0) as int;
   String get _peerName =>
       (widget.peer['nickname'] ?? widget.peer['name'] ?? '') as String;
@@ -342,6 +346,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           }
         }
       }
+      final hadTid = _tid != 0;
+      var reloadBg = false;
       setState(() {
         if (initial) _unreadFromId = lineId;
         if (peer != null) _peerHue = hueOfUser(peer);
@@ -351,6 +357,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         _hasMore = d['has_more'] == true;
         _canSend = d['can_send'] != false;
         _tid = (d['thread_id'] as int?) ?? _tid;
+        // 首屏回来才知道 threadId，旧键要靠它才找得到，补读一次。
+        if (hadTid == false && _tid != 0) reloadBg = true;
         _pinned = d['pinned'] == true;
         _muted = d['muted'] == true;
         _loading = false;
@@ -362,6 +370,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         _sel.removeWhere((id) => !ids.contains(id));
       });
       AppState.instance.refreshDmUnread();
+      if (reloadBg) _loadBg();
       if (initial) _markSeen();
       if (initial || stay) _toBottom();
     } on ApiException catch (e) {
@@ -869,9 +878,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               child: Stack(
                 children: [
                   if (_bgPath != null)
-                    Positioned.fill(
-                      child: ChatBg.image(context, _bgPath!),
-                    )
+                    Positioned.fill(child: ChatBg.image(context, _bgPath!))
                   else
                     const SizedBox.shrink(),
                   _msgArea(cs),
@@ -1018,7 +1025,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     }
     if (_msgs.isEmpty) {
       return EmptyView(
-        icon: _cleared ? Icons.delete_sweep_outlined : Icons.chat_bubble_outline,
+        icon: _cleared
+            ? Icons.delete_sweep_outlined
+            : Icons.chat_bubble_outline,
         title: _cleared ? Lc.current.chatHistoryEmpty : Lc.current.dmNoChat,
       );
     }
@@ -1876,8 +1885,13 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   }
 
   Future<void> _loadBg() async {
-    final path = await ChatBg.pathOf(_peerId);
-    if (!mounted || path == null) return;
+    // 旧版本把背景记在 dm_bg_<threadId> 上（聊天信息页写的），这儿却按 peerId 读，
+    // 设完退出再进来就没了。旧键当 legacy 传进去，读到就搬过来。
+    final path = await ChatBg.pathOf(
+      _bgKey,
+      legacy: [if (_tid != 0) 'dm_bg_$_tid', 'dm_bg_$_peerId'],
+    );
+    if (!mounted) return;
     setState(() => _bgPath = path);
   }
 
