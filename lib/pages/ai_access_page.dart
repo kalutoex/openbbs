@@ -199,6 +199,8 @@ class _AiAccessPageState extends State<AiAccessPage> {
                     TextField(
                       controller: _token,
                       obscureText: true,
+                      keyboardType: TextInputType.visiblePassword,
+                      enableSuggestions: false,
                       decoration: InputDecoration(
                         labelText: '访问令牌',
                         hintText: _hasToken
@@ -213,6 +215,7 @@ class _AiAccessPageState extends State<AiAccessPage> {
                       enableSuggestions: false,
                       controller: _pw,
                       obscureText: true,
+                      keyboardType: TextInputType.visiblePassword,
                       decoration: const InputDecoration(
                         labelText: '账号密码',
                         helperText: '开启或改地址时验一次，防着别人拿到你手机就能接管',

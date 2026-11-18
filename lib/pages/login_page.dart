@@ -238,6 +238,7 @@ class _LoginPageState extends State<LoginPage> {
                       TextField(
                         controller: _pw,
                         obscureText: !_showPw,
+                        keyboardType: TextInputType.visiblePassword,
                         autocorrect: false,
                         enableSuggestions: false,
                         autofillHints: [

@@ -308,6 +308,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                   TextField(
                     controller: _oldPw,
                     obscureText: !_seePw,
+                    keyboardType: TextInputType.visiblePassword,
                     autocorrect: false,
                     enableSuggestions: false,
                     decoration: InputDecoration(
@@ -318,6 +319,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                   TextField(
                     controller: _newPw,
                     obscureText: !_seePw,
+                    keyboardType: TextInputType.visiblePassword,
                     autocorrect: false,
                     enableSuggestions: false,
                     decoration: InputDecoration(
@@ -341,6 +343,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                   TextField(
                     controller: _newPw2,
                     obscureText: !_seePw,
+                    keyboardType: TextInputType.visiblePassword,
                     autocorrect: false,
                     enableSuggestions: false,
                     decoration: InputDecoration(
