@@ -5005,6 +5005,66 @@ abstract class L {
   /// In zh, this message translates to:
   /// **'新增 {added}，更新 {updated}，跳过 {skipped}'**
   String bookSourcesImported(int added, int updated, int skipped);
+
+  /// No description provided for @chatInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天信息'**
+  String get chatInfo;
+
+  /// No description provided for @findInChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'查找聊天记录'**
+  String get findInChat;
+
+  /// No description provided for @chatBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天背景'**
+  String get chatBackground;
+
+  /// No description provided for @pickBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'从相册选一张'**
+  String get pickBackground;
+
+  /// No description provided for @clearBackground.
+  ///
+  /// In zh, this message translates to:
+  /// **'不用背景'**
+  String get clearBackground;
+
+  /// No description provided for @clearChatHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空聊天记录'**
+  String get clearChatHistory;
+
+  /// No description provided for @clearChatHistoryAsk.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空之后你这边就看不到这些消息了，对方那边的记录不受影响。'**
+  String get clearChatHistoryAsk;
+
+  /// No description provided for @clearChatHistoryDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天记录已清空'**
+  String get clearChatHistoryDone;
+
+  /// No description provided for @backgroundWebUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'网页版暂时换不了背景'**
+  String get backgroundWebUnsupported;
+
+  /// No description provided for @chatHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天记录已清空'**
+  String get chatHistoryEmpty;
 }
 
 class _LDelegate extends LocalizationsDelegate<L> {

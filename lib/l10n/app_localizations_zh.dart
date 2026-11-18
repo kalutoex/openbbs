@@ -2745,4 +2745,34 @@ class LZh extends L {
   String bookSourcesImported(int added, int updated, int skipped) {
     return '新增 $added，更新 $updated，跳过 $skipped';
   }
+
+  @override
+  String get chatInfo => '聊天信息';
+
+  @override
+  String get findInChat => '查找聊天记录';
+
+  @override
+  String get chatBackground => '聊天背景';
+
+  @override
+  String get pickBackground => '从相册选一张';
+
+  @override
+  String get clearBackground => '不用背景';
+
+  @override
+  String get clearChatHistory => '清空聊天记录';
+
+  @override
+  String get clearChatHistoryAsk => '清空之后你这边就看不到这些消息了，对方那边的记录不受影响。';
+
+  @override
+  String get clearChatHistoryDone => '聊天记录已清空';
+
+  @override
+  String get backgroundWebUnsupported => '网页版暂时换不了背景';
+
+  @override
+  String get chatHistoryEmpty => '聊天记录已清空';
 }

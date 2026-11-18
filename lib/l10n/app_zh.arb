@@ -1835,5 +1835,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "chatInfo": "聊天信息",
+  "findInChat": "查找聊天记录",
+  "chatBackground": "聊天背景",
+  "pickBackground": "从相册选一张",
+  "clearBackground": "不用背景",
+  "clearChatHistory": "清空聊天记录",
+  "clearChatHistoryAsk": "清空之后你这边就看不到这些消息了，对方那边的记录不受影响。",
+  "clearChatHistoryDone": "聊天记录已清空",
+  "backgroundWebUnsupported": "网页版暂时换不了背景",
+  "chatHistoryEmpty": "聊天记录已清空"
 }

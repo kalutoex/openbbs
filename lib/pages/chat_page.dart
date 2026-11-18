@@ -10,6 +10,7 @@ import '../attach.dart';
 import '../haptics.dart';
 import '../poller.dart';
 import '../widgets/reply_bar.dart';
+import '../chat_bg.dart';
 import '../cloud.dart';
 import '../l10n/error_text.dart';
 import '../l10n/l10n.dart';
@@ -22,6 +23,7 @@ import '../widgets/avatar.dart';
 import '../widgets/file_card.dart';
 import '../widgets/post_images.dart';
 import '../widgets/toast.dart';
+import 'chat_info_page.dart';
 import 'user_page.dart';
 
 /// 一对一私信。
@@ -104,6 +106,19 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   String? _err;
 
+  /// 会话编号。聊天信息页改置顶、清空记录都按它走。
+  int _tid = 0;
+
+  /// 置顶和免打扰。跟着每次拉取刷新，进聊天信息页时当初值。
+  bool _pinned = false;
+  bool _muted = false;
+
+  /// 这次进来清过记录。空态里说「已清空」，不说「还没聊过」。
+  bool _cleared = false;
+
+  /// 这个会话的聊天背景，本地一张图。没有就是 null，照旧用主题底色。
+  String? _bgPath;
+
   /// 双方的主题色。对方那份每次拉取都刷新，可能人家刚换过。
   late double _peerHue = hueOfUser(widget.peer);
   double get _myHue => AppState.instance.accentHue.value;
@@ -135,6 +150,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       if (_focus.hasFocus && _showEmoji) setState(() => _showEmoji = false);
     });
     _restoreDraft();
+    _loadBg();
     _load(initial: true);
     _poll = Timer.periodic(const Duration(seconds: 15), (_) {
       if (!mounted || _sending) return;
@@ -334,6 +350,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           ..addAll(list);
         _hasMore = d['has_more'] == true;
         _canSend = d['can_send'] != false;
+        _tid = (d['thread_id'] as int?) ?? _tid;
+        _pinned = d['pinned'] == true;
+        _muted = d['muted'] == true;
         _loading = false;
         _err = null;
         if (fresh > 0 && !stay) _newCount += fresh;
@@ -849,6 +868,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               max: 900,
               child: Stack(
                 children: [
+                  if (_bgPath != null)
+                    Positioned.fill(
+                      child: ChatBg.image(context, _bgPath!),
+                    )
+                  else
+                    const SizedBox.shrink(),
                   _msgArea(cs),
                   if (_loading)
                     const Positioned(
@@ -902,10 +927,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         ),
       ),
       actions: [
+        // 搜索挪进了聊天信息页，位置照微信：那颗「…」。
         IconButton(
-          tooltip: Lc.current.search,
-          icon: const Icon(Icons.search),
-          onPressed: _openSearch,
+          tooltip: Lc.current.chatInfo,
+          icon: const Icon(Icons.more_horiz),
+          onPressed: _openChatInfo,
         ),
       ],
     );
@@ -992,8 +1018,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     }
     if (_msgs.isEmpty) {
       return EmptyView(
-        icon: Icons.chat_bubble_outline,
-        title: Lc.current.dmNoChat,
+        icon: _cleared ? Icons.delete_sweep_outlined : Icons.chat_bubble_outline,
+        title: _cleared ? Lc.current.chatHistoryEmpty : Lc.current.dmNoChat,
       );
     }
     // 点消息区任意空白、或者人手开始往上翻，都收键盘。
@@ -1847,6 +1873,51 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  Future<void> _loadBg() async {
+    final path = await ChatBg.pathOf(_peerId);
+    if (!mounted || path == null) return;
+    setState(() => _bgPath = path);
+  }
+
+  /// 聊天信息页。改完的东西它全带回来，这边照着更新，不用重拉整段消息。
+  Future<void> _openChatInfo() async {
+    if (_tid == 0) {
+      // 首屏还没回来就点了，等一次加载完成再进，不然改不了置顶。
+      toast(context, Lc.current.retry);
+      return;
+    }
+    final r = await Navigator.of(context).push<ChatInfoResult>(
+      MaterialPageRoute(
+        builder: (_) => ChatInfoPage(
+          peer: widget.peer,
+          threadId: _tid,
+          pinned: _pinned,
+          muted: _muted,
+          bgPath: _bgPath,
+        ),
+      ),
+    );
+    if (!mounted || r == null) return;
+    setState(() {
+      _pinned = r.pinned;
+      _muted = r.muted;
+      _bgPath = r.bgPath;
+      if (r.cleared) {
+        _cleared = true;
+        _msgs.clear();
+        _hasMore = false;
+        _sel.clear();
+        _multi = false;
+        _unreadFromId = 0;
+      }
+    });
+    if (r.cleared) {
+      AppState.instance.refreshDmUnread();
+      return;
+    }
+    if (r.search) await _openSearch();
   }
 
   Future<void> _openSearch() async {

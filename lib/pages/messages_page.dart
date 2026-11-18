@@ -461,10 +461,20 @@ class _MessagesPageState extends State<MessagesPage> {
           children: [
             Expanded(
               child: Text(
-                row.text,
+                // 清空过的会话还留在列表里，预览是空的，给一句说明，
+                // 不然就是一行白。
+                row.text.isEmpty && !row.notice
+                    ? Lc.current.chatHistoryEmpty
+                    : row.text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant,
+                  fontStyle: row.text.isEmpty && !row.notice
+                      ? FontStyle.italic
+                      : null,
+                ),
               ),
             ),
             if (row.unread > 0) ...[

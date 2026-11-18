@@ -2809,4 +2809,36 @@ class LEn extends L {
   String bookSourcesImported(int added, int updated, int skipped) {
     return '$added added, $updated updated, $skipped skipped';
   }
+
+  @override
+  String get chatInfo => 'Chat info';
+
+  @override
+  String get findInChat => 'Search in chat';
+
+  @override
+  String get chatBackground => 'Chat background';
+
+  @override
+  String get pickBackground => 'Choose from album';
+
+  @override
+  String get clearBackground => 'No background';
+
+  @override
+  String get clearChatHistory => 'Clear chat history';
+
+  @override
+  String get clearChatHistoryAsk =>
+      'This hides these messages on your side only. The other person keeps their copy.';
+
+  @override
+  String get clearChatHistoryDone => 'Chat history cleared';
+
+  @override
+  String get backgroundWebUnsupported =>
+      'Changing the background is not available on web yet';
+
+  @override
+  String get chatHistoryEmpty => 'Chat history cleared';
 }

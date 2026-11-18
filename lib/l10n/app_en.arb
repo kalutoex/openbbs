@@ -1217,5 +1217,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "chatInfo": "Chat info",
+  "findInChat": "Search in chat",
+  "chatBackground": "Chat background",
+  "pickBackground": "Choose from album",
+  "clearBackground": "No background",
+  "clearChatHistory": "Clear chat history",
+  "clearChatHistoryAsk": "This hides these messages on your side only. The other person keeps their copy.",
+  "clearChatHistoryDone": "Chat history cleared",
+  "backgroundWebUnsupported": "Changing the background is not available on web yet",
+  "chatHistoryEmpty": "Chat history cleared"
 }
