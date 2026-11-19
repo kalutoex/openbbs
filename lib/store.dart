@@ -162,6 +162,10 @@ class AppState extends ChangeNotifier {
   /// 底栏要不要露漫画那一格。关掉只是藏入口，书架数据不动。
   static const _kShowManga = 'show_manga';
 
+  /// 一次性迁移：1.1.10 起漫画格默认关。老设备上存过的 true 要清一次，
+  /// 清完就尊重用户自己的开关，不再动。
+  static const _kMangaOffOnce = 'manga_off_once';
+
   /// 底部 tab 表变过（板块改成站点），老键里存的值按旧表解释，新值单开一个键。
   static const _kStartTabV2 = 'start_tab_v2';
   static const _kLocale = 'locale';
@@ -317,7 +321,7 @@ class AppState extends ChangeNotifier {
   final ValueNotifier<bool> thumbs = ValueNotifier(true);
 
   /// 底栏露不露「漫画」。关掉以后底栏是首页/消息/我的。
-  final ValueNotifier<bool> showManga = ValueNotifier(true);
+  final ValueNotifier<bool> showManga = ValueNotifier(false);
 
   /// 时间线排序：updated 按最新回复，created 按最新发布。
   final ValueNotifier<String> feedSort = ValueNotifier('created');
@@ -614,7 +618,13 @@ class AppState extends ChangeNotifier {
     hueCards.value = p.getBool(_kHueCards) ?? false;
     density.value = (p.getInt(_kDensity) ?? 1).clamp(0, 2);
     thumbs.value = p.getBool(_kThumbs) ?? true;
-    showManga.value = p.getBool(_kShowManga) ?? true;
+    showManga.value = p.getBool(_kShowManga) ?? false;
+    // 漫画格改成默认藏起来，老设备上存过的 true 清一次。
+    if (p.getBool(_kMangaOffOnce) != true) {
+      showManga.value = false;
+      await p.setBool(_kShowManga, false);
+      await p.setBool(_kMangaOffOnce, true);
+    }
     final fs = p.getString(_kFeedSort);
     if (fs == 'updated' || fs == 'created') feedSort.value = fs!;
     autoUnread.value = p.getBool(_kAutoUnread) ?? true;
