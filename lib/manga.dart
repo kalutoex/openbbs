@@ -148,7 +148,8 @@ class MangaChapter {
   });
 
   factory MangaChapter.fromJson(Map<String, dynamic> j) => MangaChapter(
-        id: (j['id'] as num?)?.toInt() ?? 0,
+        // 老书的章节 id 是 uuid，转不成数字就当 0，别让详情页整页崩掉
+        id: int.tryParse('${j['id'] ?? ''}') ?? 0,
         name: '${j['name'] ?? ''}',
         seq: (j['seq'] as num?)?.toInt() ?? 0,
         pages: (j['pages'] as num?)?.toInt() ?? 0,
